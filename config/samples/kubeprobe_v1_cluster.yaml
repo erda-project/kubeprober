@@ -1,0 +1,5 @@
+apiVersion: kubeprobe.my.domain/v1
+kind: Cluster
+metadata:
+  name: moon
+spec: {}
