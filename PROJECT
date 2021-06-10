@@ -1,0 +1,16 @@
+domain: my.domain
+layout:
+- go.kubebuilder.io/v3
+projectName: probe-master
+repo: github.com/erda-project/kubeprobe
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: my.domain
+  group: kubeprobe
+  kind: Cluster
+  path: github.com/erda-project/kubeprobe/api/v1
+  version: v1
+version: "3"
