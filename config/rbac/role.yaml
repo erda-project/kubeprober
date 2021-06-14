@@ -7,7 +7,7 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
-  - kubeprobe.my.domain
+  - kubeprober.erda.cloud
   resources:
   - clusters
   verbs:
@@ -19,13 +19,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - kubeprobe.my.domain
+  - kubeprober.erda.cloud
   resources:
   - clusters/finalizers
   verbs:
   - update
 - apiGroups:
-  - kubeprobe.my.domain
+  - kubeprober.erda.cloud
   resources:
   - clusters/status
   verbs:

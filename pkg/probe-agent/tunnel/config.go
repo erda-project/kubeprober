@@ -14,11 +14,8 @@
 package client
 
 type Config struct {
-	Debug                   bool   `default:"false" desc:"enable debug logging"`
-	CollectClusterInfo      bool   `default:"true" desc:"enable collect cluster info"`
-	ClusterDialEndpoint     string `desc:"cluster dialer endpoint"`
-	ClusterHeatBeatEndpoint string `desc:"cluster heartbeat endpoint"`
-	ClusterKey              string `desc:"cluster key"`
-	SecretKey               string `desc:"secret key"`
-	K8SApiServerAddr        string `desc:"kube-apiserver address in cluster"`
+	Debug           bool   `default:"false" desc:"enable debug logging"`
+	ProbeMasterAddr string `desc:"probe-master address"`
+	ClusterName     string `desc:"cluster key"`
+	SecretKey       string `desc:"secret key"`
 }
