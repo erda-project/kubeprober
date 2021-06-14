@@ -18,96 +18,121 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
-	"strings"
+	"net/url"
 	"time"
 
-	"github.com/pkg/errors"
+	"github.com/erda-project/kubeprober/apistructs"
 	"github.com/rancher/remotedialer"
+	"k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/version"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/klog"
 )
 
 var connected = make(chan struct{})
 
 const (
-	tokenFile  = "/var/run/secrets/kubernetes.io/serviceaccount/token"
-	rootCAFile = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+	tokenFile               = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	rootCAFile              = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+	dailEndPointSuffix      = "/clusteragent/connect"
+	heartBeatEndPointSuffix = "/heartbeat"
 )
 
-func getClusterInfo(apiserverAddr string) (map[string]interface{}, error) {
-	caData, err := ioutil.ReadFile(rootCAFile)
+func sendHeartBeat(heartBeatAddr string, clusterName string, secretKey string) error {
+	ctx := context.Background()
+	var rsp *http.Response
+	var err error
+	var caData []byte
+	var token []byte
+	var clientset *kubernetes.Clientset
+	var version *version.Info
+	var nodes *v1.NodeList
+
+	if caData, err = ioutil.ReadFile(rootCAFile); err != nil {
+		return err
+	}
+
+	if token, err = ioutil.ReadFile(tokenFile); err != nil {
+		return err
+	}
+
+	config, err := rest.InClusterConfig()
 	if err != nil {
-		return nil, errors.Wrapf(err, "reading %s", rootCAFile)
+		return nil
 	}
 
-	token, err := ioutil.ReadFile(tokenFile)
-	if err != nil {
-		return nil, errors.Wrapf(err, "reading %s", tokenFile)
+	config.AcceptContentTypes = "application/json"
+	if clientset, err = kubernetes.NewForConfig(config); err != nil {
+		return err
 	}
-	return map[string]interface{}{
-		"address": apiserverAddr,
-		"token":   strings.TrimSpace(string(token)),
-		"caCert":  base64.StdEncoding.EncodeToString(caData),
-	}, nil
-}
-
-type HeartBeatReq struct {
-	Address   string `json:"address"`
-	CaData    string `json:"caData"`
-	CertData  string `json:"certData"`
-	KeyData   string `json:"keyData"`
-	Token     string `json:"token"`
-	Version   string `json:"version"`
-	NodeCount string `json:"nodeCount"`
-}
-
-func Start(ctx context.Context, cfg *Config) error {
-	//headers := http.Header{
-	//	"X-Erda-Cluster-Key": {cfg.ClusterKey},
-	//	// TODO: support encode with secretKey
-	//	"Authorization": {cfg.ClusterKey},
-	//}
-	////if cfg.CollectClusterInfo {
-	//clusterInfo, err := getClusterInfo(cfg.K8SApiServerAddr)
-	//if err != nil {
-	//	return err
-	//}
-	//bytes, err := json.Marshal(clusterInfo)
-	//if err != nil {
-	//	return err
-	//}
-	//headers["X-Erda-Cluster-Info"] = []string{base64.StdEncoding.EncodeToString(bytes)}
-	//}
-	headers := http.Header{
-		"X-Erda-Cluster-Key": {"moon"},
-		"Authorization":      {"moon"},
+	if version, err = clientset.ServerVersion(); err != nil {
+		return err
 	}
-	hbData := HeartBeatReq{
-		Address:   "XXXXX",
-		CaData:    "XXXX",
-		CertData:  "XXX",
-		KeyData:   "XXX",
-		Token:     "XXXX",
-		Version:   "XXXXX",
-		NodeCount: "XXXXXXXXXX",
+	if nodes, err = clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{}); err != nil {
+		return err
+	}
+	hbData := apistructs.HeartBeatReq{
+		Name:      clusterName,
+		SecretKey: secretKey,
+		Address:   config.Host,
+		CaData:    base64.StdEncoding.EncodeToString(caData),
+		CertData:  "",
+		KeyData:   "",
+		Token:     base64.StdEncoding.EncodeToString(token),
+		Version:   version.String(),
+		NodeCount: len(nodes.Items),
 	}
 	json_data, _ := json.Marshal(hbData)
+	if rsp, err = http.Post(heartBeatAddr, "application/json", bytes.NewBuffer(json_data)); err != nil {
+		return err
+	}
+	body, _ := ioutil.ReadAll(rsp.Body)
+	if rsp.StatusCode != http.StatusOK {
+		return errors.New(string(body))
+	}
+	rsp.Body.Close()
+	return nil
+}
+func Start(ctx context.Context, cfg *Config) error {
+	var clusterDialEndpoint string
+	var clusterHeartBeatEndpoint string
+	headers := http.Header{
+		"X-Cluster-Name": {cfg.ClusterName},
+		"Secret-Key":     {cfg.SecretKey},
+	}
+
+	u, err := url.Parse(cfg.ProbeMasterAddr)
+	if err != nil {
+		return err
+	}
+	switch u.Scheme {
+	case "http":
+		clusterDialEndpoint = "ws://" + u.Host + dailEndPointSuffix
+		clusterHeartBeatEndpoint = "http://" + u.Host + heartBeatEndPointSuffix
+	case "https":
+		clusterDialEndpoint = "wss://" + u.Host + dailEndPointSuffix
+		clusterHeartBeatEndpoint = "https://" + u.Host + heartBeatEndPointSuffix
+	}
 
 	go func() {
 		for {
 			select {
 			case <-time.After(5 * time.Second):
-				rsp, _ := http.Post(cfg.ClusterHeatBeatEndpoint, "application/json", bytes.NewBuffer(json_data))
-				body, _ := ioutil.ReadAll(rsp.Body)
-				fmt.Println(string(body))
-				rsp.Body.Close()
+				if err := sendHeartBeat(clusterHeartBeatEndpoint, cfg.ClusterName, cfg.SecretKey); err != nil {
+					klog.Errorf("[heartbeat] send heartbeat request error: %+v\n", err)
+					break
+				}
 			}
 		}
 	}()
 	for {
-		remotedialer.ClientConnect(ctx, cfg.ClusterDialEndpoint, headers, nil, func(proto, address string) bool {
+		remotedialer.ClientConnect(ctx, clusterDialEndpoint, headers, nil, func(proto, address string) bool {
 			switch proto {
 			case "tcp":
 				return true

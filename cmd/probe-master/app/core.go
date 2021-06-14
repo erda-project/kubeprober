@@ -17,8 +17,8 @@ import (
 	"context"
 	"flag"
 	//"fmt"
-	"github.com/erda-project/kubeprobe/pkg/probe-master/controller"
-	"github.com/erda-project/kubeprobe/pkg/probe-master/tunnel"
+	"github.com/erda-project/kubeprober/pkg/probe-master/controller"
+	"github.com/erda-project/kubeprober/pkg/probe-master/tunnel"
 	"k8s.io/apimachinery/pkg/runtime"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -27,8 +27,8 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"github.com/erda-project/kubeprobe/cmd/probe-master/options"
-	kubeprobev1 "github.com/erda-project/kubeprobe/pkg/probe-master/apis/v1"
+	"github.com/erda-project/kubeprober/cmd/probe-master/options"
+	kubeprobev1 "github.com/erda-project/kubeprober/pkg/probe-master/apis/v1"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"k8s.io/klog"
@@ -50,7 +50,7 @@ func init() {
 	// +kubebuilder:scaffold:scheme
 }
 
-// NewCmdYurtAppManager creates a *cobra.Command object with default parameters
+// NewCmdProbeMasterManager creates a *cobra.Command object with default parameters
 func NewCmdProbeMasterManager(stopCh <-chan struct{}) *cobra.Command {
 	ProbeMasterOptions := options.NewProbeMasterOptions()
 	cmd := &cobra.Command{
@@ -78,17 +78,6 @@ func NewCmdProbeMasterManager(stopCh <-chan struct{}) *cobra.Command {
 func Run(opts *options.ProbeMasterOptions) {
 
 	ctx := context.Background()
-
-	//start remote cluster dialer
-	go server.Start(ctx, &server.Config{
-		Debug:           false,
-		NeedClusterInfo: true,
-		Timeout:         0,
-		Listen:          ":8088",
-	})
-
-	//fmt.Println("xxx")
-	//klog.V(1).Infof("xxxxxxx")
 
 	optts := zap.Options{
 		Development: true,
@@ -125,6 +114,14 @@ func Run(opts *options.ProbeMasterOptions) {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
+
+	//start remote cluster dialer
+	klog.Infof("starting probe-master remote dialer server on :8088")
+	go server.Start(ctx, &server.Config{
+		Debug:   false,
+		Timeout: 0,
+		Listen:  ":8088",
+	})
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

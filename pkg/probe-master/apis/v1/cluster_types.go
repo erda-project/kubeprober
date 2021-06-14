@@ -47,13 +47,15 @@ type ClusterConfig struct {
 type ClusterStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	HeartBeatTimeStamp string `json:"heartBeatTimeStamp,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="UUID",type=string,JSONPath=`.metadata.uid`
+// +kubebuilder:printcolumn:name="UID",type=string,JSONPath=`.metadata.uid`
 // +kubebuilder:printcolumn:name="Version",type=string,JSONPath=`.spec.k8sVersion`
 // +kubebuilder:printcolumn:name="NodeCount",type=string,JSONPath=`.spec.nodeCount`
+// +kubebuilder:printcolumn:name="HEARTBEATTIME",type=string,JSONPath=`.status.heartBeatTimeStamp`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // Cluster is the Schema for the clusters API
