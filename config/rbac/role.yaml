@@ -32,3 +32,29 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - probe.github.com
+  resources:
+  - probes
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - probe.github.com
+  resources:
+  - probes/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - probe.github.com
+  resources:
+  - probes/status
+  verbs:
+  - get
+  - patch
+  - update
