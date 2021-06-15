@@ -1,1 +1,1 @@
-# kubeprobe
+# kubeprober

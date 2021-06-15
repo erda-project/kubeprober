@@ -6,9 +6,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
-  name: probes.probe.github.com
+  name: probes.kubeprober.erda.cloud
 spec:
-  group: probe.github.com
+  group: kubeprober.erda.cloud
   names:
     kind: Probe
     listKind: ProbeList

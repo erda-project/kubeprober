@@ -6,9 +6,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
-  name: clusters.kubeprobe.my.domain
+  name: clusters.kubeprober.erda.cloud
 spec:
-  group: kubeprobe.my.domain
+  group: kubeprober.erda.cloud
   names:
     kind: Cluster
     listKind: ClusterList
@@ -18,13 +18,16 @@ spec:
   versions:
   - additionalPrinterColumns:
     - jsonPath: .metadata.uid
-      name: UUID
+      name: UID
       type: string
     - jsonPath: .spec.k8sVersion
       name: Version
       type: string
     - jsonPath: .spec.nodeCount
       name: NodeCount
+      type: string
+    - jsonPath: .status.heartBeatTimeStamp
+      name: HEARTBEATTIME
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
@@ -82,6 +85,12 @@ spec:
             type: object
           status:
             description: ClusterStatus defines the observed state of Cluster
+            properties:
+              heartBeatTimeStamp:
+                description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                  of cluster Important: Run "make" to regenerate code after modifying
+                  this file'
+                type: string
             type: object
         type: object
     served: true

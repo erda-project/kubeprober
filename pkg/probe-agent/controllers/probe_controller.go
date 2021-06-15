@@ -17,7 +17,7 @@ import (
 	"context"
 	"fmt"
 
-	probev1alpha1 "github.com/erda-project/kubeprobe/pkg/probe-agent/apis/v1alpha1"
+	probev1alpha1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1alpha1"
 	"github.com/go-logr/logr"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
@@ -43,9 +43,9 @@ func (r *ProbeReconciler) initLogger(ctx context.Context) {
 	r.log = logger.FromContext(ctx)
 }
 
-//+kubebuilder:rbac:groups=probe.github.com,resources=probes,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=probe.github.com,resources=probes/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=probe.github.com,resources=probes/finalizers,verbs=update
+//+kubebuilder:rbac:groups=kubeprober.erda.cloud,resources=probes,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=kubeprober.erda.cloud,resources=probes/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=kubeprober.erda.cloud,resources=probes/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

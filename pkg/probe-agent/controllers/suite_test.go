@@ -17,7 +17,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	probev1alpha1 "github.com/erda-project/kubeprobe/pkg/probe-agent/apis/v1alpha1"
+	probev1alpha1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/kubernetes/scheme"

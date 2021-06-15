@@ -15,24 +15,26 @@ package controller
 
 import (
 	"context"
-
+	kubeprobev1 "github.com/erda-project/kubeprober/pkg/probe-master/apis/v1"
+	"github.com/go-logr/logr"
+	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	kubeprobev1 "github.com/erda-project/kubeprobe/pkg/probe-master/apis/v1"
 )
 
 // ClusterReconciler reconciles a Cluster object
 type ClusterReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	Log    logr.Logger
 }
 
-//+kubebuilder:rbac:groups=kubeprobe.my.domain,resources=clusters,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=kubeprobe.my.domain,resources=clusters/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=kubeprobe.my.domain,resources=clusters/finalizers,verbs=update
+//+kubebuilder:rbac:groups=kubeprober.erda.cloud,resources=clusters,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=kubeprober.erda.cloud,resources=clusters/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=kubeprober.erda.cloud,resources=clusters/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -44,10 +46,22 @@ type ClusterReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
-
+	//log := r.Log.WithValues("probe-master")
+	//log.Info("get cluster resources is %+v\n", reqk.NamespacedName)
 	// your logic here
-
+	var err error
+	cluster := &kubeprobev1.Cluster{}
+	if err = r.Get(ctx, req.NamespacedName, cluster); err != nil {
+		klog.Infof("errror is %+v\n", err)
+	}
+	pod := &v1.Pod{}
+	if err = r.Get(ctx, types.NamespacedName{
+		Namespace: "kube-system",
+		Name:      "kindnet-l78cx",
+	}, pod); err != nil {
+		klog.Infof("get pod error  is %+v\n", err)
+	}
+	klog.Infof("get pod spec is: %+v\n", pod)
 	return ctrl.Result{}, nil
 }
 
