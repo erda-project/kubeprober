@@ -63,7 +63,7 @@ build: generate fmt vet ## Build manager binary.
 master: manifests generate fmt vet ## Run a controller from your host.
 	go run ./cmd/probe-master/probe-master.go
 
-agent:
+agent: manifests generate fmt vet ## Run a controller from your host.
 	go run ./cmd/probe-agent/probe-agent.go
 
 docker-build: test ## Build docker image with the manager.

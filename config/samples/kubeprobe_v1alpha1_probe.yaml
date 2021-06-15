@@ -1,0 +1,15 @@
+apiVersion: kubeprober.erda.cloud/v1alpha1
+kind: Probe
+metadata:
+  name: probe-sample
+spec:
+  # Add fields here
+  probeList:
+    # Probe item1
+    - name: probe-check1
+      spec:
+        containers:
+          - name: hello
+            image: busybox
+            command: ['sh', '-c', 'echo "Hello, Kubernetes!" && sleep 10']
+        restartPolicy: Never

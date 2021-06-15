@@ -66,7 +66,7 @@ func (o *ProbeAgentOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.BoolVar(&o.CreateDefaultPool, "create-default-pool", o.CreateDefaultPool, "Create default cloud/edge pools if indicated.")
 	fs.BoolVar(&o.Version, "version", o.Version, "print the version information.")
 	fs.StringVar(&o.ProbeMasterAddr, "probe-master-addr", o.ProbeMasterAddr, "The address of the probe-master")
-	fs.StringVar(&o.ClusterName, "version", o.ClusterName, "cluster name.")
-	fs.StringVar(&o.SecretKey, "version", o.SecretKey, "secret key of this cluster.")
+	fs.StringVar(&o.ClusterName, "cluster-name", o.ClusterName, "cluster name.")
+	fs.StringVar(&o.SecretKey, "secret-key", o.SecretKey, "secret key of this cluster.")
 
 }

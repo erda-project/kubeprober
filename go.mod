@@ -1,6 +1,6 @@
 module github.com/erda-project/kubeprober
 
-go 1.16
+go 1.15
 
 require (
 	github.com/go-logr/logr v0.3.0
