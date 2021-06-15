@@ -1,6 +1,3 @@
-
-# Image URL to use all building/pushing image targets
-IMG ?= controller:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 
@@ -49,28 +46,19 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
-ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
-test: manifests generate fmt vet ## Run tests.
-	mkdir -p ${ENVTEST_ASSETS_DIR}
-	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.8.3/hack/setup-envtest.sh
-	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -coverprofile cover.out
-
 ##@ Build
 
 build: generate fmt vet ## Build manager binary.
-	go build -o bin/manager main.go
+	go build -o _bin/${APP_NAME} ./cmd/${APP_NAME}/${APP_NAME}.go
 
-master: manifests generate fmt vet ## Run a controller from your host.
-	go run ./cmd/probe-master/probe-master.go
+run: manifests generate fmt vet ## Run a controller from your host.
+	go run ./cmd/${APP_NAME}/${APP_NAME}.go
 
-agent: manifests generate fmt vet ## Run a controller from your host.
-	go run ./cmd/probe-agent/probe-agent.go
-
-docker-build: test ## Build docker image with the manager.
-	docker build -t ${IMG} .
+docker-build: ## Build docker image with the manager.
+	docker build --build-arg APP_NAME=${APP_NAME} -t ${APP_NAME}:latest .
 
 docker-push: ## Push docker image with the manager.
-	docker push ${IMG}
+	docker push ${APP_NAME}:latest
 
 ##@ Deployment
 
