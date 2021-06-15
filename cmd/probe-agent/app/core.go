@@ -20,10 +20,10 @@ import (
 	"context"
 	"os"
 
-	"github.com/erda-project/kubeprobe/cmd/probe-agent/options"
-	probev1alpha1 "github.com/erda-project/kubeprobe/pkg/probe-agent/apis/v1alpha1"
-	"github.com/erda-project/kubeprobe/pkg/probe-agent/controllers"
-	client "github.com/erda-project/kubeprobe/pkg/probe-agent/tunnel"
+	"github.com/erda-project/kubeprober/cmd/probe-agent/options"
+	probev1alpha1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1alpha1"
+	"github.com/erda-project/kubeprober/pkg/probe-agent/controllers"
+	client "github.com/erda-project/kubeprober/pkg/probe-agent/tunnel"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -48,7 +48,7 @@ func init() {
 	//+kubebuilder:scaffold:scheme
 }
 
-// NewCmdYurtAppManager creates a *cobra.Command object with default parameters
+// NewCmdProbeAgentManager creates a *cobra.Command object with default parameters
 func NewCmdProbeAgentManager(stopCh <-chan struct{}) *cobra.Command {
 	ProbeMasterOptions := options.NewProbeAgentOptions()
 	cmd := &cobra.Command{
@@ -80,14 +80,11 @@ func Run(opts *options.ProbeAgentOptions) {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zapopt)))
 
 	ctx := context.Background()
-	err := client.Start(ctx, &client.Config{
-		Debug:                   false,
-		CollectClusterInfo:      true,
-		ClusterDialEndpoint:     "ws://127.0.0.1:8088/clusteragent/connect",
-		ClusterHeatBeatEndpoint: "http://127.0.0.1:8088/heartbeat",
-		ClusterKey:              "moon",
-		SecretKey:               "mmon",
-		K8SApiServerAddr:        "127.0.0.1:55794",
+	client.Start(ctx, &client.Config{
+		Debug:           false,
+		ProbeMasterAddr: "http://127.0.0.1:8088",
+		ClusterName:     "moon",
+		SecretKey:       "a944499f-97f3-4986-89fa-bc7dfc7e009a",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start tunnl")

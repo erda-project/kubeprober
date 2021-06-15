@@ -17,84 +17,80 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/erda-project/kubeprober/apistructs"
+	kubeprobev1 "github.com/erda-project/kubeprober/pkg/probe-master/apis/v1"
 	"github.com/gorilla/mux"
 	"github.com/rancher/remotedialer"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog"
 	"net"
 	"net/http"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
-	"sync"
+	"time"
 )
 
-var (
-	l       sync.Mutex
-	clients = map[string]*http.Client{}
-	counter int64
-)
-
-type cluster struct {
-	Address string `json:"address"`
-	Token   string `json:"token"`
-	CACert  string `json:"caCert"`
-}
-
-func clusterRegister(server *remotedialer.Server, rw http.ResponseWriter, req *http.Request, needClusterInfo bool) {
-	//fmt.Println("xxxxxxx")
-	//if needClusterInfo {
-	//	info := req.Header.Get("X-Erda-Cluster-Info")
-	//	fmt.Printf("cluster-info is %+v\n", info)
-	//	if info == "" {
-	//		remotedialer.DefaultErrorWriter(rw, req, 400, errors.New("missing header:X-Erda-Cluster-Info"))
-	//		return
-	//	}
-	//	var clusterInfo cluster
-	//	bytes, err := base64.StdEncoding.DecodeString(info)
-	//	if err != nil {
-	//		remotedialer.DefaultErrorWriter(rw, req, 400, err)
-	//		return
-	//	}
-	//	if err := json.Unmarshal(bytes, &clusterInfo); err != nil {
-	//		remotedialer.DefaultErrorWriter(rw, req, 400, err)
-	//		return
-	//	}
-	//	if clusterInfo.Address == "" {
-	//		err = errors.New("invalid cluster info, address empty")
-	//		remotedialer.DefaultErrorWriter(rw, req, 400, err)
-	//		return
-	//	}
-	//	if clusterInfo.Token == "" {
-	//		err = errors.New("invalid cluster info, token empty")
-	//		remotedialer.DefaultErrorWriter(rw, req, 400, err)
-	//		return
-	//	}
-	//	if clusterInfo.CACert == "" {
-	//		err = errors.New("invalid cluster info, caCert empty")
-	//		remotedialer.DefaultErrorWriter(rw, req, 400, err)
-	//		return
-	//	}
-	//	// TODO: register cluster info
-	//}
+func clusterRegister(server *remotedialer.Server, rw http.ResponseWriter, req *http.Request) {
 	server.ServeHTTP(rw, req)
 }
 
-type HeartBeatReq struct {
-	Address   string `json:"address"`
-	CaData    string `json:"caData"`
-	CertData  string `json:"certData"`
-	KeyData   string `json:"keyData"`
-	Token     string `json:"token"`
-	Version   string `json:"version"`
-	NodeCount string `json:"nodeCount"`
-}
-
 func heartbeat(rw http.ResponseWriter, req *http.Request) {
-	hbData := HeartBeatReq{}
+	hbData := apistructs.HeartBeatReq{}
+	var err error
 	if err := json.NewDecoder(req.Body).Decode(&hbData); err != nil {
 		rw.WriteHeader(http.StatusBadRequest)
-
+		return
 	}
-	fmt.Printf("hhhh heartbeat data is %+v\n", hbData)
+	klog.Errorf("[heartbeat] on cluster[%s]\n", hbData.Name)
+	patchBody := kubeprobev1.Cluster{
+		Spec: kubeprobev1.ClusterSpec{
+			K8sVersion: hbData.Version,
+			ClusterConfig: kubeprobev1.ClusterConfig{
+				Address: hbData.Address,
+				Token:   hbData.Token,
+				CACert:  hbData.CaData,
+			},
+			NodeCount: hbData.NodeCount,
+		},
+	}
+	patch, _ := json.Marshal(patchBody)
+	err = clusterRestClient.Patch(context.Background(), &kubeprobev1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      hbData.Name,
+			Namespace: metav1.NamespaceDefault,
+		},
+	}, client.RawPatch(types.MergePatchType, patch))
+	if err != nil {
+		errMsg := fmt.Sprintf("[heartbeat] patch cluster[%s] spec error: %+v\n", hbData.Name, err)
+		klog.Errorf(errMsg)
+		rw.Write([]byte(errMsg))
+		rw.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	statusPatchBody := kubeprobev1.Cluster{
+		Status: kubeprobev1.ClusterStatus{
+			HeartBeatTimeStamp: time.Now().Format("2006-01-02 15:04:05"),
+		},
+	}
+	statusPatch, _ := json.Marshal(statusPatchBody)
+	err = clusterRestClient.Status().Patch(context.Background(), &kubeprobev1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      hbData.Name,
+			Namespace: metav1.NamespaceDefault,
+		},
+	}, client.RawPatch(types.MergePatchType, statusPatch))
+	if err != nil {
+		errMsg := fmt.Sprintf("[heartbeat] patch cluster[%s] status error: %+v\n", hbData.Name, err)
+		klog.Errorf(errMsg)
+		rw.Write([]byte(errMsg))
+		rw.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	rw.WriteHeader(http.StatusOK)
+	return
 }
+
 func Start(ctx context.Context, cfg *Config) error {
 	handler := remotedialer.New(Authorizer, remotedialer.DefaultErrorWriter)
 	handler.ClientConnectAuthorizer = func(proto, address string) bool {
@@ -112,14 +108,10 @@ func Start(ctx context.Context, cfg *Config) error {
 	// TODO: support handler.AddPeer
 	router := mux.NewRouter()
 	router.Handle("/clusterdialer", handler)
-	router.HandleFunc("/heartbeat", func(rw http.ResponseWriter,
-		req *http.Request) {
-		heartbeat(rw, req)
-	})
 	router.Path("/heartbeat").Methods(http.MethodPost).HandlerFunc(heartbeat)
 	router.HandleFunc("/clusteragent/connect", func(rw http.ResponseWriter,
 		req *http.Request) {
-		clusterRegister(handler, rw, req, cfg.NeedClusterInfo)
+		clusterRegister(handler, rw, req)
 	})
 	server := &http.Server{
 		BaseContext: func(net.Listener) context.Context {

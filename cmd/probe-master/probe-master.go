@@ -18,7 +18,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/erda-project/kubeprobe/cmd/probe-master/app"
+	"github.com/erda-project/kubeprober/cmd/probe-master/app"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog"
 )

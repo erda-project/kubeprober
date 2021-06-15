@@ -13,10 +13,27 @@
 
 package server
 
-import "time"
+import (
+	kubeprobev1 "github.com/erda-project/kubeprober/pkg/probe-master/apis/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
 
-type Config struct {
-	Debug   bool          `default:"false" desc:"enable debug logging"`
-	Timeout time.Duration `default:"60s" desc:"default timeout"`
-	Listen  string        `default:":8088" desc:"listen address"`
+var (
+	clusterRestClient client.Client
+)
+
+func init() {
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		return
+	}
+
+	scheme := runtime.NewScheme()
+	kubeprobev1.AddToScheme(scheme)
+	clusterRestClient, err = client.New(config, client.Options{Scheme: scheme})
+	if err != nil {
+		return
+	}
 }

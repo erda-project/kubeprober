@@ -5,7 +5,7 @@ metadata:
   name: cluster-viewer-role
 rules:
 - apiGroups:
-  - kubeprobe.my.domain
+  - kubeprober.erda.cloud
   resources:
   - clusters
   verbs:
@@ -13,7 +13,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - kubeprobe.my.domain
+  - kubeprober.erda.cloud
   resources:
   - clusters/status
   verbs:

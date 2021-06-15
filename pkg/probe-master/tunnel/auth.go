@@ -13,15 +13,39 @@
 
 package server
 
-import "net/http"
+import (
+	"context"
+	kubeprobev1 "github.com/erda-project/kubeprober/pkg/probe-master/apis/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog"
+	"net/http"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
 
 func Authorizer(req *http.Request) (string, bool, error) {
+	var err error
+	var uid string
 	// inner proxy not need auth
 	if req.URL.Path == "/clusterdialer" {
 		return "proxy", true, nil
 	}
-	clusterKey := req.Header.Get("X-Erda-Cluster-Key")
-	// TODO: support openapi auth
-	auth := req.Header.Get("Authorization")
-	return clusterKey, auth != "", nil
+	clusterName := req.Header.Get("X-Cluster-Name")
+	secretKey := req.Header.Get("Secret-Key")
+	if uid, err = getUidByClusterName(clusterName); err != nil {
+		klog.Errorf("[remote dialer authorizer] get uid by cluster name [%s] error: %+v\n", clusterName, err)
+		return clusterName, false, err
+	}
+	return clusterName, secretKey == uid, nil
+}
+
+func getUidByClusterName(name string) (string, error) {
+	cluster := &kubeprobev1.Cluster{}
+	err := clusterRestClient.Get(context.Background(), client.ObjectKey{
+		Name:      name,
+		Namespace: metav1.NamespaceDefault,
+	}, cluster)
+	if err != nil {
+		return "", err
+	}
+	return string(cluster.ObjectMeta.UID), nil
 }
