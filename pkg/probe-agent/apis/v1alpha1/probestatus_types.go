@@ -22,11 +22,35 @@ import (
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+
+type CheckerStatus string
+
+const (
+	CheckerStatusError   CheckerStatus = "ERROR"
+	CheckerStatusWARN    CheckerStatus = "WARN"
+	CheckerStatusInfo    CheckerStatus = "INFO"
+	CheckerStatusUNKNOWN CheckerStatus = "UNKNOWN"
+)
+
+func (c CheckerStatus) Priority() int {
+	if c == CheckerStatusUNKNOWN {
+		return 1
+	} else if c == CheckerStatusInfo {
+		return 2
+	} else if c == CheckerStatusWARN {
+		return 3
+	} else if c == CheckerStatusError {
+		return 4
+	} else {
+		return 0
+	}
+}
+
 type ProbeCheckerStatus struct {
 	// checker name
 	Name string `json:"name"`
-	// error/warn/info/unknown
-	Status string `json:"ok,omitempty"`
+	// ERROR/WARN/WARN/UNKNOWN
+	Status CheckerStatus `json:"status,omitempty"`
 	// if not ok, keep error message
 	Message string       `json:"message,omitempty"`
 	LastRun *metav1.Time `json:"lastRun,omitempty"`
@@ -34,13 +58,13 @@ type ProbeCheckerStatus struct {
 
 type ProbeItemStatus struct {
 	ProbeCheckerStatus `json:",inline"`
-	Checkers           []ProbeCheckerStatus `json:"checkers"`
+	Checkers           []ProbeCheckerStatus `json:"checkers,omitempty"`
 }
 
 type ProbeStatusSpec struct {
 	ProbeCheckerStatus `json:",inline"`
-	Namespace          string            `json:"namespace"`
-	Detail             []ProbeItemStatus `json:"detail"`
+	Namespace          string            `json:"namespace,omitempty"`
+	Detail             []ProbeItemStatus `json:"detail,omitempty"`
 }
 
 // ProbeStatusStatus defines the observed state of ProbeStatus

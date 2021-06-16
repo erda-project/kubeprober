@@ -58,3 +58,29 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - kubeprober.erda.cloud
+  resources:
+  - probestatuses
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - kubeprober.erda.cloud
+  resources:
+  - probestatuses/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - kubeprober.erda.cloud
+  resources:
+  - probestatuses/status
+  verbs:
+  - get
+  - patch
+  - update
