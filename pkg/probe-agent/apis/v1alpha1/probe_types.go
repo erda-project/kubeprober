@@ -39,7 +39,7 @@ type ProbeSpec struct {
 }
 
 // ProbeStatus defines the observed state of Probe
-type ProbeStatus struct {
+type ProbeStates struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 }
@@ -53,7 +53,7 @@ type Probe struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   ProbeSpec   `json:"spec,omitempty"`
-	Status ProbeStatus `json:"status,omitempty"`
+	Status ProbeStates `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true

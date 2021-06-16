@@ -1,7 +1,7 @@
 domain: erda.cloud
 layout:
 - go.kubebuilder.io/v3
-projectName: probe-master
+projectName: kubeprober
 repo: github.com/erda-project/kubeprober
 resources:
 - api:
@@ -11,6 +11,6 @@ resources:
   domain: erda.cloud
   group: kubeprober
   kind: Cluster
-  path: github.com/erda-project/kubeprober/api/v1
+  path: github.com/erda-project/kubeprober/pkg/probe-master/apis/v1
   version: v1
 version: "3"
