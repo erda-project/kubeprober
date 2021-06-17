@@ -9,7 +9,7 @@ resources:
     namespaced: true
   controller: true
   domain: erda.cloud
-  group: kubeprobe
+  group: kubeprober
   kind: Cluster
   path: github.com/erda-project/kubeprober/api/v1
   version: v1

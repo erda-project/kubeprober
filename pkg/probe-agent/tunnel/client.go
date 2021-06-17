@@ -23,6 +23,8 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/erda-project/kubeprober/apistructs"
@@ -32,14 +34,13 @@ import (
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog"
 )
 
 var connected = make(chan struct{})
 
 const (
-	tokenFile               = "/var/run/secrets/kubernetes.io/serviceaccount/token"
-	rootCAFile              = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 	dailEndPointSuffix      = "/clusteragent/connect"
 	heartBeatEndPointSuffix = "/heartbeat"
 )
@@ -48,23 +49,22 @@ func sendHeartBeat(heartBeatAddr string, clusterName string, secretKey string) e
 	ctx := context.Background()
 	var rsp *http.Response
 	var err error
-	var caData []byte
-	var token []byte
 	var clientset *kubernetes.Clientset
 	var version *version.Info
 	var nodes *v1.NodeList
 
-	if caData, err = ioutil.ReadFile(rootCAFile); err != nil {
-		return err
+	userHomeDir, err := os.UserHomeDir()
+	if err != nil {
+		userHomeDir = ""
 	}
-
-	if token, err = ioutil.ReadFile(tokenFile); err != nil {
-		return err
-	}
-
+	kubeConfig := filepath.Join(userHomeDir, ".kube", "config")
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		return nil
+		config, err = clientcmd.BuildConfigFromFlags("", kubeConfig)
+		if err != nil {
+			klog.Errorf("[remote dialer agent] get kubernetes client config error: %+v\n", err)
+			return err
+		}
 	}
 
 	config.AcceptContentTypes = "application/json"
@@ -78,15 +78,16 @@ func sendHeartBeat(heartBeatAddr string, clusterName string, secretKey string) e
 		return err
 	}
 	hbData := apistructs.HeartBeatReq{
-		Name:      clusterName,
-		SecretKey: secretKey,
-		Address:   config.Host,
-		CaData:    base64.StdEncoding.EncodeToString(caData),
-		CertData:  "",
-		KeyData:   "",
-		Token:     base64.StdEncoding.EncodeToString(token),
-		Version:   version.String(),
-		NodeCount: len(nodes.Items),
+		Name:           clusterName,
+		SecretKey:      secretKey,
+		Address:        config.Host,
+		ProbeNamespace: os.Getenv("POD_NAMESPACE"),
+		CaData:         base64.StdEncoding.EncodeToString(config.CAData),
+		CertData:       base64.StdEncoding.EncodeToString(config.CertData),
+		KeyData:        base64.StdEncoding.EncodeToString(config.KeyData),
+		Token:          base64.StdEncoding.EncodeToString([]byte(config.BearerToken)),
+		Version:        version.String(),
+		NodeCount:      len(nodes.Items),
 	}
 	json_data, _ := json.Marshal(hbData)
 	if rsp, err = http.Post(heartBeatAddr, "application/json", bytes.NewBuffer(json_data)); err != nil {
@@ -99,7 +100,7 @@ func sendHeartBeat(heartBeatAddr string, clusterName string, secretKey string) e
 	rsp.Body.Close()
 	return nil
 }
-func Start(ctx context.Context, cfg *Config) error {
+func Start(ctx context.Context, cfg *Config) {
 	var clusterDialEndpoint string
 	var clusterHeartBeatEndpoint string
 	headers := http.Header{
@@ -109,7 +110,8 @@ func Start(ctx context.Context, cfg *Config) error {
 
 	u, err := url.Parse(cfg.ProbeMasterAddr)
 	if err != nil {
-		return err
+		klog.Errorf("[tunnel-client] get probe-master addr error: %+v\n", err)
+		return
 	}
 	switch u.Scheme {
 	case "http":
@@ -145,7 +147,7 @@ func Start(ctx context.Context, cfg *Config) error {
 		}, onConnect)
 		select {
 		case <-ctx.Done():
-			return nil
+			return
 		case <-time.After(time.Duration(rand.Int()%10) * time.Second):
 			// retry connect after sleep a random time
 		}

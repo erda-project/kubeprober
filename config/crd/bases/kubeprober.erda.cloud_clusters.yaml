@@ -17,14 +17,14 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .metadata.uid
-      name: UID
-      type: string
     - jsonPath: .spec.k8sVersion
       name: Version
       type: string
     - jsonPath: .spec.nodeCount
       name: NodeCount
+      type: string
+    - jsonPath: .spec.clusterConfig.probeNamespaces
+      name: PROBENAMESPACES
       type: string
     - jsonPath: .status.heartBeatTimeStamp
       name: HEARTBEATTIME
@@ -58,11 +58,20 @@ spec:
                     type: string
                   caCert:
                     type: string
+                  certData:
+                    type: string
+                  keyData:
+                    type: string
+                  probeNamespaces:
+                    type: string
                   token:
                     type: string
                 required:
                 - address
                 - caCert
+                - certData
+                - keyData
+                - probeNamespaces
                 - token
                 type: object
               extraInfo:

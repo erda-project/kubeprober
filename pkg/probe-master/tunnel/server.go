@@ -17,6 +17,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
+	"net/http"
+	"strings"
+	"time"
+
 	"github.com/erda-project/kubeprober/apistructs"
 	kubeprobev1 "github.com/erda-project/kubeprober/pkg/probe-master/apis/v1"
 	"github.com/gorilla/mux"
@@ -24,11 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
-	"net"
-	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
-	"time"
 )
 
 func clusterRegister(server *remotedialer.Server, rw http.ResponseWriter, req *http.Request) {
@@ -42,14 +43,16 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 		rw.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	klog.Errorf("[heartbeat] on cluster[%s]\n", hbData.Name)
 	patchBody := kubeprobev1.Cluster{
 		Spec: kubeprobev1.ClusterSpec{
 			K8sVersion: hbData.Version,
 			ClusterConfig: kubeprobev1.ClusterConfig{
-				Address: hbData.Address,
-				Token:   hbData.Token,
-				CACert:  hbData.CaData,
+				Address:         hbData.Address,
+				Token:           hbData.Token,
+				CACert:          hbData.CaData,
+				CertData:        hbData.CertData,
+				KeyData:         hbData.KeyData,
+				ProbeNamespaces: hbData.ProbeNamespace,
 			},
 			NodeCount: hbData.NodeCount,
 		},
