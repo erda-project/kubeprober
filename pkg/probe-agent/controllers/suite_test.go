@@ -17,6 +17,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/sirupsen/logrus"
+
+	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	probev1alpha1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -74,3 +79,33 @@ var _ = AfterSuite(func() {
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
 })
+
+var probe = probev1alpha1.Probe{
+	ObjectMeta: metav1.ObjectMeta{
+		Namespace: "default",
+		Name:      "probe-test1",
+	},
+	Spec: probev1alpha1.ProbeSpec{
+		ProbeList: []probev1alpha1.ProbeItem{
+			{
+				Name: "probe-item-test1",
+				Spec: apiv1.PodSpec{
+					Containers: []apiv1.Container{
+						{
+							Name:    "hello",
+							Image:   "busybox",
+							Command: []string{"echo hello"},
+						},
+					},
+				},
+			},
+		},
+		Policy: probev1alpha1.Policy{},
+	},
+}
+
+func TestEnvInject(t *testing.T) {
+	pItem := probe.Spec.ProbeList[0]
+	envInject(&pItem, &probe)
+	logrus.Infof("probe item:%++v", pItem)
+}

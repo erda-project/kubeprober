@@ -16,18 +16,23 @@ package controllers
 import (
 	"context"
 
+	"github.com/go-logr/logr"
+	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	probev1alpha1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1alpha1"
+	logger "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // ProbeStatusReconciler reconciles a ProbeStatus object
 type ProbeStatusReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	log    logr.Logger
+}
+
+func (r *ProbeStatusReconciler) initLogger(ctx context.Context) {
+	r.log = logger.FromContext(ctx)
 }
 
 //+kubebuilder:rbac:groups=kubeprober.erda.cloud,resources=probestatuses,verbs=get;list;watch;create;update;patch;delete
@@ -44,16 +49,16 @@ type ProbeStatusReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *ProbeStatusReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	r.initLogger(ctx)
+	r.log.V(1).Info("receive event", "job", req)
 
 	// your logic here
-
 	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ProbeStatusReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&probev1alpha1.ProbeStatus{}).
+		For(&batchv1.Job{}).
 		Complete(r)
 }

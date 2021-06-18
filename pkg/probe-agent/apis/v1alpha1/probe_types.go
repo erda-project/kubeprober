@@ -18,6 +18,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	ProbeNamespace       = "KUBEPROBER_PROBE_NAMESPACE"
+	ProbeName            = "KUBEPROBER_PROBE_NAME"
+	ProbeItemName        = "KUBEPROBER_PROBE_ITEM_NAME"
+	ProbeStatusReportUrl = "KUBEPROBER_STATUS_REPORT_URL"
+
+	LabelKeyProbeNameSpace = "kubeprober.erda.cloud/probe-namespace"
+	LabelKeyProbeName      = "kubeprober.erda.cloud/probe-name"
+	LabelKeyProbeItemName  = "kubeprober.erda.cloud/probe-item-name"
+)
+
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
@@ -29,6 +40,7 @@ type ProbeItem struct {
 }
 
 type Policy struct {
+	// unit: minute
 	RunInterval int `json:"runInterval,omitempty"`
 }
 

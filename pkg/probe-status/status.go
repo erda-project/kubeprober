@@ -19,11 +19,6 @@ import (
 
 const (
 	maxReportTime = time.Second * 30
-
-	ProbeNamespace       = "PROBE_NAMESPACE"
-	ProbeName            = "PROBE_NAME"
-	ProbeItemName        = "PROBE_ITEM_NAME"
-	ProbeStatusReportUrl = "STATUS_REPORT_URL"
 )
 
 type ReportProbeStatusSpec struct {
@@ -183,7 +178,7 @@ func (p *ProbeStatusReportInfo) InitProbeNamespace() error {
 	if len(data) != 0 {
 		namespace = string(data)
 	} else {
-		namespace = os.Getenv(ProbeNamespace)
+		namespace = os.Getenv(probev1alpha1.ProbeNamespace)
 	}
 
 	if namespace == "" {
@@ -199,7 +194,7 @@ func (p *ProbeStatusReportInfo) InitProbeNamespace() error {
 }
 
 func (p *ProbeStatusReportInfo) InitProbeName() error {
-	name := os.Getenv(ProbeName)
+	name := os.Getenv(probev1alpha1.ProbeName)
 	if name == "" {
 		err := fmt.Errorf("cannot get probe name from environment")
 		logrus.Errorf(err.Error())
@@ -210,7 +205,7 @@ func (p *ProbeStatusReportInfo) InitProbeName() error {
 }
 
 func (p *ProbeStatusReportInfo) InitProbeItemName() error {
-	name := os.Getenv(ProbeItemName)
+	name := os.Getenv(probev1alpha1.ProbeItemName)
 	if name == "" {
 		err := fmt.Errorf("cannot get probe item name from environment")
 		logrus.Errorf(err.Error())
@@ -221,7 +216,7 @@ func (p *ProbeStatusReportInfo) InitProbeItemName() error {
 }
 
 func (p *ProbeStatusReportInfo) InitProbeStatusReportUrl() error {
-	u := os.Getenv(ProbeStatusReportUrl)
+	u := os.Getenv(probev1alpha1.ProbeStatusReportUrl)
 	if u == "" {
 		err := fmt.Errorf("cannot get probe status report url from environment")
 		logrus.Errorf(err.Error())

@@ -100,6 +100,8 @@ func Run(opts *options.ProbeAgentOptions) {
 		HealthProbeBindAddress: opts.HealthProbeAddr,
 		LeaderElection:         opts.EnableLeaderElection,
 		LeaderElectionID:       "probe-agent",
+		// TODO: use the probe controller running namespace
+		Namespace: "default",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

@@ -10,10 +10,10 @@ import (
 )
 
 func initEvn() {
-	_ = os.Setenv(ProbeNamespace, "default")
-	_ = os.Setenv(ProbeName, "probe-link-test1")
-	_ = os.Setenv(ProbeItemName, "probe-item-test2")
-	_ = os.Setenv(ProbeStatusReportUrl, "http://localhost:8081/probe-status")
+	_ = os.Setenv(probev1alpha1.ProbeNamespace, "default")
+	_ = os.Setenv(probev1alpha1.ProbeName, "probe-link-test1")
+	_ = os.Setenv(probev1alpha1.ProbeItemName, "probe-item-test2")
+	_ = os.Setenv(probev1alpha1.ProbeStatusReportUrl, "http://localhost:8081/probe-status")
 }
 
 func TestReportStatus(t *testing.T) {
