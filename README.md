@@ -35,9 +35,58 @@ The operator running on the management cluster. This operator maintains two CRDs
 The operator running on the managed cluster. This operator maintains two CRDs. One is a Probe that is exactly the same as the probe-master. The probe-agent executes the cluster’s diagnostic items according to the definition of the probe. The other is ProbeStatus for Record the diagnosis results of each Probe. Users can view the diagnosis results of the cluster through kubectl get probestatus in the managed cluster.
 ## Getting started
 ### Installation
-TODO
-### How to ues
-TODO
+Both the master and agent of kubeprober run as controllers in kubernetes. Before installation, make sure that you have deployed the kubernetes cluster and can access it using kubectl.
+#### Deploy probe-master：
+```
+make install
+APP_NAME=probe-master make deploy
+```
+#### Deploy probe-agent：
+
+Before deploying the agent, make sure that you have created a cluster in the master, and modify the configmap configuration after creating the cluster:
+```
+vim config/setup/probe-agent/deployment.yaml
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubeprober
+  namespace: kubeprober
+data:
+  PROBE_MASTER_ADDR: http://10.107.114.92:8088
+  CLUSTER_NAME: moon
+  SECRET_KEY: a944499f-97f3-4986-89fa-bc7dfc7e009a
+```
+install probe-agent
+```
+make install
+APP_NAME=probe-agent make deploy
+```
+
+### To start developing kubeprober
+You can run and build probe-master and probe-agent locally. please make sure that ~/.kube/config can access the kubernetes cluster.
+#### run probe-master
+```
+APP_NAME=probe-master make run
+```
+#### run probe-agent
+```
+export PROBE_MASTER_ADDR="http://127.0.0.1:8088"
+export CLUSTER_NAME="moon"
+export SECRET_KEY="a944499f-97f3-4986-89fa-bc7dfc7e009a" 
+
+APP_NAME=probe-agent make run
+```
+#### build binary file
+```
+APP_NAME=probe-master make build
+APP_NAME=probe-agent make build
+```
+#### build image
+```
+APP_NAME=probe-master make docker-build
+APP_NAME=probe-agent make docker-build
+```
 ### Write your prober
 TODO
 ## Contributing

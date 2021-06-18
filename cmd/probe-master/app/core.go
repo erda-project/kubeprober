@@ -16,11 +16,11 @@ package app
 import (
 	"context"
 	"flag"
-	//"fmt"
-	"github.com/erda-project/kubeprober/pkg/probe-master/controller"
-	"github.com/erda-project/kubeprober/pkg/probe-master/tunnel"
-	"k8s.io/apimachinery/pkg/runtime"
+
 	"os"
+
+	"github.com/erda-project/kubeprober/pkg/probe-master/controller"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 

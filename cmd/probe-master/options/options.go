@@ -32,9 +32,9 @@ type ProbeMasterOptions struct {
 // NewProbeMasterOptions creates a new NewProbeMasterOptions with a default config.
 func NewProbeMasterOptions() *ProbeMasterOptions {
 	o := &ProbeMasterOptions{
-		MetricsAddr:             ":8080",
-		PprofAddr:               ":8090",
-		HealthProbeAddr:         ":8000",
+		MetricsAddr:             ":8081",
+		PprofAddr:               ":8091",
+		HealthProbeAddr:         ":8001",
 		EnableLeaderElection:    false,
 		EnablePprof:             false,
 		LeaderElectionNamespace: "kube-system",

@@ -35,9 +35,57 @@ KubeProber 是一个针对大规模 Kubernetes 集群设计的诊断工具，用
 
 ## 开始使用
 ### 安装
-TODO
-### 如何使用
-TODO
+kubeprober的master跟agent均作为controller运行在kubernetes中，安装前确保您已经部署好了kubernetes集群，并且可以使用kubectl访问它。
+
+#### master端的安装方法：
+```
+make install
+APP_NAME=probe-master make deploy
+```
+#### agent端安装方法：
+
+部署agent前确保您在master已经创建好了一个cluster，创建好cluster后修改configmap的配置：
+```
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubeprober
+  namespace: kubeprober
+data:
+  PROBE_MASTER_ADDR: http://10.107.114.92:8088
+  CLUSTER_NAME: moon
+  SECRET_KEY: a944499f-97f3-4986-89fa-bc7dfc7e009a
+```
+安装probe-agent
+```
+make install
+APP_NAME=probe-agent make deploy
+```
+### 开发
+
+你可以在本地运行以及构建probe-master以及probe-agent，运行之前请确保本地存在~/.kube/config可以访问到kubernetes集群。
+#### 运行probe-master
+```
+APP_NAME=probe-master make run
+```
+#### 运行probe-agent
+```
+export PROBE_MASTER_ADDR="http://127.0.0.1:8088"
+export CLUSTER_NAME="moon"
+export SECRET_KEY="a944499f-97f3-4986-89fa-bc7dfc7e009a" 
+
+APP_NAME=probe-agent make run
+```
+#### 编译为二进制文件
+```
+APP_NAME=probe-master make build
+APP_NAME=probe-agent make build
+```
+#### 构建镜像
+```
+APP_NAME=probe-master make docker-build
+APP_NAME=probe-agent make docker-build
+```
 ### 自定义prober
 TODO
 ## 贡献

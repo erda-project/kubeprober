@@ -38,9 +38,12 @@ type ExtraVar struct {
 }
 
 type ClusterConfig struct {
-	Address string `json:"address"`
-	Token   string `json:"token"`
-	CACert  string `json:"caCert"`
+	Address         string `json:"address"`
+	Token           string `json:"token"`
+	CACert          string `json:"caCert"`
+	CertData        string `json:"certData"`
+	KeyData         string `json:"keyData"`
+	ProbeNamespaces string `json:"probeNamespaces"`
 }
 
 // ClusterStatus defines the observed state of Cluster
@@ -52,9 +55,9 @@ type ClusterStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="UID",type=string,JSONPath=`.metadata.uid`
 // +kubebuilder:printcolumn:name="Version",type=string,JSONPath=`.spec.k8sVersion`
 // +kubebuilder:printcolumn:name="NodeCount",type=string,JSONPath=`.spec.nodeCount`
+// +kubebuilder:printcolumn:name="PROBENAMESPACES",type=string,JSONPath=`.spec.clusterConfig.probeNamespaces`
 // +kubebuilder:printcolumn:name="HEARTBEATTIME",type=string,JSONPath=`.status.heartBeatTimeStamp`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 

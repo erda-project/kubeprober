@@ -80,16 +80,12 @@ func Run(opts *options.ProbeAgentOptions) {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zapopt)))
 
 	ctx := context.Background()
-	err := client.Start(ctx, &client.Config{
+	go client.Start(ctx, &client.Config{
 		Debug:           false,
-		ProbeMasterAddr: "http://127.0.0.1:8088",
-		ClusterName:     "moon",
-		SecretKey:       "a944499f-97f3-4986-89fa-bc7dfc7e009a",
+		ProbeMasterAddr: opts.ProbeMasterAddr,
+		ClusterName:     opts.ClusterName,
+		SecretKey:       opts.SecretKey,
 	})
-	if err != nil {
-		setupLog.Error(err, "unable to start tunnl")
-		os.Exit(1)
-	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
