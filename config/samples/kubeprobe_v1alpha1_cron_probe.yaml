@@ -1,12 +1,15 @@
 apiVersion: kubeprober.erda.cloud/v1alpha1
 kind: Probe
 metadata:
-  name: probe-sample
+  name: probe-cron-sample
 spec:
+  policy:
+    # unit: minute
+    runInterval: 1
   # Add fields here
   probeList:
     # Probe item1
-    - name: probe-check1
+    - name: probe-cron-item1
       spec:
         containers:
           - name: hello

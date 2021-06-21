@@ -18,6 +18,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	ProbeNamespace       = "KUBEPROBER_PROBE_NAMESPACE"
+	ProbeName            = "KUBEPROBER_PROBE_NAME"
+	ProbeItemName        = "KUBEPROBER_PROBE_ITEM_NAME"
+	ProbeStatusReportUrl = "KUBEPROBER_STATUS_REPORT_URL"
+
+	LabelKeyProbeNameSpace = "kubeprober.erda.cloud/probe-namespace"
+	LabelKeyProbeName      = "kubeprober.erda.cloud/probe-name"
+	LabelKeyProbeItemName  = "kubeprober.erda.cloud/probe-item-name"
+)
+
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
@@ -29,6 +40,7 @@ type ProbeItem struct {
 }
 
 type Policy struct {
+	// unit: minute
 	RunInterval int `json:"runInterval,omitempty"`
 }
 
@@ -39,7 +51,7 @@ type ProbeSpec struct {
 }
 
 // ProbeStatus defines the observed state of Probe
-type ProbeStatus struct {
+type ProbeStates struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 }
@@ -53,7 +65,7 @@ type Probe struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   ProbeSpec   `json:"spec,omitempty"`
-	Status ProbeStatus `json:"status,omitempty"`
+	Status ProbeStates `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true

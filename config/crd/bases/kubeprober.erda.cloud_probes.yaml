@@ -39,6 +39,7 @@ spec:
               policy:
                 properties:
                   runInterval:
+                    description: 'unit: minute'
                     type: integer
                 type: object
               probeList:

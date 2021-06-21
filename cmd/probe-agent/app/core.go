@@ -20,10 +20,6 @@ import (
 	"context"
 	"os"
 
-	"github.com/erda-project/kubeprober/cmd/probe-agent/options"
-	probev1alpha1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1alpha1"
-	"github.com/erda-project/kubeprober/pkg/probe-agent/controllers"
-	client "github.com/erda-project/kubeprober/pkg/probe-agent/tunnel"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -34,6 +30,12 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	"github.com/erda-project/kubeprober/cmd/probe-agent/options"
+	"github.com/erda-project/kubeprober/cmd/probe-agent/webserver"
+	probev1alpha1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1alpha1"
+	"github.com/erda-project/kubeprober/pkg/probe-agent/controllers"
+	client "github.com/erda-project/kubeprober/pkg/probe-agent/tunnel"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -70,6 +72,10 @@ func NewCmdProbeAgentManager(stopCh <-chan struct{}) *cobra.Command {
 	}
 
 	ProbeAgentOptions.AddFlags(cmd.Flags())
+	err := ProbeAgentOptions.ValidateOptions()
+	if err != nil {
+		panic(err)
+	}
 	return cmd
 }
 
@@ -94,6 +100,8 @@ func Run(opts *options.ProbeAgentOptions) {
 		HealthProbeBindAddress: opts.HealthProbeAddr,
 		LeaderElection:         opts.EnableLeaderElection,
 		LeaderElectionID:       "probe-agent",
+		// TODO: use the probe controller running namespace
+		Namespace: "default",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -107,6 +115,14 @@ func Run(opts *options.ProbeAgentOptions) {
 		setupLog.Error(err, "unable to create controller", "controller", "Probe")
 		os.Exit(1)
 	}
+
+	if err = (&controllers.ProbeStatusReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ProbeResult")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
@@ -118,9 +134,14 @@ func Run(opts *options.ProbeAgentOptions) {
 		os.Exit(1)
 	}
 
+	setupLog.Info("starting probe server")
+	s := webserver.NewServer(mgr.GetClient(), opts.ProbeListenAddr)
+	s.Start()
+
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+
 }
