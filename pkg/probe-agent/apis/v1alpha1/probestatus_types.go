@@ -28,14 +28,14 @@ type CheckerStatus string
 const (
 	CheckerStatusError   CheckerStatus = "ERROR"
 	CheckerStatusWARN    CheckerStatus = "WARN"
-	CheckerStatusInfo    CheckerStatus = "INFO"
 	CheckerStatusUNKNOWN CheckerStatus = "UNKNOWN"
+	CheckerStatusInfo    CheckerStatus = "INFO"
 )
 
 func (c CheckerStatus) Priority() int {
-	if c == CheckerStatusUNKNOWN {
+	if c == CheckerStatusInfo {
 		return 1
-	} else if c == CheckerStatusInfo {
+	} else if c == CheckerStatusUNKNOWN {
 		return 2
 	} else if c == CheckerStatusWARN {
 		return 3

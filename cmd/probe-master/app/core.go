@@ -16,22 +16,21 @@ package app
 import (
 	"context"
 	"flag"
-
 	"os"
 
-	"github.com/erda-project/kubeprober/pkg/probe-master/controller"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/klog"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	ctrl "sigs.k8s.io/controller-runtime"
-
 	"github.com/erda-project/kubeprober/cmd/probe-master/options"
 	kubeprobev1 "github.com/erda-project/kubeprober/pkg/probe-master/apis/v1"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
-	"k8s.io/klog"
+	"github.com/erda-project/kubeprober/pkg/probe-master/controller"
+	server "github.com/erda-project/kubeprober/pkg/probe-master/tunnel"
 	// +kubebuilder:scaffold:imports
 )
 

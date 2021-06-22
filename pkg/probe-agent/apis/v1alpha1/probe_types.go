@@ -24,6 +24,8 @@ const (
 	ProbeItemName        = "KUBEPROBER_PROBE_ITEM_NAME"
 	ProbeStatusReportUrl = "KUBEPROBER_STATUS_REPORT_URL"
 
+	LabelKeyApp            = "app"
+	LabelValueApp          = "kubeprober.erda.cloud"
 	LabelKeyProbeNameSpace = "kubeprober.erda.cloud/probe-namespace"
 	LabelKeyProbeName      = "kubeprober.erda.cloud/probe-name"
 	LabelKeyProbeItemName  = "kubeprober.erda.cloud/probe-item-name"

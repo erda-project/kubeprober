@@ -1,12 +1,11 @@
-package webserver
+package controllers
 
 import (
 	"testing"
 
-	"gotest.tools/assert"
-
 	probev1alpha1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1alpha1"
 	probestatus "github.com/erda-project/kubeprober/pkg/probe-status"
+	"gotest.tools/assert"
 )
 
 const (
@@ -44,6 +43,6 @@ func TestUpdateProbeStatus(t *testing.T) {
 		},
 	}
 
-	status := updateProbeStatus(r, s)
+	_, status := mergeProbeStatus(r, s)
 	assert.DeepEqual(t, s, status)
 }

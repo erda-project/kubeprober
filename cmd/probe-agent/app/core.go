@@ -22,12 +22,16 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/klog"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -93,6 +97,19 @@ func Run(opts *options.ProbeAgentOptions) {
 		SecretKey:       opts.SecretKey,
 	})
 
+	// listwatch pod for failed probe pod, listwatch cronjob for reconcile
+	// TODO: add list label selector in related controller & merge them here
+	newCacheFunc := cache.BuilderWithOptions(cache.Options{
+		SelectorsByObject: cache.SelectorsByObject{
+			&corev1.Pod{}: {
+				Label: labels.SelectorFromSet(labels.Set{probev1alpha1.LabelKeyApp: probev1alpha1.LabelValueApp}),
+			},
+			&batchv1beta1.CronJob{}: {
+				Label: labels.SelectorFromSet(labels.Set{probev1alpha1.LabelKeyApp: probev1alpha1.LabelValueApp}),
+			},
+		},
+	})
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     opts.MetricsAddr,
@@ -101,7 +118,8 @@ func Run(opts *options.ProbeAgentOptions) {
 		LeaderElection:         opts.EnableLeaderElection,
 		LeaderElectionID:       "probe-agent",
 		// TODO: use the probe controller running namespace
-		Namespace: "default",
+		// Namespace: "default",
+		NewCache: newCacheFunc,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

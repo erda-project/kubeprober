@@ -1,0 +1,16 @@
+apiVersion: kubeprober.erda.cloud/v1alpha1
+kind: Probe
+metadata:
+  name: probe-link-test2
+spec:
+  # Add fields here
+  probeList:
+    # Probe item1
+    - name: probe-item-test2-failed
+      spec:
+        activeDeadlineSeconds: 30
+        containers:
+          - name: hello-failed
+            image: busybox
+            command: ['sh', '-c', 'echo "Hello, Kubernetes!" && sleep 40']
+        restartPolicy: Never
