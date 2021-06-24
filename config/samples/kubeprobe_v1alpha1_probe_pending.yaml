@@ -1,0 +1,23 @@
+apiVersion: kubeprober.erda.cloud/v1alpha1
+kind: Probe
+metadata:
+  name: probe-sample-pending
+spec:
+  # Add fields here
+  probeList:
+    # Probe item1
+    - name: probe-check1-peding
+      spec:
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+                - matchExpressions:
+                    - key: dice/platform-test
+                      operator: Exists
+        activeDeadlineSeconds: 10
+        containers:
+          - name: hello-pending
+            image: busybox
+            command: ['sh', '-c', 'echo "Hello, Kubernetes!" && sleep 10']
+        restartPolicy: Never

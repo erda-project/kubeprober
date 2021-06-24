@@ -84,9 +84,6 @@ func (r *ProbeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 }
 
 func (r *ProbeReconciler) ReconcileJobs(ctx context.Context, probe *probev1alpha1.Probe) (ctrl.Result, error) {
-
-	r.log.V(0).Info("reconcile probe jobs")
-
 	for _, j := range probe.Spec.ProbeList {
 		_, err := r.ReconcileJob(ctx, j, probe)
 		if err != nil {
@@ -227,6 +224,7 @@ func genCronJob(pItem probev1alpha1.ProbeItem, probe *probev1alpha1.Probe) (cj b
 				},
 			},
 			Labels: map[string]string{
+				probev1alpha1.LabelKeyApp:            probev1alpha1.LabelValueApp,
 				probev1alpha1.LabelKeyProbeNameSpace: probe.Namespace,
 				probev1alpha1.LabelKeyProbeName:      probe.Name,
 				probev1alpha1.LabelKeyProbeItemName:  pItem.Name,
@@ -255,8 +253,10 @@ func genJob(pItem probev1alpha1.ProbeItem, probe *probev1alpha1.Probe) (j batchv
 		return
 	}
 	envInject(&pItem, probe)
-	// TODO: add annotations & labels to mark parent crd resource; add random postfix to job name
 	trueVar := true
+	// TODO: put this config in specific area
+	activeDeadlineSecond := int64(60 * 30)
+	backoffLimit := int32(0)
 	j = batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      pItem.Name,
@@ -271,6 +271,7 @@ func genJob(pItem probev1alpha1.ProbeItem, probe *probev1alpha1.Probe) (j batchv
 				},
 			},
 			Labels: map[string]string{
+				probev1alpha1.LabelKeyApp:            probev1alpha1.LabelValueApp,
 				probev1alpha1.LabelKeyProbeNameSpace: probe.Namespace,
 				probev1alpha1.LabelKeyProbeName:      probe.Name,
 				probev1alpha1.LabelKeyProbeItemName:  pItem.Name,
@@ -280,6 +281,7 @@ func genJob(pItem probev1alpha1.ProbeItem, probe *probev1alpha1.Probe) (j batchv
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
+						probev1alpha1.LabelKeyApp:            probev1alpha1.LabelValueApp,
 						probev1alpha1.LabelKeyProbeNameSpace: probe.Namespace,
 						probev1alpha1.LabelKeyProbeName:      probe.Name,
 						probev1alpha1.LabelKeyProbeItemName:  pItem.Name,
@@ -287,6 +289,8 @@ func genJob(pItem probev1alpha1.ProbeItem, probe *probev1alpha1.Probe) (j batchv
 				},
 				Spec: pItem.Spec,
 			},
+			ActiveDeadlineSeconds: &activeDeadlineSecond,
+			BackoffLimit:          &backoffLimit,
 		},
 	}
 
