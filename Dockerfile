@@ -1,3 +1,4 @@
+
 # Build the manager binary
 FROM golang:1.16 as builder
 
@@ -24,8 +25,11 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o ${APP_NAME} ./cmd/${APP
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM alpine:3.9
-WORKDIR /
-COPY --from=builder /workspace/${APP_NAME} .
+ARG APP_NAME
+ENV APP_NAME=${APP_NAME}
+WORKDIR /workspace
+
+COPY --from=builder /workspace/${APP_NAME} /workspace
 #USER 65532:65532
 
-ENTRYPOINT ["/${APP_NAME}"]
+ENTRYPOINT [ "sh", "-c", "/workspace/${APP_NAME}"]
