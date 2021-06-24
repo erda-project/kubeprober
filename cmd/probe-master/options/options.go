@@ -27,6 +27,7 @@ type ProbeMasterOptions struct {
 	Namespace               string
 	CreateDefaultPool       bool
 	Version                 bool
+	ProbeMasterListenAddr   string
 }
 
 // NewProbeMasterOptions creates a new NewProbeMasterOptions with a default config.
@@ -40,6 +41,7 @@ func NewProbeMasterOptions() *ProbeMasterOptions {
 		LeaderElectionNamespace: "kube-system",
 		Namespace:               "",
 		CreateDefaultPool:       false,
+		ProbeMasterListenAddr:   ":8088",
 	}
 
 	return o

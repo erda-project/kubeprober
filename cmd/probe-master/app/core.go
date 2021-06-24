@@ -17,20 +17,23 @@ import (
 	"context"
 	"flag"
 	"os"
+	"time"
 
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
+	"github.com/erda-project/kubeprober/pkg/probe-master/controller"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/klog"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/erda-project/kubeprober/cmd/probe-master/options"
-	kubeprobev1 "github.com/erda-project/kubeprober/pkg/probe-master/apis/v1"
-	"github.com/erda-project/kubeprober/pkg/probe-master/controller"
-	server "github.com/erda-project/kubeprober/pkg/probe-master/tunnel"
+	probev1alpha1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1alpha1"
+	clusterv1 "github.com/erda-project/kubeprober/pkg/probe-master/apis/v1"
+	server "github.com/erda-project/kubeprober/pkg/probe-master/tunnel-server"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"k8s.io/klog"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -44,7 +47,8 @@ var (
 
 func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
-	_ = kubeprobev1.AddToScheme(scheme)
+	_ = clusterv1.AddToScheme(scheme)
+	_ = probev1alpha1.AddToScheme(scheme)
 
 	// +kubebuilder:scaffold:scheme
 }
@@ -95,12 +99,19 @@ func Run(opts *options.ProbeMasterOptions) {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
-
 	if err = (&controller.ClusterReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Cluster")
+		os.Exit(1)
+	}
+
+	if err = (&controller.ProbeReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Probe")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder
@@ -119,10 +130,11 @@ func Run(opts *options.ProbeMasterOptions) {
 	go server.Start(ctx, &server.Config{
 		Debug:   false,
 		Timeout: 0,
-		Listen:  ":8088",
+		Listen:  opts.ProbeMasterListenAddr,
 	})
 
 	setupLog.Info("starting manager")
+	time.Sleep(10 * time.Second)
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
