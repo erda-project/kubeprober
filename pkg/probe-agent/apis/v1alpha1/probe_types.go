@@ -56,6 +56,7 @@ type ProbeSpec struct {
 type ProbeStates struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	MD5 string `json:"md5,omitempty"`
 }
 
 //+kubebuilder:object:root=true

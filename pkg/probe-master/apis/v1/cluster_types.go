@@ -50,7 +50,8 @@ type ClusterConfig struct {
 type ClusterStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	HeartBeatTimeStamp string `json:"heartBeatTimeStamp,omitempty"`
+	HeartBeatTimeStamp string   `json:"heartBeatTimeStamp,omitempty"`
+	AttachedProbes     []string `json:"attachedProbes,omitempty"`
 }
 
 //+kubebuilder:object:root=true

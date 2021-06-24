@@ -83,6 +83,9 @@ rules:
       - clusters
       - clusters/status
       - probes
+      - probes/status
+      - probestatuses
+      - probestatuses/status
     verbs:
       - create
       - get

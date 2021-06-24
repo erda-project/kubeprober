@@ -15,7 +15,9 @@ package controllers
 
 import (
 	"context"
+	"crypto/md5"
 	"fmt"
+	"k8s.io/apimachinery/pkg/util/json"
 
 	"github.com/go-logr/logr"
 	batchv1 "k8s.io/api/batch/v1"
@@ -75,6 +77,18 @@ func (r *ProbeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 			return ctrl.Result{}, err
 		}
 	}
+
+	//update probe status
+	probeSpecByte, _ := json.Marshal(probe.Spec)
+	probeSpecHas := fmt.Sprintf("%x", md5.Sum(probeSpecByte))
+	if probe.Status.MD5 != fmt.Sprintf("%x", probeSpecHas) {
+		probe.Status.MD5 = probeSpecHas
+		err := r.Status().Update(ctx, &probe)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	// check whether it's single probe or cron probe
 	if probe.Spec.Policy.RunInterval <= 0 {
 		return r.ReconcileJobs(ctx, &probe)

@@ -15,12 +15,25 @@ package controller
 
 import (
 	"context"
-	kubeprobev1 "github.com/erda-project/kubeprober/pkg/probe-master/apis/v1"
+	"encoding/base64"
+	"k8s.io/apimachinery/pkg/util/json"
+	"reflect"
+	"strings"
+
+	probev1alpha1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1alpha1"
+	clusterv1 "github.com/erda-project/kubeprober/pkg/probe-master/apis/v1"
+	dialclient "github.com/erda-project/kubeprober/pkg/probe-master/tunnel-client"
 	"github.com/go-logr/logr"
-	"k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -46,28 +59,232 @@ type ClusterReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	//log := r.Log.WithValues("probe-master")
-	//log.Info("get cluster resources is %+v\n", reqk.NamespacedName)
-	// your logic here
 	var err error
-	cluster := &kubeprobev1.Cluster{}
+	var labelKeys []string
+
+	cluster := &clusterv1.Cluster{}
 	if err = r.Get(ctx, req.NamespacedName, cluster); err != nil {
-		klog.Infof("errror is %+v\n", err)
+		klog.Errorf("get cluster spec [%s] error:  %+v\n", req.Name, err)
+		return ctrl.Result{}, err
 	}
-	pod := &v1.Pod{}
-	if err = r.Get(ctx, types.NamespacedName{
-		Namespace: "kube-system",
-		Name:      "kindnet-l78cx",
-	}, pod); err != nil {
-		klog.Infof("get pod error  is %+v\n", err)
+
+	//get probe labels of cluster
+	labels := cluster.GetLabels()
+	for k, v := range labels {
+		if v == "true" && strings.Split(k, "/")[0] == "probe" {
+			labelKeys = append(labelKeys, strings.Split(k, "/")[1])
+		}
 	}
-	klog.Infof("get pod spec is: %+v\n", pod)
+	klog.Infof("labels of cluster [%s] is: %+v\n", req.Name, labelKeys)
+
+	//add probe
+	for i, _ := range labelKeys {
+		if !IsContain(cluster.Status.AttachedProbes, labelKeys[i]) {
+			probe := &probev1alpha1.Probe{}
+			if err = r.Get(ctx, types.NamespacedName{
+				Namespace: "default",
+				Name:      labelKeys[i],
+			}, probe); err != nil {
+				klog.Errorf("fail to get probe [%s], error: %+v\n", labelKeys[i], err)
+				return ctrl.Result{}, err
+			}
+			//TODO: 处理already exist的情况
+			if err = AddProbeToCluster(cluster, probe); err != nil {
+				klog.Errorf("create probe [%s] for cluster [%s] err: %+v\n", probe.Name, cluster.Name, err)
+				return ctrl.Result{}, err
+			}
+		}
+	}
+	//delete probe
+	for i, _ := range cluster.Status.AttachedProbes {
+		klog.Errorf("ppppppppppp, %+v\n", cluster.Status.AttachedProbes[i])
+		if !IsContain(labelKeys, cluster.Status.AttachedProbes[i]) {
+			//TODO: 处理not found的情况
+			if err = DeleteProbeOfCluster(cluster, cluster.Status.AttachedProbes[i]); err != nil {
+				klog.Errorf("delete probe [%s] for cluster [%s] err: %+v\n", cluster.Status.AttachedProbes[i], cluster.Name, err)
+				return ctrl.Result{}, err
+			}
+		}
+	}
+
+	//update status of cluster
+	cluster.Status.AttachedProbes = labelKeys
+	if err = r.Status().Update(ctx, cluster); err != nil {
+		klog.Errorf("update cluster [%s] status error: %+v\n", req.Name, err)
+		return ctrl.Result{}, err
+	}
 	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&kubeprobev1.Cluster{}).
+		For(&clusterv1.Cluster{}).WithEventFilter(&ClusterPredicate{}).
 		Complete(r)
+}
+func IsContain(items []string, item string) bool {
+	for _, eachItem := range items {
+		if eachItem == item {
+			return true
+		}
+	}
+	return false
+}
+
+// add probe to cluster
+func AddProbeToCluster(cluster *clusterv1.Cluster, probe *probev1alpha1.Probe) error {
+	var err error
+	var c client.Client
+
+	c, err = GenerateProbeClient(cluster)
+	if err != nil {
+		return err
+	}
+
+	pp := &probev1alpha1.Probe{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Probe",
+			APIVersion: "kubeprober.erda.cloud/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      probe.Name,
+			Namespace: cluster.Spec.ClusterConfig.ProbeNamespaces,
+		},
+		Spec: probe.Spec,
+	}
+
+	err = c.Create(context.Background(), pp)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+//delete probe of cluster
+func DeleteProbeOfCluster(cluster *clusterv1.Cluster, probeName string) error {
+	var err error
+	var c client.Client
+
+	c, err = GenerateProbeClient(cluster)
+	if err != nil {
+		return err
+	}
+
+	pp := &unstructured.Unstructured{}
+	pp.SetName(probeName)
+	pp.SetNamespace(cluster.Spec.ClusterConfig.ProbeNamespaces)
+	pp.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "kubeprober.erda.cloud",
+		Kind:    "Probe",
+		Version: "v1alpha1",
+	})
+
+	err = c.Delete(context.Background(), pp)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// get probe of cluster
+func GetProbeOfCluster(cluster *clusterv1.Cluster, probeName string) (*probev1alpha1.Probe, error) {
+	var err error
+	var c client.Client
+
+	c, err = GenerateProbeClient(cluster)
+	if err != nil {
+		return nil, err
+	}
+
+	probe := &probev1alpha1.Probe{}
+
+	err = c.Get(context.Background(), client.ObjectKey{
+		Namespace: cluster.Spec.ClusterConfig.ProbeNamespaces,
+		Name:      probeName,
+	}, probe)
+	if err != nil {
+		return nil, err
+	}
+
+	return probe, nil
+}
+
+// update probe of cluster
+func UpdateProbeOfCluster(cluster *clusterv1.Cluster, probe *probev1alpha1.Probe) error {
+	var err error
+	var c client.Client
+	var patch []byte
+
+	c, err = GenerateProbeClient(cluster)
+	if err != nil {
+		return err
+	}
+	patchBody := probev1alpha1.Probe{
+		Spec: probe.Spec,
+	}
+	if patch, err = json.Marshal(patchBody); err != nil {
+		return err
+	}
+	if err = c.Patch(context.Background(), &probev1alpha1.Probe{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      probe.Name,
+			Namespace: cluster.Spec.ClusterConfig.ProbeNamespaces,
+		},
+	}, client.RawPatch(types.MergePatchType, patch)); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+//Generate k8sclient of cluster
+func GenerateProbeClient(cluster *clusterv1.Cluster) (client.Client, error) {
+	var clusterToken []byte
+	var err error
+	var c client.Client
+
+	if clusterToken, err = base64.StdEncoding.DecodeString(cluster.Spec.ClusterConfig.Token); err != nil {
+		return nil, err
+	}
+	config, err := dialclient.GetDialerRestConfig(cluster.Name, &dialclient.ManageConfig{
+		Type:    dialclient.ManageProxy,
+		Address: cluster.Spec.ClusterConfig.Address,
+		Token:   strings.Trim(string(clusterToken), "\n"),
+	})
+	if err != nil {
+		return nil, err
+	}
+	klog.Errorf("ffffffffff  config: %+v\n", config)
+	scheme := runtime.NewScheme()
+	probev1alpha1.AddToScheme(scheme)
+	c, err = client.New(config, client.Options{Scheme: scheme})
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+type ClusterPredicate struct {
+	predicate.Funcs
+}
+
+func (rl *ClusterPredicate) Update(e event.UpdateEvent) bool {
+	//only label or extrainfo changed event hadnled
+	if !reflect.DeepEqual(e.ObjectNew.GetLabels(), e.ObjectOld.GetLabels()) {
+		return true
+	}
+	oldobj, ok1 := e.ObjectOld.(*clusterv1.Cluster)
+	newobj, ok2 := e.ObjectNew.(*clusterv1.Cluster)
+	if ok1 && ok2 {
+		if !reflect.DeepEqual(oldobj.Spec.ExtraInfo, newobj.Spec.ExtraInfo) {
+			return true
+		}
+	}
+	return false
+}
+
+func (rl *ClusterPredicate) Create(e event.CreateEvent) bool {
+	klog.Errorf("create create")
+	return true
 }
