@@ -67,21 +67,24 @@ metadata:
     app: probe-agent
 spec:
   selector:
-    matchLabels:
-      app: probe-agent
+    app: probe-agent
   ports:
     - protocol: TCP
       port: 8082
       targetPort: 8082
+      name: probe-status
     - protocol: TCP
       port: 8080
       targetPort: 8080
+      name: health
     - protocol: TCP
       port: 8090
       targetPort: 8090
+      name: pprof
     - protocol: TCP
       port: 8000
       targetPort: 8000
+      name: metrics
 ---
 apiVersion: v1
 kind: ConfigMap

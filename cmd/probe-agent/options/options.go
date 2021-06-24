@@ -18,6 +18,7 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 
 	probev1alpha1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1alpha1"
@@ -40,7 +41,7 @@ type ProbeAgentOptions struct {
 	SecretKey               string
 	ProbeStatusReportUrl    string
 	ProbeListenAddr         string
-	ProbeAgentDebug         bool
+	ProbeAgentDebug         string
 }
 
 // NewProbeAgentOptions creates a new NewProbeAgentOptions with a default config.
@@ -82,6 +83,7 @@ func (o *ProbeAgentOptions) PostConfig() error {
 	if o.ProbeStatusReportUrl == "" {
 		o.ProbeStatusReportUrl = fmt.Sprintf("http://probeagent.%s.svc.cluster.local%s/probe-status", ns, o.ProbeListenAddr)
 	}
+	logrus.Infof("probe status report url %s", o.ProbeStatusReportUrl)
 	return nil
 }
 
@@ -104,4 +106,5 @@ func (o *ProbeAgentOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.ClusterName, "cluster-name", os.Getenv("CLUSTER_NAME"), "cluster name.")
 	fs.StringVar(&o.SecretKey, "secret-key", os.Getenv("SECRET_KEY"), "secret key of this cluster.")
 	fs.StringVar(&o.ProbeStatusReportUrl, "probestatus-report-url", os.Getenv(probev1alpha1.ProbeStatusReportUrl), "probe status report url for probe check pod")
+	fs.StringVar(&o.ProbeAgentDebug, "probe-agent-debug", os.Getenv("PROBE_AGENT_DEBUG"), "whether debug probe agent, if debug stop tunnel service")
 }

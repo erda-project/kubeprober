@@ -76,14 +76,15 @@ func NewCmdProbeAgentManager(stopCh <-chan struct{}) *cobra.Command {
 	}
 
 	options.ProbeAgentConf.AddFlags(cmd.Flags())
-	err := options.ProbeAgentConf.ValidateOptions()
+	err := options.ProbeAgentConf.PostConfig()
 	if err != nil {
 		panic(err)
 	}
-	err = options.ProbeAgentConf.PostConfig()
+	err = options.ProbeAgentConf.ValidateOptions()
 	if err != nil {
 		panic(err)
 	}
+
 	return cmd
 }
 
@@ -94,7 +95,7 @@ func Run(opts *options.ProbeAgentOptions) {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zapopt)))
 
 	// if debug probe agent, disable tunnel service
-	if !opts.ProbeAgentDebug {
+	if opts.ProbeAgentDebug != "true" {
 		ctx := context.Background()
 		go client.Start(ctx, &client.Config{
 			Debug:           false,
