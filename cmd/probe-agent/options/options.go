@@ -19,7 +19,11 @@ import (
 	"os"
 
 	"github.com/spf13/pflag"
+
+	probev1alpha1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1alpha1"
 )
+
+var ProbeAgentConf = NewProbeAgentOptions()
 
 type ProbeAgentOptions struct {
 	MetricsAddr             string
@@ -36,6 +40,7 @@ type ProbeAgentOptions struct {
 	SecretKey               string
 	ProbeStatusReportUrl    string
 	ProbeListenAddr         string
+	ProbeAgentDebug         bool
 }
 
 // NewProbeAgentOptions creates a new NewProbeAgentOptions with a default config.
@@ -68,6 +73,22 @@ func (o *ProbeAgentOptions) ValidateOptions() error {
 	return nil
 }
 
+func (o *ProbeAgentOptions) PostConfig() error {
+	ns := os.Getenv("POD_NAMESPACE")
+	if o.ProbeStatusReportUrl == "" && ns == "" {
+		err := fmt.Errorf("both ProbeStatusReportUrl and POD_NAMESPACE environment is empty")
+		return err
+	}
+	if o.ProbeStatusReportUrl == "" {
+		o.ProbeStatusReportUrl = fmt.Sprintf("http://probeagent.%s.svc.cluster.local%s/probe-status", ns, o.ProbeListenAddr)
+	}
+	return nil
+}
+
+func (o ProbeAgentOptions) GetProbeStatusReportUrl() string {
+	return o.ProbeStatusReportUrl
+}
+
 // AddFlags returns flags for a specific yurthub by section name
 func (o *ProbeAgentOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.MetricsAddr, "metrics-addr", o.MetricsAddr, "The address the metric endpoint binds to.")
@@ -82,5 +103,5 @@ func (o *ProbeAgentOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.ProbeMasterAddr, "probe-master-addr", os.Getenv("PROBE_MASTER_ADDR"), "The address of the probe-master")
 	fs.StringVar(&o.ClusterName, "cluster-name", os.Getenv("CLUSTER_NAME"), "cluster name.")
 	fs.StringVar(&o.SecretKey, "secret-key", os.Getenv("SECRET_KEY"), "secret key of this cluster.")
-	fs.StringVar(&o.ProbeStatusReportUrl, "probestatus-report-url", o.ProbeStatusReportUrl, "probe status report url for probe check pod")
+	fs.StringVar(&o.ProbeStatusReportUrl, "probestatus-report-url", os.Getenv(probev1alpha1.ProbeStatusReportUrl), "probe status report url for probe check pod")
 }
