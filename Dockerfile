@@ -3,9 +3,10 @@
 FROM golang:1.16 as builder
 
 ARG APP_NAME
+# WORKDIR /go/src/github.com/erda-project/kubeprober
 WORKDIR /workspace
 ENV APP_NAME=${APP_NAME}
-ENV GOPROXY=https://goproxy.cn
+ENV GOPROXY=https://goproxy.cn,direct
 
 # Copy the Go Modules manifests
 COPY go.mod go.mod
@@ -20,16 +21,18 @@ COPY cmd/ cmd/
 COPY pkg/ pkg/
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o ${APP_NAME} ./cmd/${APP_NAME}/${APP_NAME}.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -mod readonly -a -o ${APP_NAME} ./cmd/${APP_NAME}/${APP_NAME}.go
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM alpine:3.9
+FROM centos:7
 ARG APP_NAME
 ENV APP_NAME=${APP_NAME}
-WORKDIR /workspace
+WORKDIR /
 
-COPY --from=builder /workspace/${APP_NAME} /workspace
+COPY --from=builder /workspace/${APP_NAME} .
 #USER 65532:65532
 
-ENTRYPOINT [ "sh", "-c", "/workspace/${APP_NAME}"]
+CMD [ "sh", "-c", "/${APP_NAME}"]
+
+
