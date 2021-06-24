@@ -18,6 +18,7 @@ import (
 	"crypto/md5"
 	"fmt"
 	"k8s.io/apimachinery/pkg/util/json"
+	"os"
 
 	"github.com/go-logr/logr"
 	batchv1 "k8s.io/api/batch/v1"
@@ -352,63 +353,85 @@ type ProbeEventPredicates struct {
 }
 
 func (p *ProbeEventPredicates) Create(e event.CreateEvent) bool {
-	// TODO: when controller start, create event generated for exist crd resource; should ignore finished probe job, maybe status field needed
-	n := getNamespaceName(e.Object)
-	logger.Log.V(1).Info("create event for probe task", "task", n)
-	return true
+	ns := e.Object.GetNamespace()
+	if ns == os.Getenv("POD_NAMESPACE") {
+		return true
+	}
+	return false
 }
 
 func (p *ProbeEventPredicates) Delete(e event.DeleteEvent) bool {
-	n := getNamespaceName(e.Object)
-	logger.Log.V(1).Info("ignore delete event for probe task", "task", n)
+	ns := e.Object.GetNamespace()
+	if ns == os.Getenv("POD_NAMESPACE") {
+		return true
+	}
 	return false
 }
 
 func (p *ProbeEventPredicates) Update(e event.UpdateEvent) bool {
-	n := getNamespaceName(e.ObjectNew)
-	logger.Log.V(1).Info("update event for probe task", "task", n)
+	oldObject := e.ObjectOld.(*probev1alpha1.Probe)
+	newObject := e.ObjectNew.(*probev1alpha1.Probe)
+	ns := newObject.GetNamespace()
+	if ns != os.Getenv("POD_NAMESPACE") {
+		return false
+	}
+
+	if oldObject.Status == newObject.Status {
+		return false
+	}
+
 	return true
 }
 
 func (p *ProbeEventPredicates) Generic(e event.GenericEvent) bool {
-	n := getNamespaceName(e.Object)
-	logger.Log.V(1).Info("generic event for probe task", "task", n)
-	return true
+	ns := e.Object.GetNamespace()
+	if ns == os.Getenv("POD_NAMESPACE") {
+		return true
+	}
+	return false
 }
 
-// TODO: how to watch only cronjob spec change
 type ProbeCronJobPredicates struct {
 	predicate.Funcs
 }
 
 func (pcj *ProbeCronJobPredicates) Create(e event.CreateEvent) bool {
-	//n := getNamespaceName(e.Object)
-	//p := getProbeNamespaceName(e.Object)
-	//logger.Log.V(1).Info("cronjob create event for probe task", "task", p, "cj", n)
+	ns := e.Object.GetNamespace()
+	if ns == os.Getenv("POD_NAMESPACE") {
+		return true
+	}
 	return false
 }
 
 func (pcj *ProbeCronJobPredicates) Delete(e event.DeleteEvent) bool {
-	//n := getNamespaceName(e.Object)
-	//p := getProbeNamespaceName(e.Object)
-	//logger.Log.V(1).Info("cronjob delete event for probe task", "task", p, "cj", n)
-	return true
-}
-
-func (pcj *ProbeCronJobPredicates) Update(e event.UpdateEvent) bool {
-	//n := getNamespaceName(e.ObjectNew)
-	//p := getProbeNamespaceName(e.ObjectNew)
-	//og := e.ObjectOld.GetGeneration()
-	//ng := e.ObjectOld.GetGeneration()
-	//logger.Log.V(1).Info("cronjob update event for probe task", "task", p, "cj", n, "old generation", og, "new generation", ng)
+	ns := e.Object.GetNamespace()
+	if ns == os.Getenv("POD_NAMESPACE") {
+		return true
+	}
 	return false
 }
 
-func (pcj *ProbeCronJobPredicates) Generic(e event.GenericEvent) bool {
-	//n := getNamespaceName(e.Object)
-	//p := getProbeNamespaceName(e.Object)
-	//logger.Log.V(1).Info("cronjob generic event for probe task", "task", p, "cj", n)
+func (pcj *ProbeCronJobPredicates) Update(e event.UpdateEvent) bool {
+	oldObject := e.ObjectOld.(*probev1alpha1.Probe)
+	newObject := e.ObjectNew.(*probev1alpha1.Probe)
+	ns := newObject.GetNamespace()
+	if ns != os.Getenv("POD_NAMESPACE") {
+		return false
+	}
+
+	if oldObject.Status == newObject.Status {
+		return false
+	}
+
 	return true
+}
+
+func (pcj *ProbeCronJobPredicates) Generic(e event.GenericEvent) bool {
+	ns := e.Object.GetNamespace()
+	if ns == os.Getenv("POD_NAMESPACE") {
+		return true
+	}
+	return false
 }
 
 func getNamespaceName(o client.Object) string {

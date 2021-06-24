@@ -62,6 +62,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	var err error
 	var labelKeys []string
 
+	klog.Errorf("____________________cluster_____________________________________, %+v\n", req.NamespacedName)
 	cluster := &clusterv1.Cluster{}
 	if err = r.Get(ctx, req.NamespacedName, cluster); err != nil {
 		klog.Errorf("get cluster spec [%s] error:  %+v\n", req.Name, err)
@@ -85,9 +86,10 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 				Namespace: "default",
 				Name:      labelKeys[i],
 			}, probe); err != nil {
-				klog.Errorf("fail to get probe [%s], error: %+v\n", labelKeys[i], err)
+				klog.Infof("fail to get probe [%s], error: %+v\n", labelKeys[i], err)
 				return ctrl.Result{}, err
 			}
+			klog.Errorf("create probe [%s] for cluster [%s]\n", probe.Name, cluster.Name)
 			//TODO: 处理already exist的情况
 			if err = AddProbeToCluster(cluster, probe); err != nil {
 				klog.Errorf("create probe [%s] for cluster [%s] err: %+v\n", probe.Name, cluster.Name, err)
@@ -97,9 +99,9 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 	//delete probe
 	for i, _ := range cluster.Status.AttachedProbes {
-		klog.Errorf("ppppppppppp, %+v\n", cluster.Status.AttachedProbes[i])
 		if !IsContain(labelKeys, cluster.Status.AttachedProbes[i]) {
 			//TODO: 处理not found的情况
+			klog.Infof("delete probe [%s] for cluster [%s]\n", cluster.Status.AttachedProbes[i], cluster.Name)
 			if err = DeleteProbeOfCluster(cluster, cluster.Status.AttachedProbes[i]); err != nil {
 				klog.Errorf("delete probe [%s] for cluster [%s] err: %+v\n", cluster.Status.AttachedProbes[i], cluster.Name, err)
 				return ctrl.Result{}, err
@@ -122,6 +124,7 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&clusterv1.Cluster{}).WithEventFilter(&ClusterPredicate{}).
 		Complete(r)
 }
+
 func IsContain(items []string, item string) bool {
 	for _, eachItem := range items {
 		if eachItem == item {
@@ -271,6 +274,10 @@ type ClusterPredicate struct {
 
 func (rl *ClusterPredicate) Update(e event.UpdateEvent) bool {
 	//only label or extrainfo changed event hadnled
+	ns := e.ObjectNew.GetNamespace()
+	if ns != metav1.NamespaceDefault {
+		return false
+	}
 	if !reflect.DeepEqual(e.ObjectNew.GetLabels(), e.ObjectOld.GetLabels()) {
 		return true
 	}
@@ -285,6 +292,25 @@ func (rl *ClusterPredicate) Update(e event.UpdateEvent) bool {
 }
 
 func (rl *ClusterPredicate) Create(e event.CreateEvent) bool {
-	klog.Errorf("create create")
+	ns := e.Object.GetNamespace()
+	if ns != metav1.NamespaceDefault {
+		return false
+	}
+	return true
+}
+
+func (rl *ClusterPredicate) Delete(e event.DeleteEvent) bool {
+	ns := e.Object.GetNamespace()
+	if ns != metav1.NamespaceDefault {
+		return false
+	}
+	return true
+}
+
+func (rl *ClusterPredicate) Generic(e event.GenericEvent) bool {
+	ns := e.Object.GetNamespace()
+	if ns != metav1.NamespaceDefault {
+		return false
+	}
 	return true
 }

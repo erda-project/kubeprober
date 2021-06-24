@@ -24,6 +24,7 @@ import (
 	probev1alpha1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1alpha1"
 	clusterv1 "github.com/erda-project/kubeprober/pkg/probe-master/apis/v1"
 	"github.com/go-logr/logr"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog"
@@ -57,6 +58,7 @@ func (r *ProbeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	probe := &probev1alpha1.Probe{}
 	clusterList := &clusterv1.ClusterList{}
 
+	klog.Errorf("____________________probe_____________________________________, %+v\n", req.NamespacedName)
 	//delete probe
 
 	if err = r.Get(ctx, req.NamespacedName, probe); err != nil {
@@ -74,6 +76,7 @@ func (r *ProbeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 			return ctrl.Result{}, err
 		}
 	}
+
 	if err = r.List(ctx, clusterList); err != nil {
 		klog.Infof("list cluster error: %+v\n", err)
 	}
@@ -83,10 +86,12 @@ func (r *ProbeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		remoteProbe := &probev1alpha1.Probe{}
 		cluster := clusterList.Items[i]
 		if IsContain(cluster.Status.AttachedProbes, probe.Name) {
+			klog.Infof("get probe [%s] of cluster [%s]\n", probe.Name, cluster.Name)
 			if remoteProbe, err = GetProbeOfCluster(&cluster, probe.Name); err != nil {
 				klog.Errorf("get probe [%s] of cluster [%s] error: %+v\n", probe.Name, cluster.Name, err)
 			}
 			if remoteProbe.Status.MD5 != probe.Status.MD5 {
+				klog.Infof("update probe [%s] of cluster [%s]\n", probe.Name, cluster.Name)
 				err = UpdateProbeOfCluster(&cluster, probe)
 				if err != nil {
 					klog.Errorf("update probe [%s] of cluster [%s] error: %+v\n", probe.Name, cluster.Name, err)
@@ -109,25 +114,44 @@ type ProbePredicate struct {
 }
 
 func (rl *ProbePredicate) Update(e event.UpdateEvent) bool {
-	ns := e.ObjectNew.GetNamespace()
-	if ns == "default" {
-		return true
+	klog.Errorf("update update\n")
+	oldObject := e.ObjectOld.(*probev1alpha1.Probe)
+	newObject := e.ObjectNew.(*probev1alpha1.Probe)
+	ns := newObject.GetNamespace()
+	if ns != metav1.NamespaceDefault {
+		return false
 	}
-	return false
+
+	if oldObject.Status == newObject.Status {
+		return false
+	}
+
+	return true
 }
 
 func (rl *ProbePredicate) Create(e event.CreateEvent) bool {
+	klog.Errorf("create create\n")
 	ns := e.Object.GetNamespace()
-	if ns == "default" {
-		return true
+	if ns != metav1.NamespaceDefault {
+		return false
 	}
-	return false
+	return true
 }
 
 func (rl *ProbePredicate) Delete(e event.DeleteEvent) bool {
+	klog.Errorf("delete delete\n")
 	ns := e.Object.GetNamespace()
-	if ns == "default" {
-		return true
+	if ns != metav1.NamespaceDefault {
+		return false
 	}
-	return false
+	return true
+}
+
+func (rl *ProbePredicate) Generic(e event.GenericEvent) bool {
+	klog.Errorf("generic generic\n")
+	ns := e.Object.GetNamespace()
+	if ns != metav1.NamespaceDefault {
+		return false
+	}
+	return true
 }
