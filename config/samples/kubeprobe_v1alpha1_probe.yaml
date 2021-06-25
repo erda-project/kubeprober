@@ -1,15 +1,39 @@
 apiVersion: kubeprober.erda.cloud/v1alpha1
 kind: Probe
 metadata:
-  name: probe-sample
+  name: probe-link-test1
+  namespace: kubeprober
 spec:
   # Add fields here
   probeList:
     # Probe item1
-    - name: probe-check1
+    - name: probe-item-test1-success
       spec:
         containers:
           - name: hello
+            image: busybox
+            command: ['sh', '-c', 'echo "Hello, Kubernetes!" && sleep 10']
+        restartPolicy: Never
+    - name: probe-item-test1-failed
+      spec:
+        activeDeadlineSeconds: 30
+        containers:
+          - name: hello-failed
+            image: busybox
+            command: ['sh', '-c', 'echo "Hello, Kubernetes!" && sleep 40']
+        restartPolicy: Never
+    - name: probe-item-test1-pending
+      spec:
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+                - matchExpressions:
+                    - key: dice/platform-test
+                      operator: Exists
+        activeDeadlineSeconds: 10
+        containers:
+          - name: hello-pending
             image: busybox
             command: ['sh', '-c', 'echo "Hello, Kubernetes!" && sleep 10']
         restartPolicy: Never

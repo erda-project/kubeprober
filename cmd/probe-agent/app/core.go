@@ -76,14 +76,6 @@ func NewCmdProbeAgentManager(stopCh <-chan struct{}) *cobra.Command {
 	}
 
 	options.ProbeAgentConf.AddFlags(cmd.Flags())
-	err := options.ProbeAgentConf.PostConfig()
-	if err != nil {
-		panic(err)
-	}
-	err = options.ProbeAgentConf.ValidateOptions()
-	if err != nil {
-		panic(err)
-	}
 
 	return cmd
 }
@@ -93,6 +85,15 @@ func Run(opts *options.ProbeAgentOptions) {
 		Development: true,
 	}
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zapopt)))
+
+	err := opts.PostConfig()
+	if err != nil {
+		panic(err)
+	}
+	err = opts.ValidateOptions()
+	if err != nil {
+		panic(err)
+	}
 
 	// if debug probe agent, disable tunnel service
 	if opts.ProbeAgentDebug != "true" {
@@ -125,9 +126,8 @@ func Run(opts *options.ProbeAgentOptions) {
 		HealthProbeBindAddress: opts.HealthProbeAddr,
 		LeaderElection:         opts.EnableLeaderElection,
 		LeaderElectionID:       "probe-agent",
-		// TODO: use the probe controller running namespace
-		// Namespace: "default",
-		NewCache: newCacheFunc,
+		Namespace:              opts.GetNamespace(),
+		NewCache:               newCacheFunc,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

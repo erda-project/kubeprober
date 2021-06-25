@@ -253,6 +253,7 @@ func needUpdate(new, old probev1alpha1.ProbeCheckerStatus) bool {
 	return true
 }
 
+// filter exception pod
 type PodPredicates struct {
 	predicate.Funcs
 }
@@ -271,6 +272,19 @@ func (p *PodPredicates) Delete(e event.DeleteEvent) bool {
 }
 
 func (p *PodPredicates) Update(e event.UpdateEvent) bool {
+
+	oldObject := e.ObjectOld.(*corev1.Pod)
+	newObject := e.ObjectNew.(*corev1.Pod)
+
+	if newObject.Status.Phase != corev1.PodPending && newObject.Status.Phase != corev1.PodFailed {
+		return false
+	}
+
+	if oldObject.Status.Phase == newObject.Status.Phase &&
+		oldObject.Status.Reason == newObject.Status.Reason {
+		return false
+	}
+
 	n := getNamespaceName(e.ObjectNew)
 	logger.Log.V(2).Info("update event for probe pod", "pod", n)
 	return true

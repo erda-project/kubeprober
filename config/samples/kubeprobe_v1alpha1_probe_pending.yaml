@@ -1,12 +1,13 @@
 apiVersion: kubeprober.erda.cloud/v1alpha1
 kind: Probe
 metadata:
-  name: probe-sample-pending
+  name: probe-link-test1
+  namespace: kubeprober
 spec:
   # Add fields here
   probeList:
     # Probe item1
-    - name: probe-check1-peding
+    - name: probe-item-test1-pending
       spec:
         affinity:
           nodeAffinity:

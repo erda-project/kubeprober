@@ -2,12 +2,13 @@ package webserver
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logger "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/erda-project/kubeprober/pkg/probe-agent/controllers"
 	probestatus "github.com/erda-project/kubeprober/pkg/probe-status"
@@ -29,15 +30,15 @@ func (s *Server) Start() {
 		http.HandleFunc("/probe-status", func(w http.ResponseWriter, r *http.Request) {
 			err := s.ProbeResultHandler(w, r)
 			if err != nil {
-				logrus.Errorf("probe-status endpoint error: %v", err)
+				logger.Log.Error(err, "probe-status endpoint error")
 			}
 		})
 
 		for {
-			logrus.Infof("starting web server on port: %s", s.ProbeListenAddr)
+			logger.Log.Info(fmt.Sprintf("starting web server on port: %s", s.ProbeListenAddr))
 			err := http.ListenAndServe(s.ProbeListenAddr, nil)
 			if err != nil {
-				logrus.Errorf("start web server failed, port:%s, error:%v", s.ProbeListenAddr, err)
+				logger.Log.Error(err, "start web server failed", "ProbeListenAddr", s.ProbeListenAddr)
 				time.Sleep(time.Second)
 			}
 		}
@@ -53,7 +54,7 @@ func (s *Server) ProbeResultHandler(w http.ResponseWriter, r *http.Request) erro
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		logrus.Errorf("read request body failed, body: %s, error:%v", string(b), err)
+		logger.Log.Error(err, "read request body failed", "body", string(b))
 		return nil
 	}
 
@@ -61,18 +62,18 @@ func (s *Server) ProbeResultHandler(w http.ResponseWriter, r *http.Request) erro
 	err = json.Unmarshal(b, &rp)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		logrus.Errorf("unmarshal request body failed, body: %s, error:%v", string(b), err)
+		logger.Log.Error(err, "unmarshal request body failed", "body", string(b))
 		return nil
 	}
 
 	err = controllers.ReportProbeResult(s.client, rp)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		logrus.Errorf("process probe item status failed, probe item status:%v, error:%v", rp, err)
+		logger.Log.Error(err, "process probe item status failed", "probe item status", rp)
 		return nil
 	}
 
 	w.WriteHeader(http.StatusOK)
-	logrus.Infof("process probe item status successfully, key: %s/%s/%s", rp.ProbeNamespace, rp.ProbeName, rp.Name)
+	logger.Log.Info(fmt.Sprintf("process probe item status successfully, key: %s/%s/%s", rp.ProbeNamespace, rp.ProbeName, rp.Name))
 	return nil
 }

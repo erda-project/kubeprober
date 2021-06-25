@@ -1,12 +1,13 @@
 apiVersion: kubeprober.erda.cloud/v1alpha1
 kind: Probe
 metadata:
-  name: probe-link-test2
+  name: probe-link-test1
+  namespace: kubeprober
 spec:
   # Add fields here
   probeList:
     # Probe item1
-    - name: probe-item-test2-failed
+    - name: probe-item-test1-failed
       spec:
         activeDeadlineSeconds: 30
         containers:
