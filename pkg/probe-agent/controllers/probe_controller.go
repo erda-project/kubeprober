@@ -17,6 +17,7 @@ import (
 	"context"
 	"crypto/md5"
 	"fmt"
+
 	"k8s.io/apimachinery/pkg/util/json"
 	"os"
 
@@ -34,6 +35,7 @@ import (
 	logger "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/erda-project/kubeprober/cmd/probe-agent/options"
 	probev1alpha1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1alpha1"
 )
 
@@ -330,6 +332,10 @@ func envInject(pItem *probev1alpha1.ProbeItem, probe *probev1alpha1.Probe) {
 		{
 			Name:  probev1alpha1.ProbeItemName,
 			Value: pItem.Name,
+		},
+		{
+			Name:  probev1alpha1.ProbeStatusReportUrl,
+			Value: options.ProbeAgentConf.GetProbeStatusReportUrl(),
 		},
 	}
 	for i := range pItem.Spec.Containers {

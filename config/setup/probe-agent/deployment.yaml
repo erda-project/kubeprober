@@ -23,9 +23,7 @@ spec:
         app: probe-agent
     spec:
       containers:
-        - command:
-          - /probe-agent
-          image: kubeprober/probe-agent:v0.0.1
+        - image: kubeprober/probe-agent:v0.0.1
           imagePullPolicy: "Always"
           name: probe-agent
           securityContext:
@@ -59,6 +57,34 @@ spec:
                 fieldPath: metadata.namespace
       serviceAccountName: kubeprober
       terminationGracePeriodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: probeagent
+  namespace: kubeprober
+  labels:
+    app: probe-agent
+spec:
+  selector:
+    app: probe-agent
+  ports:
+    - protocol: TCP
+      port: 8082
+      targetPort: 8082
+      name: probe-status
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+      name: health
+    - protocol: TCP
+      port: 8090
+      targetPort: 8090
+      name: pprof
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+      name: metrics
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -99,13 +125,16 @@ rules:
       - ""
     resources:
       - nodes
+      - pods
     verbs:
+      - get
       - list
       - watch
   - apiGroups:
-      - ""
+      - "batch"
     resources:
-      - pods
+      - jobs
+      - cronjobs
     verbs:
       - get
       - list

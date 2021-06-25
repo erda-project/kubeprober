@@ -56,13 +56,13 @@ func init() {
 
 // NewCmdProbeAgentManager creates a *cobra.Command object with default parameters
 func NewCmdProbeAgentManager(stopCh <-chan struct{}) *cobra.Command {
-	ProbeAgentOptions := options.NewProbeAgentOptions()
+
 	cmd := &cobra.Command{
 		Use:   "probe-agent",
 		Short: "Launch probe-agent",
 		Long:  "Launch probe-agent",
 		Run: func(cmd *cobra.Command, args []string) {
-			if ProbeAgentOptions.Version {
+			if options.ProbeAgentConf.Version {
 				//fmt.Printf("%s: %#v\n", "probe-master", projectinfo.Get())
 				return
 			}
@@ -71,15 +71,20 @@ func NewCmdProbeAgentManager(stopCh <-chan struct{}) *cobra.Command {
 				klog.V(1).Infof("FLAG: --%s=%q", flag.Name, flag.Value)
 			})
 
-			Run(ProbeAgentOptions)
+			Run(options.ProbeAgentConf)
 		},
 	}
 
-	ProbeAgentOptions.AddFlags(cmd.Flags())
-	err := ProbeAgentOptions.ValidateOptions()
+	options.ProbeAgentConf.AddFlags(cmd.Flags())
+	err := options.ProbeAgentConf.PostConfig()
 	if err != nil {
 		panic(err)
 	}
+	err = options.ProbeAgentConf.ValidateOptions()
+	if err != nil {
+		panic(err)
+	}
+
 	return cmd
 }
 
@@ -89,13 +94,16 @@ func Run(opts *options.ProbeAgentOptions) {
 	}
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zapopt)))
 
-	ctx := context.Background()
-	go client.Start(ctx, &client.Config{
-		Debug:           false,
-		ProbeMasterAddr: opts.ProbeMasterAddr,
-		ClusterName:     opts.ClusterName,
-		SecretKey:       opts.SecretKey,
-	})
+	// if debug probe agent, disable tunnel service
+	if opts.ProbeAgentDebug != "true" {
+		ctx := context.Background()
+		go client.Start(ctx, &client.Config{
+			Debug:           false,
+			ProbeMasterAddr: opts.ProbeMasterAddr,
+			ClusterName:     opts.ClusterName,
+			SecretKey:       opts.SecretKey,
+		})
+	}
 
 	// listwatch pod for failed probe pod, listwatch cronjob for reconcile
 	// TODO: add list label selector in related controller & merge them here

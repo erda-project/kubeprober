@@ -44,5 +44,6 @@ func TestUpdateProbeStatus(t *testing.T) {
 	}
 
 	_, status := mergeProbeStatus(r, s)
+	_, status = mergeProbeStatus(r, s)
 	assert.DeepEqual(t, s, status)
 }
