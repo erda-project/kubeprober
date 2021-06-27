@@ -18,7 +18,9 @@ import (
 	"net/url"
 	"os"
 
-	"k8s.io/klog"
+	"github.com/sirupsen/logrus"
+
+	"github.com/spf13/pflag"
 
 	probev1alpha1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1alpha1"
 	"github.com/spf13/pflag"
@@ -87,7 +89,7 @@ func (o *ProbeAgentOptions) PostConfig() error {
 	if o.ProbeStatusReportUrl == "" {
 		o.ProbeStatusReportUrl = fmt.Sprintf("http://probeagent.%s.svc.cluster.local%s/probe-status", o.Namespace, o.ProbeListenAddr)
 	}
-	klog.Errorf("ProbeStatusReportUrl: %s", o.ProbeStatusReportUrl)
+	logrus.Infof("probe status report url %s", o.ProbeStatusReportUrl)
 	return nil
 }
 

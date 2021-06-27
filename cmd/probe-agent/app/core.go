@@ -76,6 +76,14 @@ func NewCmdProbeAgentManager(stopCh <-chan struct{}) *cobra.Command {
 	}
 
 	options.ProbeAgentConf.AddFlags(cmd.Flags())
+	err := options.ProbeAgentConf.PostConfig()
+	if err != nil {
+		panic(err)
+	}
+	err = options.ProbeAgentConf.ValidateOptions()
+	if err != nil {
+		panic(err)
+	}
 
 	return cmd
 }
