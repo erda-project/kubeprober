@@ -18,16 +18,15 @@ import (
 	"crypto/md5"
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/util/json"
-	"os"
-
 	"github.com/go-logr/logr"
+	"github.com/google/go-cmp/cmp"
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/json"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -354,47 +353,30 @@ func remove(slice []corev1.EnvVar, s int) []corev1.EnvVar {
 	return append(slice[:s], slice[s+1:]...)
 }
 
-type ProbeEventPredicates struct {
+type ProbePredicates struct {
 	predicate.Funcs
 }
 
-func (p *ProbeEventPredicates) Create(e event.CreateEvent) bool {
-	ns := e.Object.GetNamespace()
-	if ns == os.Getenv("POD_NAMESPACE") {
-		return true
-	}
-	return false
-}
-
-func (p *ProbeEventPredicates) Delete(e event.DeleteEvent) bool {
-	ns := e.Object.GetNamespace()
-	if ns == os.Getenv("POD_NAMESPACE") {
-		return true
-	}
-	return false
-}
-
-func (p *ProbeEventPredicates) Update(e event.UpdateEvent) bool {
-	oldObject := e.ObjectOld.(*probev1alpha1.Probe)
-	newObject := e.ObjectNew.(*probev1alpha1.Probe)
-	ns := newObject.GetNamespace()
-	if ns != os.Getenv("POD_NAMESPACE") {
-		return false
-	}
-
-	if oldObject.Status == newObject.Status {
-		return false
-	}
-
+func (p *ProbePredicates) Create(e event.CreateEvent) bool {
 	return true
 }
 
-func (p *ProbeEventPredicates) Generic(e event.GenericEvent) bool {
-	ns := e.Object.GetNamespace()
-	if ns == os.Getenv("POD_NAMESPACE") {
+func (p *ProbePredicates) Delete(e event.DeleteEvent) bool {
+	return false
+}
+
+func (p *ProbePredicates) Update(e event.UpdateEvent) bool {
+	oldObject := e.ObjectOld.(*probev1alpha1.Probe)
+	newObject := e.ObjectNew.(*probev1alpha1.Probe)
+	equal := cmp.Equal(oldObject.Spec, newObject.Spec)
+	if !equal {
 		return true
 	}
 	return false
+}
+
+func (p *ProbePredicates) Generic(e event.GenericEvent) bool {
+	return true
 }
 
 type ProbeCronJobPredicates struct {
@@ -402,42 +384,25 @@ type ProbeCronJobPredicates struct {
 }
 
 func (pcj *ProbeCronJobPredicates) Create(e event.CreateEvent) bool {
-	ns := e.Object.GetNamespace()
-	if ns == os.Getenv("POD_NAMESPACE") {
-		return true
-	}
 	return false
 }
 
 func (pcj *ProbeCronJobPredicates) Delete(e event.DeleteEvent) bool {
-	ns := e.Object.GetNamespace()
-	if ns == os.Getenv("POD_NAMESPACE") {
-		return true
-	}
-	return false
-}
-
-func (pcj *ProbeCronJobPredicates) Update(e event.UpdateEvent) bool {
-	oldObject := e.ObjectOld.(*probev1alpha1.Probe)
-	newObject := e.ObjectNew.(*probev1alpha1.Probe)
-	ns := newObject.GetNamespace()
-	if ns != os.Getenv("POD_NAMESPACE") {
-		return false
-	}
-
-	if oldObject.Status == newObject.Status {
-		return false
-	}
-
 	return true
 }
 
-func (pcj *ProbeCronJobPredicates) Generic(e event.GenericEvent) bool {
-	ns := e.Object.GetNamespace()
-	if ns == os.Getenv("POD_NAMESPACE") {
+func (pcj *ProbeCronJobPredicates) Update(e event.UpdateEvent) bool {
+	oldObject := e.ObjectOld.(*batchv1beta1.CronJob)
+	newObject := e.ObjectNew.(*batchv1beta1.CronJob)
+	equal := cmp.Equal(oldObject.Spec, newObject.Spec)
+	if !equal {
 		return true
 	}
 	return false
+}
+
+func (pcj *ProbeCronJobPredicates) Generic(e event.GenericEvent) bool {
+	return true
 }
 
 func getNamespaceName(o client.Object) string {
@@ -451,7 +416,7 @@ func getProbeNamespaceName(o client.Object) string {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ProbeReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	probePredicates := builder.WithPredicates(&ProbeEventPredicates{})
+	probePredicates := builder.WithPredicates(&ProbePredicates{})
 	probeCronJobPredicates := builder.WithPredicates(&ProbeCronJobPredicates{})
 
 	return ctrl.NewControllerManagedBy(mgr).

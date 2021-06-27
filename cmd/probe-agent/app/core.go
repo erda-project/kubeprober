@@ -94,6 +94,15 @@ func Run(opts *options.ProbeAgentOptions) {
 	}
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zapopt)))
 
+	err := opts.PostConfig()
+	if err != nil {
+		panic(err)
+	}
+	err = opts.ValidateOptions()
+	if err != nil {
+		panic(err)
+	}
+
 	// if debug probe agent, disable tunnel service
 	if opts.ProbeAgentDebug != "true" {
 		ctx := context.Background()
@@ -125,9 +134,8 @@ func Run(opts *options.ProbeAgentOptions) {
 		HealthProbeBindAddress: opts.HealthProbeAddr,
 		LeaderElection:         opts.EnableLeaderElection,
 		LeaderElectionID:       "probe-agent",
-		// TODO: use the probe controller running namespace
-		// Namespace: "default",
-		NewCache: newCacheFunc,
+		Namespace:              opts.GetNamespace(),
+		NewCache:               newCacheFunc,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

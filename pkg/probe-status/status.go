@@ -35,13 +35,13 @@ func ReportProbeStatus(status []probev1alpha1.ProbeCheckerStatus) error {
 		return err
 	}
 
-	pss, err := RenderProbeStatus(status, info)
+	pss, err := renderProbeStatus(status, info)
 	if err != nil {
 		logrus.Errorf("render checker status failed, content:%v, error:%v", status, err)
 		return err
 	}
 
-	err = SendProbeStatus(*pss, info)
+	err = sendProbeStatus(*pss, info)
 	if err != nil {
 		return err
 	}
@@ -49,7 +49,7 @@ func ReportProbeStatus(status []probev1alpha1.ProbeCheckerStatus) error {
 	return nil
 }
 
-func SendProbeStatus(ps ReportProbeStatusSpec, info ProbeStatusReportInfo) error {
+func sendProbeStatus(ps ReportProbeStatusSpec, info ProbeStatusReportInfo) error {
 	b, err := json.Marshal(ps)
 	if err != nil {
 		logrus.Errorf("marshal probe status failed, content:%v, error:%v", ps, err)
@@ -90,7 +90,7 @@ func SendProbeStatus(ps ReportProbeStatusSpec, info ProbeStatusReportInfo) error
 	return nil
 }
 
-func RenderProbeStatus(status []probev1alpha1.ProbeCheckerStatus, info ProbeStatusReportInfo) (*ReportProbeStatusSpec, error) {
+func renderProbeStatus(status []probev1alpha1.ProbeCheckerStatus, info ProbeStatusReportInfo) (*ReportProbeStatusSpec, error) {
 	if len(status) == 0 {
 		err := fmt.Errorf("empty report status")
 		logrus.Errorf(err.Error())
