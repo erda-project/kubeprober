@@ -1,0 +1,102 @@
+
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  creationTimestamp: null
+  name: mutating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-kubeprober-erda-cloud-v1-cluster
+  failurePolicy: Fail
+  name: cluster.probe.kubeprober.erda.cloud
+  rules:
+  - apiGroups:
+    - kubeprober.erda.cloud
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - clusters
+  sideEffects: None
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-kubeprober-erda-cloud-v1-probe
+  failurePolicy: Fail
+  name: probe.kubeprober.erda.cloud
+  rules:
+  - apiGroups:
+    - kubeprober.erda.cloud
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - probes
+  sideEffects: None
+
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  creationTimestamp: null
+  name: validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-kubeprober-erda-cloud-v1-cluster
+  failurePolicy: Fail
+  name: cluster.probe.kubeprober.erda.cloud
+  rules:
+  - apiGroups:
+    - kubeprober.erda.cloud
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    - DELETE
+    resources:
+    - clusters
+  sideEffects: None
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-kubeprober-erda-cloud-v1-probe
+  failurePolicy: Fail
+  name: probe.kubeprober.erda.cloud
+  rules:
+  - apiGroups:
+    - kubeprober.erda.cloud
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    - DELETE
+    resources:
+    - probes
+  sideEffects: None

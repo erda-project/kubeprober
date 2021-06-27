@@ -18,10 +18,11 @@ import (
 	"crypto/md5"
 	"fmt"
 	"k8s.io/apimachinery/pkg/util/json"
+	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	probev1alpha1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1alpha1"
+	probev1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1"
 	clusterv1 "github.com/erda-project/kubeprober/pkg/probe-master/apis/v1"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -55,14 +56,15 @@ type ProbeReconciler struct {
 func (r *ProbeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var err error
 
-	probe := &probev1alpha1.Probe{}
+	probe := &probev1.Probe{}
 	clusterList := &clusterv1.ClusterList{}
 
 	klog.Errorf("____________________probe_____________________________________, %+v\n", req.NamespacedName)
 	//delete probe
 
 	if err = r.Get(ctx, req.NamespacedName, probe); err != nil {
-		klog.Infof("get probe spec [%s] error: %+v\n", req.Name, err)
+		klog.Errorf("get probe spec [%s] error: %+v\n", req.Name, err)
+		return ctrl.Result{}, err
 	}
 
 	//update probe status
@@ -78,23 +80,26 @@ func (r *ProbeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 
 	if err = r.List(ctx, clusterList); err != nil {
-		klog.Infof("list cluster error: %+v\n", err)
+		klog.Errorf("list cluster error: %+v\n", err)
+		return ctrl.Result{}, err
 	}
 
 	//update probe of cluster attatched
 	for i := range clusterList.Items {
-		remoteProbe := &probev1alpha1.Probe{}
+		remoteProbe := &probev1.Probe{}
 		cluster := clusterList.Items[i]
 		if IsContain(cluster.Status.AttachedProbes, probe.Name) {
 			klog.Infof("get probe [%s] of cluster [%s]\n", probe.Name, cluster.Name)
 			if remoteProbe, err = GetProbeOfCluster(&cluster, probe.Name); err != nil {
 				klog.Errorf("get probe [%s] of cluster [%s] error: %+v\n", probe.Name, cluster.Name, err)
+				return ctrl.Result{}, err
 			}
 			if remoteProbe.Status.MD5 != probe.Status.MD5 {
 				klog.Infof("update probe [%s] of cluster [%s]\n", probe.Name, cluster.Name)
 				err = UpdateProbeOfCluster(&cluster, probe)
 				if err != nil {
 					klog.Errorf("update probe [%s] of cluster [%s] error: %+v\n", probe.Name, cluster.Name, err)
+					return ctrl.Result{}, err
 				}
 			}
 		}
@@ -105,7 +110,7 @@ func (r *ProbeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 // SetupWithManager sets up the controller wibth the Manager.
 func (r *ProbeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&probev1alpha1.Probe{}).WithEventFilter(&ProbePredicate{}).
+		For(&probev1.Probe{}).WithEventFilter(&ProbePredicate{}).
 		Complete(r)
 }
 
@@ -115,18 +120,18 @@ type ProbePredicate struct {
 
 func (rl *ProbePredicate) Update(e event.UpdateEvent) bool {
 	klog.Errorf("update update\n")
-	oldObject := e.ObjectOld.(*probev1alpha1.Probe)
-	newObject := e.ObjectNew.(*probev1alpha1.Probe)
+	oldObject := e.ObjectOld.(*probev1.Probe)
+	newObject := e.ObjectNew.(*probev1.Probe)
 	ns := newObject.GetNamespace()
 	if ns != metav1.NamespaceDefault {
 		return false
 	}
 
-	if oldObject.Status == newObject.Status {
-		return false
+	if !reflect.DeepEqual(oldObject.Spec, newObject.Spec) {
+		return true
 	}
 
-	return true
+	return false
 }
 
 func (rl *ProbePredicate) Create(e event.CreateEvent) bool {

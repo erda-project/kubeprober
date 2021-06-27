@@ -20,7 +20,7 @@ import (
 	"reflect"
 	"strings"
 
-	probev1alpha1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1alpha1"
+	probev1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1"
 	clusterv1 "github.com/erda-project/kubeprober/pkg/probe-master/apis/v1"
 	dialclient "github.com/erda-project/kubeprober/pkg/probe-master/tunnel-client"
 	"github.com/go-logr/logr"
@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -81,7 +82,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	//add probe
 	for i, _ := range labelKeys {
 		if !IsContain(cluster.Status.AttachedProbes, labelKeys[i]) {
-			probe := &probev1alpha1.Probe{}
+			probe := &probev1.Probe{}
 			if err = r.Get(ctx, types.NamespacedName{
 				Namespace: "default",
 				Name:      labelKeys[i],
@@ -135,7 +136,7 @@ func IsContain(items []string, item string) bool {
 }
 
 // add probe to cluster
-func AddProbeToCluster(cluster *clusterv1.Cluster, probe *probev1alpha1.Probe) error {
+func AddProbeToCluster(cluster *clusterv1.Cluster, probe *probev1.Probe) error {
 	var err error
 	var c client.Client
 
@@ -144,10 +145,10 @@ func AddProbeToCluster(cluster *clusterv1.Cluster, probe *probev1alpha1.Probe) e
 		return err
 	}
 
-	pp := &probev1alpha1.Probe{
+	pp := &probev1.Probe{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Probe",
-			APIVersion: "kubeprober.erda.cloud/v1alpha1",
+			APIVersion: "kubeprober.erda.cloud/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      probe.Name,
@@ -180,7 +181,7 @@ func DeleteProbeOfCluster(cluster *clusterv1.Cluster, probeName string) error {
 	pp.SetGroupVersionKind(schema.GroupVersionKind{
 		Group:   "kubeprober.erda.cloud",
 		Kind:    "Probe",
-		Version: "v1alpha1",
+		Version: "v1",
 	})
 
 	err = c.Delete(context.Background(), pp)
@@ -191,7 +192,7 @@ func DeleteProbeOfCluster(cluster *clusterv1.Cluster, probeName string) error {
 }
 
 // get probe of cluster
-func GetProbeOfCluster(cluster *clusterv1.Cluster, probeName string) (*probev1alpha1.Probe, error) {
+func GetProbeOfCluster(cluster *clusterv1.Cluster, probeName string) (*probev1.Probe, error) {
 	var err error
 	var c client.Client
 
@@ -200,7 +201,7 @@ func GetProbeOfCluster(cluster *clusterv1.Cluster, probeName string) (*probev1al
 		return nil, err
 	}
 
-	probe := &probev1alpha1.Probe{}
+	probe := &probev1.Probe{}
 
 	err = c.Get(context.Background(), client.ObjectKey{
 		Namespace: cluster.Spec.ClusterConfig.ProbeNamespaces,
@@ -214,7 +215,7 @@ func GetProbeOfCluster(cluster *clusterv1.Cluster, probeName string) (*probev1al
 }
 
 // update probe of cluster
-func UpdateProbeOfCluster(cluster *clusterv1.Cluster, probe *probev1alpha1.Probe) error {
+func UpdateProbeOfCluster(cluster *clusterv1.Cluster, probe *probev1.Probe) error {
 	var err error
 	var c client.Client
 	var patch []byte
@@ -223,13 +224,13 @@ func UpdateProbeOfCluster(cluster *clusterv1.Cluster, probe *probev1alpha1.Probe
 	if err != nil {
 		return err
 	}
-	patchBody := probev1alpha1.Probe{
+	patchBody := probev1.Probe{
 		Spec: probe.Spec,
 	}
 	if patch, err = json.Marshal(patchBody); err != nil {
 		return err
 	}
-	if err = c.Patch(context.Background(), &probev1alpha1.Probe{
+	if err = c.Patch(context.Background(), &probev1.Probe{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      probe.Name,
 			Namespace: cluster.Spec.ClusterConfig.ProbeNamespaces,
@@ -246,21 +247,34 @@ func GenerateProbeClient(cluster *clusterv1.Cluster) (client.Client, error) {
 	var clusterToken []byte
 	var err error
 	var c client.Client
+	var config *rest.Config
 
-	if clusterToken, err = base64.StdEncoding.DecodeString(cluster.Spec.ClusterConfig.Token); err != nil {
-		return nil, err
+	if cluster.Spec.ClusterConfig.Token != "" {
+		if clusterToken, err = base64.StdEncoding.DecodeString(cluster.Spec.ClusterConfig.Token); err != nil {
+			klog.Errorf("token, %+v\n", err)
+			return nil, err
+		}
+		config, err = dialclient.GetDialerRestConfig(cluster.Name, &dialclient.ManageConfig{
+			Type:    dialclient.ManageProxy,
+			Address: cluster.Spec.ClusterConfig.Address,
+			Token:   strings.Trim(string(clusterToken), "\n"),
+		})
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		config, err = dialclient.GetDialerRestConfig(cluster.Name, &dialclient.ManageConfig{
+			Type:     dialclient.ManageProxy,
+			Address:  cluster.Spec.ClusterConfig.Address,
+			CertData: cluster.Spec.ClusterConfig.CertData,
+			KeyData:  cluster.Spec.ClusterConfig.KeyData,
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
-	config, err := dialclient.GetDialerRestConfig(cluster.Name, &dialclient.ManageConfig{
-		Type:    dialclient.ManageProxy,
-		Address: cluster.Spec.ClusterConfig.Address,
-		Token:   strings.Trim(string(clusterToken), "\n"),
-	})
-	if err != nil {
-		return nil, err
-	}
-	klog.Errorf("ffffffffff  config: %+v\n", config)
 	scheme := runtime.NewScheme()
-	probev1alpha1.AddToScheme(scheme)
+	probev1.AddToScheme(scheme)
 	c, err = client.New(config, client.Options{Scheme: scheme})
 	if err != nil {
 		return nil, err

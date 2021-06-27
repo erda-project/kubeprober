@@ -3,27 +3,27 @@ package main
 import (
 	"github.com/sirupsen/logrus"
 
-	probev1alpha1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1alpha1"
+	probev1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1"
 	status "github.com/erda-project/kubeprober/pkg/probe-status"
 )
 
 func main() {
-	report := []probev1alpha1.ProbeCheckerStatus{
+	report := []probev1.ProbeCheckerStatus{
 		{
 			Name:   "checker1",
-			Status: probev1alpha1.CheckerStatusInfo,
+			Status: probev1.CheckerStatusInfo,
 		},
 		{
 			Name:   "checker2",
-			Status: probev1alpha1.CheckerStatusUNKNOWN,
+			Status: probev1.CheckerStatusUNKNOWN,
 		},
 		{
 			Name:   "checker3",
-			Status: probev1alpha1.CheckerStatusWARN,
+			Status: probev1.CheckerStatusWARN,
 		},
 		{
 			Name:   "checker4",
-			Status: probev1alpha1.CheckerStatusError,
+			Status: probev1.CheckerStatusError,
 		},
 	}
 	if err := status.ReportProbeStatus(report); err != nil {

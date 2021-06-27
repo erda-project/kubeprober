@@ -14,7 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	probev1alpha1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1alpha1"
+	probev1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1"
 )
 
 const (
@@ -22,12 +22,12 @@ const (
 )
 
 type ReportProbeStatusSpec struct {
-	ProbeName                     string `json:"probeName"`
-	ProbeNamespace                string `json:"probeNamespace"`
-	probev1alpha1.ProbeItemStatus `json:",inline"`
+	ProbeName               string `json:"probeName"`
+	ProbeNamespace          string `json:"probeNamespace"`
+	probev1.ProbeItemStatus `json:",inline"`
 }
 
-func ReportProbeStatus(status []probev1alpha1.ProbeCheckerStatus) error {
+func ReportProbeStatus(status []probev1.ProbeCheckerStatus) error {
 	info := ProbeStatusReportInfo{}
 	err := info.Init()
 	if err != nil {
@@ -90,7 +90,7 @@ func sendProbeStatus(ps ReportProbeStatusSpec, info ProbeStatusReportInfo) error
 	return nil
 }
 
-func renderProbeStatus(status []probev1alpha1.ProbeCheckerStatus, info ProbeStatusReportInfo) (*ReportProbeStatusSpec, error) {
+func renderProbeStatus(status []probev1.ProbeCheckerStatus, info ProbeStatusReportInfo) (*ReportProbeStatusSpec, error) {
 	if len(status) == 0 {
 		err := fmt.Errorf("empty report status")
 		logrus.Errorf(err.Error())
@@ -98,8 +98,8 @@ func renderProbeStatus(status []probev1alpha1.ProbeCheckerStatus, info ProbeStat
 	}
 
 	now := metav1.Now()
-	pcs := probev1alpha1.ProbeCheckerStatus{
-		Status:  probev1alpha1.CheckerStatusInfo,
+	pcs := probev1.ProbeCheckerStatus{
+		Status:  probev1.CheckerStatusInfo,
 		LastRun: &now,
 	}
 
@@ -112,17 +112,17 @@ func renderProbeStatus(status []probev1alpha1.ProbeCheckerStatus, info ProbeStat
 		if s.LastRun == nil {
 			status[i].LastRun = &now
 		}
-		if s.Status == probev1alpha1.CheckerStatusUNKNOWN {
+		if s.Status == probev1.CheckerStatusUNKNOWN {
 			logrus.Warnf("probe checker status should not be UNKNOWN")
 			continue
 		}
-		if pcs.Status != probev1alpha1.CheckerStatusError && s.Status != probev1alpha1.CheckerStatusInfo {
+		if pcs.Status != probev1.CheckerStatusError && s.Status != probev1.CheckerStatusInfo {
 			pcs.Status = s.Status
 		}
 	}
 
-	pis := probev1alpha1.ProbeItemStatus{
-		ProbeCheckerStatus: probev1alpha1.ProbeCheckerStatus{
+	pis := probev1.ProbeItemStatus{
+		ProbeCheckerStatus: probev1.ProbeCheckerStatus{
 			Name:    info.ProbeItemName,
 			Status:  pcs.Status,
 			LastRun: pcs.LastRun,
@@ -178,7 +178,7 @@ func (p *ProbeStatusReportInfo) InitProbeNamespace() error {
 	if len(data) != 0 {
 		namespace = string(data)
 	} else {
-		namespace = os.Getenv(probev1alpha1.ProbeNamespace)
+		namespace = os.Getenv(probev1.ProbeNamespace)
 	}
 
 	if namespace == "" {
@@ -194,7 +194,7 @@ func (p *ProbeStatusReportInfo) InitProbeNamespace() error {
 }
 
 func (p *ProbeStatusReportInfo) InitProbeName() error {
-	name := os.Getenv(probev1alpha1.ProbeName)
+	name := os.Getenv(probev1.ProbeName)
 	if name == "" {
 		err := fmt.Errorf("cannot get probe name from environment")
 		logrus.Errorf(err.Error())
@@ -205,7 +205,7 @@ func (p *ProbeStatusReportInfo) InitProbeName() error {
 }
 
 func (p *ProbeStatusReportInfo) InitProbeItemName() error {
-	name := os.Getenv(probev1alpha1.ProbeItemName)
+	name := os.Getenv(probev1.ProbeItemName)
 	if name == "" {
 		err := fmt.Errorf("cannot get probe item name from environment")
 		logrus.Errorf(err.Error())
@@ -216,7 +216,7 @@ func (p *ProbeStatusReportInfo) InitProbeItemName() error {
 }
 
 func (p *ProbeStatusReportInfo) InitProbeStatusReportUrl() error {
-	u := os.Getenv(probev1alpha1.ProbeStatusReportUrl)
+	u := os.Getenv(probev1.ProbeStatusReportUrl)
 	if u == "" {
 		err := fmt.Errorf("cannot get probe status report url from environment")
 		logrus.Errorf(err.Error())
