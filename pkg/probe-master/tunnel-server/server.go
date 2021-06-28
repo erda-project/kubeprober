@@ -22,8 +22,8 @@ import (
 	"strings"
 	"time"
 
+	kubeprobev1 "github.com/erda-project/kubeprober/apis/v1"
 	"github.com/erda-project/kubeprober/apistructs"
-	kubeprobev1 "github.com/erda-project/kubeprober/pkg/probe-master/apis/v1"
 	"github.com/gorilla/mux"
 	"github.com/rancher/remotedialer"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

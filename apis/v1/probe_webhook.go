@@ -16,12 +16,12 @@ package v1
 import (
 	"context"
 	"fmt"
-	"github.com/pkg/errors"
 	"os"
 	"path/filepath"
 	"strings"
 
-	clusterv1 "github.com/erda-project/kubeprober/pkg/probe-master/apis/v1"
+	"github.com/pkg/errors"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -54,7 +54,7 @@ func init() {
 	}
 
 	scheme := runtime.NewScheme()
-	clusterv1.AddToScheme(scheme)
+	AddToScheme(scheme)
 	clusterRestClient, err = client.New(config, client.Options{Scheme: scheme})
 	if err != nil {
 		return
@@ -101,7 +101,7 @@ func (p *Probe) ValidateDelete() error {
 	var err error
 	var attachedCluster []string
 	probelog.Info("validate delete", "name", p.Name)
-	clusters := &clusterv1.ClusterList{}
+	clusters := &ClusterList{}
 	if err = clusterRestClient.List(context.Background(), clusters); err != nil {
 		return nil
 	}

@@ -3,7 +3,7 @@ package controllers
 import (
 	"testing"
 
-	probev1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1"
+	kubeprobev1 "github.com/erda-project/kubeprober/apis/v1"
 	probestatus "github.com/erda-project/kubeprober/pkg/probe-status"
 	"gotest.tools/assert"
 )
@@ -14,15 +14,15 @@ const (
 )
 
 func TestUpdateProbeStatus(t *testing.T) {
-	pis := probev1.ProbeItemStatus{
-		ProbeCheckerStatus: probev1.ProbeCheckerStatus{
+	pis := kubeprobev1.ProbeItemStatus{
+		ProbeCheckerStatus: kubeprobev1.ProbeCheckerStatus{
 			Name:   "probe-item-test1",
-			Status: probev1.CheckerStatusInfo,
+			Status: kubeprobev1.CheckerStatusInfo,
 		},
-		Checkers: []probev1.ProbeCheckerStatus{
+		Checkers: []kubeprobev1.ProbeCheckerStatus{
 			{
 				Name:   "probe-item-test1",
-				Status: probev1.CheckerStatusInfo,
+				Status: kubeprobev1.CheckerStatusInfo,
 			},
 		},
 	}
@@ -32,14 +32,14 @@ func TestUpdateProbeStatus(t *testing.T) {
 		ProbeNamespace:  probeNamespace,
 		ProbeItemStatus: pis,
 	}
-	s := probev1.ProbeStatus{
-		Spec: probev1.ProbeStatusSpec{
-			ProbeCheckerStatus: probev1.ProbeCheckerStatus{
+	s := kubeprobev1.ProbeStatus{
+		Spec: kubeprobev1.ProbeStatusSpec{
+			ProbeCheckerStatus: kubeprobev1.ProbeCheckerStatus{
 				Name:   probeName,
-				Status: probev1.CheckerStatusInfo,
+				Status: kubeprobev1.CheckerStatusInfo,
 			},
 			Namespace: probeNamespace,
-			Detail:    []probev1.ProbeItemStatus{pis},
+			Detail:    []kubeprobev1.ProbeItemStatus{pis},
 		},
 	}
 

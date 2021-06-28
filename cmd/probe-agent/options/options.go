@@ -20,7 +20,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	probev1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1"
+	kubeprobev1 "github.com/erda-project/kubeprober/apis/v1"
 	"github.com/spf13/pflag"
 )
 
@@ -113,6 +113,6 @@ func (o *ProbeAgentOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.ProbeMasterAddr, "probe-master-addr", os.Getenv("PROBE_MASTER_ADDR"), "The address of the probe-master")
 	fs.StringVar(&o.ClusterName, "cluster-name", os.Getenv("CLUSTER_NAME"), "cluster name.")
 	fs.StringVar(&o.SecretKey, "secret-key", os.Getenv("SECRET_KEY"), "secret key of this cluster.")
-	fs.StringVar(&o.ProbeStatusReportUrl, "probestatus-report-url", os.Getenv(probev1.ProbeStatusReportUrl), "probe status report url for probe check pod")
+	fs.StringVar(&o.ProbeStatusReportUrl, "probestatus-report-url", os.Getenv(kubeprobev1.ProbeStatusReportUrl), "probe status report url for probe check pod")
 	fs.StringVar(&o.ProbeAgentDebug, "probe-agent-debug", os.Getenv("PROBE_AGENT_DEBUG"), "whether debug probe agent, if debug stop tunnel service")
 }
