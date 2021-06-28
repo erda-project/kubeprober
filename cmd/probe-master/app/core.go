@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/erda-project/kubeprober/cmd/probe-master/options"
-	probev1alpha1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1alpha1"
+	probev1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1"
 	clusterv1 "github.com/erda-project/kubeprober/pkg/probe-master/apis/v1"
 	server "github.com/erda-project/kubeprober/pkg/probe-master/tunnel-server"
 	"github.com/spf13/cobra"
@@ -48,7 +48,7 @@ var (
 func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 	_ = clusterv1.AddToScheme(scheme)
-	_ = probev1alpha1.AddToScheme(scheme)
+	_ = probev1.AddToScheme(scheme)
 
 	// +kubebuilder:scaffold:scheme
 }
@@ -94,6 +94,7 @@ func Run(opts *options.ProbeMasterOptions) {
 		HealthProbeBindAddress: opts.HealthProbeAddr,
 		LeaderElection:         opts.EnableLeaderElection,
 		LeaderElectionID:       "probe-master",
+		CertDir:                "config/cert/",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -112,6 +113,16 @@ func Run(opts *options.ProbeMasterOptions) {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Probe")
+		os.Exit(1)
+	}
+
+	if err = (&clusterv1.Cluster{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "Cluster")
+		os.Exit(1)
+	}
+
+	if err = (&probev1.Probe{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "Probe")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

@@ -22,7 +22,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	probev1alpha1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1alpha1"
+	probev1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -63,7 +63,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	err = probev1alpha1.AddToScheme(scheme.Scheme)
+	err = probev1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme
@@ -80,13 +80,13 @@ var _ = AfterSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 })
 
-var probe = probev1alpha1.Probe{
+var probe = probev1.Probe{
 	ObjectMeta: metav1.ObjectMeta{
 		Namespace: "default",
 		Name:      "probe-test1",
 	},
-	Spec: probev1alpha1.ProbeSpec{
-		ProbeList: []probev1alpha1.ProbeItem{
+	Spec: probev1.ProbeSpec{
+		ProbeList: []probev1.ProbeItem{
 			{
 				Name: "probe-item-test1",
 				Spec: apiv1.PodSpec{
@@ -100,7 +100,7 @@ var probe = probev1alpha1.Probe{
 				},
 			},
 		},
-		Policy: probev1alpha1.Policy{},
+		Policy: probev1.Policy{},
 	},
 }
 

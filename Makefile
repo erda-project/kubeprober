@@ -47,6 +47,9 @@ vet: ## Run go vet against code.
 	go vet ./...
 
 ##@ Build
+dev: manifests kustomize
+#	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/dev | kubectl apply -f -
 
 build: generate fmt vet ## Build manager binary.
 	go build -o _bin/${APP_NAME} ./cmd/${APP_NAME}/${APP_NAME}.go

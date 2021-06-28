@@ -37,7 +37,7 @@ import (
 
 	"github.com/erda-project/kubeprober/cmd/probe-agent/options"
 	"github.com/erda-project/kubeprober/cmd/probe-agent/webserver"
-	probev1alpha1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1alpha1"
+	probev1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1"
 	"github.com/erda-project/kubeprober/pkg/probe-agent/controllers"
 	client "github.com/erda-project/kubeprober/pkg/probe-agent/tunnel"
 	//+kubebuilder:scaffold:imports
@@ -50,7 +50,7 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(probev1alpha1.AddToScheme(scheme))
+	utilruntime.Must(probev1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -119,10 +119,10 @@ func Run(opts *options.ProbeAgentOptions) {
 	newCacheFunc := cache.BuilderWithOptions(cache.Options{
 		SelectorsByObject: cache.SelectorsByObject{
 			&corev1.Pod{}: {
-				Label: labels.SelectorFromSet(labels.Set{probev1alpha1.LabelKeyApp: probev1alpha1.LabelValueApp}),
+				Label: labels.SelectorFromSet(labels.Set{probev1.LabelKeyApp: probev1.LabelValueApp}),
 			},
 			&batchv1beta1.CronJob{}: {
-				Label: labels.SelectorFromSet(labels.Set{probev1alpha1.LabelKeyApp: probev1alpha1.LabelValueApp}),
+				Label: labels.SelectorFromSet(labels.Set{probev1.LabelKeyApp: probev1.LabelValueApp}),
 			},
 		},
 	})
