@@ -138,10 +138,7 @@ func (r *ProbeReconciler) ReconcileJob(ctx context.Context, pItem kubeprobev1.Pr
 	return ctrl.Result{}, nil
 }
 
-func (r *ProbeReconciler) ReconcileCronJobs(ctx context.Context, probe *kubeprobev1.Probe) (ctrl.Result, error) {
-
-	r.log.V(0).Info("reconcile probe cron jobs")
-
+func (r *ProbeReconciler) ReconcileCronJobs(ctx context.Context, probe *probev1.Probe) (ctrl.Result, error) {
 	for _, j := range probe.Spec.ProbeList {
 		_, err := r.ReconcileCronJob(ctx, j, probe)
 		if err != nil {
@@ -366,10 +363,9 @@ func (p *ProbePredicates) Delete(e event.DeleteEvent) bool {
 }
 
 func (p *ProbePredicates) Update(e event.UpdateEvent) bool {
-	oldObject := e.ObjectOld.(*kubeprobev1.Probe)
-	newObject := e.ObjectNew.(*kubeprobev1.Probe)
-	equal := cmp.Equal(oldObject.Spec, newObject.Spec)
-	if !equal {
+	ns := getNamespaceName(e.ObjectNew)
+	logger.Log.V(2).Info("probe update", "key", ns)
+	if e.ObjectNew.GetGeneration() != e.ObjectOld.GetGeneration() {
 		return true
 	}
 	return false
@@ -392,6 +388,9 @@ func (pcj *ProbeCronJobPredicates) Delete(e event.DeleteEvent) bool {
 }
 
 func (pcj *ProbeCronJobPredicates) Update(e event.UpdateEvent) bool {
+	ns := getNamespaceName(e.ObjectNew)
+	logger.Log.V(2).Info("cronjob update", "key", ns)
+
 	oldObject := e.ObjectOld.(*batchv1beta1.CronJob)
 	newObject := e.ObjectNew.(*batchv1beta1.CronJob)
 	equal := cmp.Equal(oldObject.Spec, newObject.Spec)

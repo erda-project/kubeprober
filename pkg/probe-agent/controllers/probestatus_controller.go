@@ -212,8 +212,11 @@ func newProbeStatus(r probestatus.ReportProbeStatusSpec) (s kubeprobev1.ProbeSta
 func mergeProbeStatus(r probestatus.ReportProbeStatusSpec, s kubeprobev1.ProbeStatus) (bool, kubeprobev1.ProbeStatus) {
 
 	lastRun := r.LastRun
+	// check whether overview status change
 	overwrite := true
+	// check whether incoming probe item already exist
 	exist := false
+	// check whether need to update probe status
 	update := true
 
 	for i, j := range s.Spec.Detail {

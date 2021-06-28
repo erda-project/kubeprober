@@ -20,6 +20,7 @@ import (
 	"context"
 	"os"
 
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
@@ -62,11 +63,6 @@ func NewCmdProbeAgentManager(stopCh <-chan struct{}) *cobra.Command {
 		Short: "Launch probe-agent",
 		Long:  "Launch probe-agent",
 		Run: func(cmd *cobra.Command, args []string) {
-			if options.ProbeAgentConf.Version {
-				//fmt.Printf("%s: %#v\n", "probe-master", projectinfo.Get())
-				return
-			}
-
 			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
 				klog.V(1).Infof("FLAG: --%s=%q", flag.Name, flag.Value)
 			})
@@ -84,7 +80,7 @@ func NewCmdProbeAgentManager(stopCh <-chan struct{}) *cobra.Command {
 	if err != nil {
 		panic(err)
 	}
-
+	logrus.Infof("config: %+v", options.ProbeAgentConf)
 	return cmd
 }
 
@@ -93,15 +89,6 @@ func Run(opts *options.ProbeAgentOptions) {
 		Development: true,
 	}
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zapopt)))
-
-	err := opts.PostConfig()
-	if err != nil {
-		panic(err)
-	}
-	err = opts.ValidateOptions()
-	if err != nil {
-		panic(err)
-	}
 
 	// if debug probe agent, disable tunnel service
 	if opts.ProbeAgentDebug != "true" {
