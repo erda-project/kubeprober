@@ -20,8 +20,7 @@ import (
 	"reflect"
 	"strings"
 
-	probev1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1"
-	clusterv1 "github.com/erda-project/kubeprober/pkg/probe-master/apis/v1"
+	kubeprobev1 "github.com/erda-project/kubeprober/apis/v1"
 	dialclient "github.com/erda-project/kubeprober/pkg/probe-master/tunnel-client"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -64,7 +63,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	var labelKeys []string
 
 	klog.Errorf("____________________cluster_____________________________________, %+v\n", req.NamespacedName)
-	cluster := &clusterv1.Cluster{}
+	cluster := &kubeprobev1.Cluster{}
 	if err = r.Get(ctx, req.NamespacedName, cluster); err != nil {
 		klog.Errorf("get cluster spec [%s] error:  %+v\n", req.Name, err)
 		return ctrl.Result{}, err
@@ -82,7 +81,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	//add probe
 	for i, _ := range labelKeys {
 		if !IsContain(cluster.Status.AttachedProbes, labelKeys[i]) {
-			probe := &probev1.Probe{}
+			probe := &kubeprobev1.Probe{}
 			if err = r.Get(ctx, types.NamespacedName{
 				Namespace: "default",
 				Name:      labelKeys[i],
@@ -122,7 +121,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 // SetupWithManager sets up the controller with the Manager.
 func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&clusterv1.Cluster{}).WithEventFilter(&ClusterPredicate{}).
+		For(&kubeprobev1.Cluster{}).WithEventFilter(&ClusterPredicate{}).
 		Complete(r)
 }
 
@@ -136,7 +135,7 @@ func IsContain(items []string, item string) bool {
 }
 
 // add probe to cluster
-func AddProbeToCluster(cluster *clusterv1.Cluster, probe *probev1.Probe) error {
+func AddProbeToCluster(cluster *kubeprobev1.Cluster, probe *kubeprobev1.Probe) error {
 	var err error
 	var c client.Client
 
@@ -145,7 +144,7 @@ func AddProbeToCluster(cluster *clusterv1.Cluster, probe *probev1.Probe) error {
 		return err
 	}
 
-	pp := &probev1.Probe{
+	pp := &kubeprobev1.Probe{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Probe",
 			APIVersion: "kubeprober.erda.cloud/v1",
@@ -166,7 +165,7 @@ func AddProbeToCluster(cluster *clusterv1.Cluster, probe *probev1.Probe) error {
 }
 
 //delete probe of cluster
-func DeleteProbeOfCluster(cluster *clusterv1.Cluster, probeName string) error {
+func DeleteProbeOfCluster(cluster *kubeprobev1.Cluster, probeName string) error {
 	var err error
 	var c client.Client
 
@@ -192,7 +191,7 @@ func DeleteProbeOfCluster(cluster *clusterv1.Cluster, probeName string) error {
 }
 
 // get probe of cluster
-func GetProbeOfCluster(cluster *clusterv1.Cluster, probeName string) (*probev1.Probe, error) {
+func GetProbeOfCluster(cluster *kubeprobev1.Cluster, probeName string) (*kubeprobev1.Probe, error) {
 	var err error
 	var c client.Client
 
@@ -201,7 +200,7 @@ func GetProbeOfCluster(cluster *clusterv1.Cluster, probeName string) (*probev1.P
 		return nil, err
 	}
 
-	probe := &probev1.Probe{}
+	probe := &kubeprobev1.Probe{}
 
 	err = c.Get(context.Background(), client.ObjectKey{
 		Namespace: cluster.Spec.ClusterConfig.ProbeNamespaces,
@@ -215,7 +214,7 @@ func GetProbeOfCluster(cluster *clusterv1.Cluster, probeName string) (*probev1.P
 }
 
 // update probe of cluster
-func UpdateProbeOfCluster(cluster *clusterv1.Cluster, probe *probev1.Probe) error {
+func UpdateProbeOfCluster(cluster *kubeprobev1.Cluster, probe *kubeprobev1.Probe) error {
 	var err error
 	var c client.Client
 	var patch []byte
@@ -224,13 +223,13 @@ func UpdateProbeOfCluster(cluster *clusterv1.Cluster, probe *probev1.Probe) erro
 	if err != nil {
 		return err
 	}
-	patchBody := probev1.Probe{
+	patchBody := kubeprobev1.Probe{
 		Spec: probe.Spec,
 	}
 	if patch, err = json.Marshal(patchBody); err != nil {
 		return err
 	}
-	if err = c.Patch(context.Background(), &probev1.Probe{
+	if err = c.Patch(context.Background(), &kubeprobev1.Probe{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      probe.Name,
 			Namespace: cluster.Spec.ClusterConfig.ProbeNamespaces,
@@ -243,7 +242,7 @@ func UpdateProbeOfCluster(cluster *clusterv1.Cluster, probe *probev1.Probe) erro
 }
 
 //Generate k8sclient of cluster
-func GenerateProbeClient(cluster *clusterv1.Cluster) (client.Client, error) {
+func GenerateProbeClient(cluster *kubeprobev1.Cluster) (client.Client, error) {
 	var clusterToken []byte
 	var err error
 	var c client.Client
@@ -274,7 +273,7 @@ func GenerateProbeClient(cluster *clusterv1.Cluster) (client.Client, error) {
 		}
 	}
 	scheme := runtime.NewScheme()
-	probev1.AddToScheme(scheme)
+	kubeprobev1.AddToScheme(scheme)
 	c, err = client.New(config, client.Options{Scheme: scheme})
 	if err != nil {
 		return nil, err
@@ -295,8 +294,8 @@ func (rl *ClusterPredicate) Update(e event.UpdateEvent) bool {
 	if !reflect.DeepEqual(e.ObjectNew.GetLabels(), e.ObjectOld.GetLabels()) {
 		return true
 	}
-	oldobj, ok1 := e.ObjectOld.(*clusterv1.Cluster)
-	newobj, ok2 := e.ObjectNew.(*clusterv1.Cluster)
+	oldobj, ok1 := e.ObjectOld.(*kubeprobev1.Cluster)
+	newobj, ok2 := e.ObjectNew.(*kubeprobev1.Cluster)
 	if ok1 && ok2 {
 		if !reflect.DeepEqual(oldobj.Spec.ExtraInfo, newobj.Spec.ExtraInfo) {
 			return true

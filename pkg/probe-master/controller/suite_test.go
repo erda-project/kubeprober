@@ -27,7 +27,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	kubeprobev1 "github.com/erda-project/kubeprober/pkg/probe-master/apis/v1"
+	kubeprobev1 "github.com/erda-project/kubeprober/apis/v1"
 	//+kubebuilder:scaffold:imports
 )
 

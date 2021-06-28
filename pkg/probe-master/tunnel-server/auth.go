@@ -17,7 +17,7 @@ import (
 	"context"
 	"net/http"
 
-	kubeprobev1 "github.com/erda-project/kubeprober/pkg/probe-master/apis/v1"
+	kubeprobev1 "github.com/erda-project/kubeprober/apis/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"

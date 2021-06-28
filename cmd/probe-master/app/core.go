@@ -27,9 +27,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	kubeprobev1 "github.com/erda-project/kubeprober/apis/v1"
 	"github.com/erda-project/kubeprober/cmd/probe-master/options"
-	probev1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1"
-	clusterv1 "github.com/erda-project/kubeprober/pkg/probe-master/apis/v1"
 	server "github.com/erda-project/kubeprober/pkg/probe-master/tunnel-server"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -47,8 +46,7 @@ var (
 
 func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
-	_ = clusterv1.AddToScheme(scheme)
-	_ = probev1.AddToScheme(scheme)
+	_ = kubeprobev1.AddToScheme(scheme)
 
 	// +kubebuilder:scaffold:scheme
 }
@@ -116,12 +114,12 @@ func Run(opts *options.ProbeMasterOptions) {
 		os.Exit(1)
 	}
 
-	if err = (&clusterv1.Cluster{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = (&kubeprobev1.Cluster{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "Cluster")
 		os.Exit(1)
 	}
 
-	if err = (&probev1.Probe{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = (&kubeprobev1.Probe{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "Probe")
 		os.Exit(1)
 	}
