@@ -22,8 +22,9 @@ func main() {
 			Status: kubeprobev1.CheckerStatusWARN,
 		},
 		{
-			Name:   "checker4",
-			Status: kubeprobev1.CheckerStatusError,
+			Name:    "checker4",
+			Status:  kubeprobev1.CheckerStatusError,
+			Message: "chcker4 run error because the network is timeout",
 		},
 	}
 	if err := status.ReportProbeStatus(report); err != nil {
