@@ -17,6 +17,7 @@ RUN go mod download
 # Copy the go source
 
 COPY apistructs/ apistructs/
+COPY apis/ apis/
 COPY cmd/ cmd/
 COPY pkg/ pkg/
 
@@ -34,5 +35,3 @@ COPY --from=builder /workspace/${APP_NAME} .
 #USER 65532:65532
 
 CMD [ "sh", "-c", "/${APP_NAME}"]
-
-
