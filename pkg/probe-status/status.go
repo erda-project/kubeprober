@@ -43,6 +43,7 @@ func ReportProbeStatus(status []probev1.ProbeCheckerStatus) error {
 
 	err = sendProbeStatus(*pss, info)
 	if err != nil {
+		logrus.Errorf("send probe status failed, error:%v", err)
 		return err
 	}
 
