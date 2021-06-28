@@ -16,7 +16,14 @@ spec:
     singular: probestatus
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .spec.status
+      name: STATUS
+      type: string
+    - jsonPath: .spec.message
+      name: MESSAGE
+      type: string
+    name: v1
     schema:
       openAPIV3Schema:
         description: ProbeStatus is the Schema for the probestatuses API
