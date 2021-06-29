@@ -1,4 +1,4 @@
-apiVersion: kubeprober.erda.cloud/v1alpha1
+apiVersion: kubeprober.erda.cloud/v1
 kind: Probe
 metadata:
   name: probe-link-test1

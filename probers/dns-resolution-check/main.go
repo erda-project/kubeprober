@@ -15,8 +15,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 
+	probev1 "github.com/erda-project/kubeprober/apis/v1"
 	"github.com/erda-project/kubeprober/pkg/kubeclient"
-	probev1 "github.com/erda-project/kubeprober/pkg/probe-agent/apis/v1"
 	status "github.com/erda-project/kubeprober/pkg/probe-status"
 )
 

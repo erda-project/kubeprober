@@ -39,7 +39,7 @@ Both the master and agent of kubeprober run as controllers in kubernetes. Before
 #### Deploy probe-master：
 ```
 make install
-APP_NAME=probe-master make deploy
+APP=probe-master make deploy
 ```
 #### Deploy probe-agent：
 
@@ -60,14 +60,14 @@ data:
 install probe-agent
 ```
 make install
-APP_NAME=probe-agent make deploy
+APP=probe-agent make deploy
 ```
 
 ### To start developing kubeprober
 You can run and build probe-master and probe-agent locally. please make sure that ~/.kube/config can access the kubernetes cluster.
 #### run probe-master
 ```
-APP_NAME=probe-master make run
+APP=probe-master make run
 ```
 #### run probe-agent
 ```
@@ -75,17 +75,17 @@ export PROBE_MASTER_ADDR="http://127.0.0.1:8088"
 export CLUSTER_NAME="moon"
 export SECRET_KEY="a944499f-97f3-4986-89fa-bc7dfc7e009a" 
 
-APP_NAME=probe-agent make run
+APP=probe-agent make run
 ```
 #### build binary file
 ```
-APP_NAME=probe-master make build
-APP_NAME=probe-agent make build
+APP=probe-master make build
+APP=probe-agent make build
 ```
 #### build image
 ```
-APP_NAME=probe-master make docker-build
-APP_NAME=probe-agent make docker-build
+APP=probe-master make docker-build
+APP=probe-agent make docker-build
 ```
 ### Write your prober
 TODO

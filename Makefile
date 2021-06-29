@@ -14,6 +14,11 @@ endif
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
+# default project
+project = kubeprober
+# version tag, default is latest if no input
+V ?= latest
+
 all: build
 
 ##@ General
@@ -52,16 +57,18 @@ dev: manifests kustomize
 	$(KUSTOMIZE) build config/dev | kubectl apply -f -
 
 build: generate fmt vet ## Build manager binary.
-	go build -o _bin/${APP_NAME} ./cmd/${APP_NAME}/${APP_NAME}.go
+	go build -o _bin/${APP} ./cmd/${APP}/${APP}.go
 
 run: manifests generate fmt vet ## Run a controller from your host.
-	go run ./cmd/${APP_NAME}/${APP_NAME}.go
+	go run ./cmd/${APP}/${APP}.go
 
 docker-build: ## Build docker image with the manager.
-	docker build --build-arg APP_NAME=${APP_NAME} -t ${APP_NAME}:latest .
+	docker build --build-arg APP=${APP} -t ${project}/${APP}:${V} .
 
 docker-push: ## Push docker image with the manager.
-	docker push ${APP_NAME}:latest
+	docker push ${project}/${APP}:${V}
+
+docker-build-push: docker-build docker-push
 
 ##@ Deployment
 
@@ -72,10 +79,10 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 	$(KUSTOMIZE) build config/crd | kubectl delete -f -
 
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	kubectl apply -f config/setup/${APP_NAME}/deployment.yaml
+	kubectl apply -f config/setup/${APP}/deployment.yaml
 
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
-	kubectl delete -f config/setup/${APP_NAME}/deployment.yaml
+	kubectl delete -f config/setup/${APP}/deployment.yaml
 
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
