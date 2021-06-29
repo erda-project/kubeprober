@@ -33,9 +33,8 @@ type ProbeAgentOptions struct {
 	EnableLeaderElection    bool
 	EnablePprof             bool
 	LeaderElectionNamespace string
+	LeaderElectionID        string
 	Namespace               string
-	CreateDefaultPool       bool
-	Version                 bool
 	ProbeMasterAddr         string
 	ClusterName             string
 	SecretKey               string
@@ -53,8 +52,8 @@ func NewProbeAgentOptions() *ProbeAgentOptions {
 		EnableLeaderElection:    false,
 		EnablePprof:             false,
 		LeaderElectionNamespace: "kube-system",
+		LeaderElectionID:        "88d8007a.erda.cloud",
 		Namespace:               "kubeprober",
-		CreateDefaultPool:       false,
 		ProbeListenAddr:         ":8082",
 		ProbeStatusReportUrl:    "",
 	}
@@ -108,8 +107,6 @@ func (o *ProbeAgentOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.BoolVar(&o.EnablePprof, "enable-pprof", o.EnablePprof, "Enable pprof for controller manager.")
 	fs.StringVar(&o.LeaderElectionNamespace, "leader-election-namespace", o.LeaderElectionNamespace, "This determines the namespace in which the leader election configmap will be created, it will use in-cluster namespace if empty.")
 	fs.StringVar(&o.Namespace, "namespace", os.Getenv("POD_NAMESPACE"), "Namespace if specified restricts the manager's cache to watch objects in the desired namespace. Defaults to kubeprober.")
-	fs.BoolVar(&o.CreateDefaultPool, "create-default-pool", o.CreateDefaultPool, "Create default cloud/edge pools if indicated.")
-	fs.BoolVar(&o.Version, "version", o.Version, "print the version information.")
 	fs.StringVar(&o.ProbeMasterAddr, "probe-master-addr", os.Getenv("PROBE_MASTER_ADDR"), "The address of the probe-master")
 	fs.StringVar(&o.ClusterName, "cluster-name", os.Getenv("CLUSTER_NAME"), "cluster name.")
 	fs.StringVar(&o.SecretKey, "secret-key", os.Getenv("SECRET_KEY"), "secret key of this cluster.")

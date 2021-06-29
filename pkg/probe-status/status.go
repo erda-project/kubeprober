@@ -118,6 +118,7 @@ func renderProbeStatus(status []kubeprobev1.ProbeCheckerStatus, info ProbeStatus
 		}
 		if pcs.Status != kubeprobev1.CheckerStatusError && s.Status != kubeprobev1.CheckerStatusInfo {
 			pcs.Status = s.Status
+			pcs.Message = s.Message
 		}
 	}
 
@@ -125,6 +126,7 @@ func renderProbeStatus(status []kubeprobev1.ProbeCheckerStatus, info ProbeStatus
 		ProbeCheckerStatus: kubeprobev1.ProbeCheckerStatus{
 			Name:    info.ProbeItemName,
 			Status:  pcs.Status,
+			Message: pcs.Message,
 			LastRun: pcs.LastRun,
 		},
 		Checkers: status,
