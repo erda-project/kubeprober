@@ -11,7 +11,7 @@ import (
 func Client(kubeConfigFile string) (*kubernetes.Clientset, error) {
 	kubeconfig, err := rest.InClusterConfig()
 	if err != nil {
-		// If not in cluster, use kube config file
+		// If not in cluster, use kubeconfig file
 		kubeconfig, err = clientcmd.BuildConfigFromFlags("", kubeConfigFile)
 		if err != nil {
 			return nil, err
