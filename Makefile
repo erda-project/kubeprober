@@ -72,17 +72,10 @@ docker-build-push: docker-build docker-push
 
 ##@ Deployment
 
-install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/crd | kubectl apply -f -
-
-uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/crd | kubectl delete -f -
-
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	kubectl apply -f config/setup/${APP}/deployment.yaml
-
+	$(KUSTOMIZE) build config/${APP} | kubectl apply -f -
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
-	kubectl delete -f config/setup/${APP}/deployment.yaml
+	$(KUSTOMIZE) build config/${APP} | kubectl delete -f -
 
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen

@@ -3,13 +3,13 @@ kind: Namespace
 metadata:
   labels:
     control-plane: controller-manager
-  name: kubeprober
+  name: system
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: probe-master
-  namespace: kubeprober
+  namespace: system
   labels:
     app: probe-master
 spec:
@@ -55,8 +55,20 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+  name: webhook-service
+  namespace: system
+spec:
+  ports:
+    - port: 443
+      targetPort: 9443
+  selector:
+    app: probe-master
+---
+apiVersion: v1
+kind: Service
+metadata:
   name: probe-master
-  namespace: kubeprober
+  namespace: system
   labels:
     name: probe-master
 spec:
@@ -66,60 +78,3 @@ spec:
       name: tcp
   selector:
     app: probe-master
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  annotations:
-    rbac.authorization.kubernetes.io/autoupdate: "true"
-  name: kubeprober
-rules:
-- apiGroups:
-  - kubeprober.erda.cloud
-  resources:
-  - clusters
-  - clusters/status
-  - probes
-  verbs:
-  - create
-  - get
-  - list
-  - watch
-  - delete
-  - update
-  - patch
-  - deletecollection
-- apiGroups:
-  - ""
-  resources:
-  - nodes
-  verbs:
-  - list
-  - watch
-- apiGroups:
-    - ""
-  resources:
-    - pods
-  verbs:
-    - get
-    - list
-    - watch
----
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
-metadata:
-  name: kubeprober
-subjects:
-  - kind: ServiceAccount
-    name: kubeprober
-    namespace: kubeprober
-roleRef:
-  kind: ClusterRole
-  name: kubeprober
-  apiGroup: rbac.authorization.k8s.io
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: kubeprober
-  namespace: kubeprober

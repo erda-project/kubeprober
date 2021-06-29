@@ -52,6 +52,10 @@ func (r *ProbeReconciler) initLogger(ctx context.Context) {
 //+kubebuilder:rbac:groups=kubeprober.erda.cloud,resources=probes,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=kubeprober.erda.cloud,resources=probes/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=kubeprober.erda.cloud,resources=probes/finalizers,verbs=update
+//+kubebuilder:rbac:groups="",resources=nodes,verbs=list;watch;get
+//+kubebuilder:rbac:groups="",resources=pods,verbs=list;watch;get
+//+kubebuilder:rbac:groups="batch",resources=jobs,verbs=create;get;list;watch;delete;update;patch;deletecollection
+//+kubebuilder:rbac:groups="batch",resources=cronjobs,verbs=create;get;list;watch;delete;update;patch;deletecollection
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

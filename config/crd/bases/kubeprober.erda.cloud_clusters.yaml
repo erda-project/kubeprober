@@ -29,6 +29,9 @@ spec:
     - jsonPath: .status.heartBeatTimeStamp
       name: HEARTBEATTIME
       type: string
+    - jsonPath: .metadata.uid
+      name: SECRETKEY
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date

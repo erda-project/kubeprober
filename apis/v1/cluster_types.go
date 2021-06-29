@@ -60,6 +60,7 @@ type ClusterStatus struct {
 // +kubebuilder:printcolumn:name="NodeCount",type=string,JSONPath=`.spec.nodeCount`
 // +kubebuilder:printcolumn:name="PROBENAMESPACES",type=string,JSONPath=`.spec.clusterConfig.probeNamespaces`
 // +kubebuilder:printcolumn:name="HEARTBEATTIME",type=string,JSONPath=`.status.heartBeatTimeStamp`
+// +kubebuilder:printcolumn:name="SECRETKEY",type=string,JSONPath=`.metadata.uid`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // Cluster is the Schema for the clusters API
