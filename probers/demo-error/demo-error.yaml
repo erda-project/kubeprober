@@ -1,4 +1,4 @@
-apiVersion: kubeprober.erda.cloud/v1alpha1
+apiVersion: kubeprober.erda.cloud/v1
 kind: Probe
 metadata:
   name: probe-link-test1
@@ -7,9 +7,9 @@ spec:
   # Add fields here
   probeList:
     # Probe item1
-    - name: probe-item-test1-demo-info
+    - name: probe-item-test1-demo-error
       spec:
         containers:
-          - name: demo-info
-            image: kubeprober/probe-test-demo-info:v0.0.1
+          - name: demo-error
+            image: kubeprober/probe-test-demo-error:v0.0.2
         restartPolicy: Never

@@ -138,7 +138,7 @@ func (r *ProbeReconciler) ReconcileJob(ctx context.Context, pItem kubeprobev1.Pr
 	return ctrl.Result{}, nil
 }
 
-func (r *ProbeReconciler) ReconcileCronJobs(ctx context.Context, probe *probev1.Probe) (ctrl.Result, error) {
+func (r *ProbeReconciler) ReconcileCronJobs(ctx context.Context, probe *kubeprobev1.Probe) (ctrl.Result, error) {
 	for _, j := range probe.Spec.ProbeList {
 		_, err := r.ReconcileCronJob(ctx, j, probe)
 		if err != nil {

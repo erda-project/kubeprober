@@ -11,7 +11,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-// Package v1alpha1 contains API Schema definitions for the probe v1alpha1 API group
+// Package v1 contains API Schema definitions for the probe v1 API group
 //+kubebuilder:object:generate=true
 //+groupName=kubeprober.erda.cloud
 package v1

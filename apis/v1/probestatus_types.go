@@ -75,6 +75,8 @@ type ProbeStatusStates struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="STATUS",type="string",JSONPath=".spec.status"
+//+kubebuilder:printcolumn:name="MESSAGE",type="string",JSONPath=".spec.message"
 
 // ProbeStatus is the Schema for the probestatuses API
 type ProbeStatus struct {
