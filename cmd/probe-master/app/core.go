@@ -92,7 +92,7 @@ func Run(opts *options.ProbeMasterOptions) {
 		HealthProbeBindAddress: opts.HealthProbeAddr,
 		LeaderElection:         opts.EnableLeaderElection,
 		LeaderElectionID:       "probe-master",
-		CertDir:                "config/cert/",
+		//CertDir:                "config/cert/",   //used to develop in local
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

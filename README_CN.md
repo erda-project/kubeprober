@@ -46,15 +46,17 @@ APP=probe-master make deploy
 
 部署agent前确保您在master已经创建好了一个cluster，创建好cluster后修改configmap的配置：
 ```
+vim config/manager-probe-agent/manager.yaml
+
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: kubeprober
-  namespace: kubeprober
+  namespace: system
 data:
-  PROBE_MASTER_ADDR: http://10.107.114.92:8088
+  PROBE_MASTER_ADDR: http://kubeprober-probe-master.kubeprober.svc.cluster.local:8088
   CLUSTER_NAME: moon
-  SECRET_KEY: a944499f-97f3-4986-89fa-bc7dfc7e009a
+  SECRET_KEY: 2f5079a5-425c-4fb7-8518-562e1685c9b4
 ```
 安装probe-agent
 ```
@@ -64,6 +66,10 @@ APP=probe-agent make deploy
 ### 开发
 
 你可以在本地运行以及构建probe-master以及probe-agent，运行之前请确保本地存在~/.kube/config可以访问到kubernetes集群。
+#### 安装 crd && webhook
+```
+make dev
+```
 #### 运行probe-master
 ```
 APP=probe-master make run

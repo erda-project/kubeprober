@@ -45,17 +45,17 @@ APP=probe-master make deploy
 
 Before deploying the agent, make sure that you have created a cluster in the master, and modify the configmap configuration after creating the cluster:
 ```
-vim config/setup/probe-agent/deployment.yaml
+vim config/manager-probe-agent/manager.yaml
 
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: kubeprober
-  namespace: kubeprober
+  namespace: system
 data:
-  PROBE_MASTER_ADDR: http://10.107.114.92:8088
+  PROBE_MASTER_ADDR: http://kubeprober-probe-master.kubeprober.svc.cluster.local:8088
   CLUSTER_NAME: moon
-  SECRET_KEY: a944499f-97f3-4986-89fa-bc7dfc7e009a
+  SECRET_KEY: 2f5079a5-425c-4fb7-8518-562e1685c9b4
 ```
 install probe-agent
 ```
@@ -65,6 +65,10 @@ APP=probe-agent make deploy
 
 ### To start developing kubeprober
 You can run and build probe-master and probe-agent locally. please make sure that ~/.kube/config can access the kubernetes cluster.
+#### install crd && webhook resources
+```
+make dev
+```
 #### run probe-master
 ```
 APP=probe-master make run

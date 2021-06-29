@@ -1,25 +1,26 @@
 resources:
-- ../default
+  - ../crd
+  - ../webhook
 
 patches:
-- patch: |
-    - op: "add"
-      path: "/webhooks/0/clientConfig/url"
-      value: "https://host.docker.internal:9443/mutate-kubeprober-erda-cloud-v1-cluster"
-    - op: "add"
-      path: "/webhooks/1/clientConfig/url"
-      value: "https://host.docker.internal:9443/mutate-kubeprober-erda-cloud-v1-probe"
-  target:
-    kind: MutatingWebhookConfiguration
-- patch: |
-    - op: "add"
-      path: "/webhooks/0/clientConfig/url"
-      value: "https://host.docker.internal:9443/validate-kubeprober-erda-cloud-v1-cluster"
-    - op: "add"
-      path: "/webhooks/1/clientConfig/url"
-      value: "https://host.docker.internal:9443/validate-kubeprober-erda-cloud-v1-probe"
-  target:
-    kind: ValidatingWebhookConfiguration
-- path: webhook_patch.yaml
-  target:
-    group: admissionregistration.k8s.io
+  - patch: |
+      - op: "add"
+        path: "/webhooks/0/clientConfig/url"
+        value: "https://host.docker.internal:9443/mutate-kubeprober-erda-cloud-v1-cluster"
+      - op: "add"
+        path: "/webhooks/1/clientConfig/url"
+        value: "https://host.docker.internal:9443/mutate-kubeprober-erda-cloud-v1-probe"
+    target:
+      kind: MutatingWebhookConfiguration
+  - patch: |
+      - op: "add"
+        path: "/webhooks/0/clientConfig/url"
+        value: "https://host.docker.internal:9443/validate-kubeprober-erda-cloud-v1-cluster"
+      - op: "add"
+        path: "/webhooks/1/clientConfig/url"
+        value: "https://host.docker.internal:9443/validate-kubeprober-erda-cloud-v1-probe"
+    target:
+      kind: ValidatingWebhookConfiguration
+  - path: webhook_patch.yaml
+    target:
+      group: admissionregistration.k8s.io

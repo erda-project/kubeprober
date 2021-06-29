@@ -3,13 +3,13 @@ kind: Namespace
 metadata:
   labels:
     control-plane: controller-manager
-  name: kubeprober
+  name: system
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: probe-agent
-  namespace: kubeprober
+  namespace: system
   labels:
     app: probe-agent
 spec:
@@ -48,13 +48,13 @@ spec:
               cpu: 100m
               memory: 20Mi
           envFrom:
-          - configMapRef:
-              name: kubeprober
+            - configMapRef:
+                name: kubeprober
           env:
-          - name: POD_NAMESPACE
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.namespace
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
       serviceAccountName: kubeprober
       terminationGracePeriodSeconds: 10
 ---
@@ -90,76 +90,8 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: kubeprober
-  namespace: kubeprober
+  namespace: system
 data:
-  PROBE_MASTER_ADDR: http://10.107.114.92:8088
+  PROBE_MASTER_ADDR: http://kubeprober-probe-master.kubeprober.svc.cluster.local:8088
   CLUSTER_NAME: moon
-  SECRET_KEY: a944499f-97f3-4986-89fa-bc7dfc7e009a
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  annotations:
-    rbac.authorization.kubernetes.io/autoupdate: "true"
-  name: kubeprober
-rules:
-  - apiGroups:
-      - kubeprober.erda.cloud
-    resources:
-      - clusters
-      - clusters/status
-      - probes
-      - probes/status
-      - probestatuses
-      - probestatuses/status
-    verbs:
-      - create
-      - get
-      - list
-      - watch
-      - delete
-      - update
-      - patch
-      - deletecollection
-  - apiGroups:
-      - ""
-    resources:
-      - nodes
-      - pods
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - "batch"
-    resources:
-      - jobs
-      - cronjobs
-    verbs:
-      - create
-      - get
-      - list
-      - watch
-      - delete
-      - update
-      - patch
-      - deletecollection
----
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
-metadata:
-  name: kubeprober
-subjects:
-  - kind: ServiceAccount
-    name: kubeprober
-    namespace: kubeprober
-roleRef:
-  kind: ClusterRole
-  name: kubeprober
-  apiGroup: rbac.authorization.k8s.io
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: kubeprober
-  namespace: kubeprober
+  SECRET_KEY: 2f5079a5-425c-4fb7-8518-562e1685c9b4
