@@ -20,12 +20,15 @@ spec:
     - jsonPath: .spec.status
       name: STATUS
       type: string
-    - jsonPath: .spec.message
-      name: MESSAGE
-      type: string
     - jsonPath: .spec.lastRun
       name: LASTRUN
       type: string
+    - jsonPath: .spec.message
+      name: MESSAGE
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
     name: v1
     schema:
       openAPIV3Schema:

@@ -20,6 +20,9 @@ spec:
     - jsonPath: .spec.policy.runInterval
       name: RUNINTERVAL
       type: integer
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
     name: v1
     schema:
       openAPIV3Schema:

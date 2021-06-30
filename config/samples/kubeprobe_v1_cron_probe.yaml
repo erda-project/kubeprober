@@ -1,17 +1,31 @@
 apiVersion: kubeprober.erda.cloud/v1
 kind: Probe
 metadata:
-  name: probe-cron-sample
+  name: probe-cron-link-test
 spec:
   policy:
     # unit: minute
     runInterval: 2
-  # Add fields here
   probeList:
-    # Probe item1
-    - name: probe-cron-item1
+    # probe item1:
+    - name: item1-dns-resolution-check
       spec:
         containers:
-          - name: demo-error
-            image: kubeprober/probe-test-demo-error:v0.0.1
+          - name: dns-resolution-check
+            image: kubeprober/dns-resolution-check:v0.0.1
+            resources:
+              requests:
+                cpu: 10m
+                memory: 50Mi
+        restartPolicy: Never
+    # probe item2: probe status with level -- INFO
+    - name: item2-demo-info
+      spec:
+        containers:
+          - name: demo-info
+            image: kubeprober/demo-info:v0.0.1
+            resources:
+              requests:
+                cpu: 10m
+                memory: 50Mi
         restartPolicy: Never

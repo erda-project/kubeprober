@@ -14,17 +14,19 @@ func main() {
 			Status: kubeprobev1.CheckerStatusInfo,
 		},
 		{
-			Name:   "checker2",
-			Status: kubeprobev1.CheckerStatusUNKNOWN,
+			Name:    "checker2",
+			Status:  kubeprobev1.CheckerStatusUNKNOWN,
+			Message: "UNKNOWN: non info level status message cannot be empty",
 		},
 		{
-			Name:   "checker3",
-			Status: kubeprobev1.CheckerStatusWARN,
+			Name:    "checker3",
+			Status:  kubeprobev1.CheckerStatusWARN,
+			Message: "WARN: non info level status message cannot be empty",
 		},
 		{
 			Name:    "checker4",
 			Status:  kubeprobev1.CheckerStatusError,
-			Message: "chcker4 run error because the network is timeout",
+			Message: "ERROR: non info level status message cannot be empty, message: checker4 run failed because network is timeout",
 		},
 	}
 	if err := status.ReportProbeStatus(report); err != nil {
