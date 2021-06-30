@@ -38,6 +38,11 @@ KubeProber 是一个针对大规模 Kubernetes 集群设计的诊断工具，用
 kubeprober的master跟agent均作为controller运行在kubernetes中，安装前确保您已经部署好了kubernetes集群，并且可以使用kubectl访问它。
 
 #### master端的安装方法：
+WebHook 的运行需要校验证书，需要先部署一下 cert-manager 的服务:
+```
+kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml
+```
+部署probe-master
 ```
 APP=probe-master make deploy
 ```
