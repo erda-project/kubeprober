@@ -37,6 +37,11 @@ The operator running on the managed cluster. This operator maintains two CRDs. O
 ### Installation
 Both the master and agent of kubeprober run as controllers in kubernetes. Before installation, make sure that you have deployed the kubernetes cluster and can access it using kubectl.
 #### Deploy probe-master：
+The operation of WebHook needs to verify the certificate, and you need to deploy the cert-manager service first:
+```
+kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml
+```
+install probe-master:
 ```
 APP=probe-master make deploy
 ```
