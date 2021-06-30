@@ -5,7 +5,7 @@
 ## 什么是 KubeProber?
 KubeProber 是一个针对大规模 Kubernetes 集群设计的诊断工具，用于在 kubernetes 集群中执行诊断项以证明集群的各项功能是否正常，KubeProber 有如下特点:
 
-* **支持大规模集群** 支持多集群管理，支持在管理端配置集群跟诊断项的关系以及统一查看所有集群的诊断结果；、
+* **支持大规模集群** 支持多集群管理，支持在管理端配置集群跟诊断项的关系以及统一查看所有集群的诊断结果；
 * **云原生** 核心逻辑采用 [operator](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/) 来实现，提供完整的Kubernetes API兼容性;
 * **可扩展** 支持用户自定义巡检项。
 
@@ -39,28 +39,33 @@ kubeprober的master跟agent均作为controller运行在kubernetes中，安装前
 
 #### master端的安装方法：
 ```
-make install
 APP=probe-master make deploy
 ```
 #### agent端安装方法：
 
-部署agent前确保您在master已经创建好了一个cluster，创建好cluster后修改configmap的配置：
+部署agent前确保您在master侧已经创建好了一个cluster:
+```
+kubectl apply -f config/samples/kubeprobe_v1_cluster.yaml
+kubectl get cluster
+```
+
+创建好cluster后修改configmap的配置：
 ```
 vim config/manager-probe-agent/manager.yaml
 
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: kubeprober
+  name: probeagent
   namespace: system
 data:
-  PROBE_MASTER_ADDR: http://kubeprober-probe-master.kubeprober.svc.cluster.local:8088
-  CLUSTER_NAME: moon
-  SECRET_KEY: 2f5079a5-425c-4fb7-8518-562e1685c9b4
+  probe-conf.yaml: |
+    probe_master_addr: http://kubeprober-probe-master.kubeprober.svc.cluster.local:8088
+    cluster_name: moon
+    secret_key: 2f5079a5-425c-4fb7-8518-562e1685c9b4
 ```
 安装probe-agent
 ```
-make install
 APP=probe-agent make deploy
 ```
 ### 开发

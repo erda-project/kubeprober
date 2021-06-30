@@ -38,28 +38,32 @@ The operator running on the managed cluster. This operator maintains two CRDs. O
 Both the master and agent of kubeprober run as controllers in kubernetes. Before installation, make sure that you have deployed the kubernetes cluster and can access it using kubectl.
 #### Deploy probe-master：
 ```
-make install
 APP=probe-master make deploy
 ```
 #### Deploy probe-agent：
 
-Before deploying the agent, make sure that you have created a cluster in the master, and modify the configmap configuration after creating the cluster:
+Before deploying the agent, make sure that you have created a cluster in the master side:
+```
+kubectl apply -f config/samples/kubeprobe_v1_cluster.yaml
+kubectl get cluster
+```
+Modify the configmap configuration after creating the cluster:
 ```
 vim config/manager-probe-agent/manager.yaml
 
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: kubeprober
+  name: probeagent
   namespace: system
 data:
-  PROBE_MASTER_ADDR: http://kubeprober-probe-master.kubeprober.svc.cluster.local:8088
-  CLUSTER_NAME: moon
-  SECRET_KEY: 2f5079a5-425c-4fb7-8518-562e1685c9b4
+  probe-conf.yaml: |
+    probe_master_addr: http://kubeprober-probe-master.kubeprober.svc.cluster.local:8088
+    cluster_name: moon
+    secret_key: 2f5079a5-425c-4fb7-8518-562e1685c9b4
 ```
 install probe-agent
 ```
-make install
 APP=probe-agent make deploy
 ```
 

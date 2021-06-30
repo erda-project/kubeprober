@@ -56,6 +56,10 @@ dev: manifests kustomize
 #	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/dev | kubectl apply -f -
 
+clear-dev: manifests kustomize
+#	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/dev | kubectl delete -f -
+
 build: generate fmt vet ## Build manager binary.
 	go build -o _bin/${APP} ./cmd/${APP}/${APP}.go
 
