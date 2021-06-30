@@ -32,6 +32,9 @@ spec:
     - jsonPath: .metadata.uid
       name: SECRETKEY
       type: string
+    - jsonPath: .status.attachedProbes
+      name: PROBE
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date

@@ -99,8 +99,8 @@ metadata:
   namespace: system
 data:
   probe-conf.yaml: |
-    probe_master_addr: http://kubeprober-probe-master.kubeprober.svc.cluster.local:8088
+    probe_master_addr: http://probe-master.kubeprober.svc.cluster.local:8088
     cluster_name: moon
-    secret_key: 2f5079a5-425c-4fb7-8518-562e1685c9b4
+    secret_key: 92782ee2-5a07-41c7-a1fc-7ff58e529114
     agent_debug: false
     debug_level: 1
