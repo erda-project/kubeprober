@@ -26,6 +26,8 @@ spec:
         - image: kubeprober/probe-agent:v0.0.1
           imagePullPolicy: "Always"
           name: probe-agent
+          command: ["/bin/sh"]
+          args: ["-c", "/probe-agent --config-file=/opt/probe-conf.yaml"]
           securityContext:
             allowPrivilegeEscalation: false
           livenessProbe:
@@ -47,14 +49,18 @@ spec:
             requests:
               cpu: 100m
               memory: 20Mi
-          envFrom:
-            - configMapRef:
-                name: kubeprober
           env:
             - name: POD_NAMESPACE
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+          volumeMounts:
+            - name: probe-config-volume
+              mountPath: /opt
+      volumes:
+        - name: probe-config-volume
+          configMap:
+            name: probeagent
       serviceAccountName: kubeprober
       terminationGracePeriodSeconds: 10
 ---
@@ -89,9 +95,12 @@ spec:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: kubeprober
+  name: probeagent
   namespace: system
 data:
-  PROBE_MASTER_ADDR: http://kubeprober-probe-master.kubeprober.svc.cluster.local:8088
-  CLUSTER_NAME: moon
-  SECRET_KEY: 2f5079a5-425c-4fb7-8518-562e1685c9b4
+  probe-conf.yaml: |
+    probe_master_addr: http://kubeprober-probe-master.kubeprober.svc.cluster.local:8088
+    cluster_name: moon
+    secret_key: 2f5079a5-425c-4fb7-8518-562e1685c9b4
+    agent_debug: false
+    debug_level: 1

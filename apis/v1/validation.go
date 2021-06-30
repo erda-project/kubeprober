@@ -15,11 +15,14 @@ package v1
 
 import "fmt"
 
-func (in *ProbeCheckerStatus) Validate() error {
+func (in ProbeCheckerStatus) Validate() error {
 	if in.Name == "" {
 		err := fmt.Errorf("probe checker name is empty")
 		return err
 	}
-	// TODO status level & message empty check
+	if in.Status != CheckerStatusInfo && in.Message == "" {
+		err := fmt.Errorf("non info level status with empty message")
+		return err
+	}
 	return nil
 }

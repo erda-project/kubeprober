@@ -130,7 +130,7 @@ func genProbeCheckerStatus(reason, msg, pItemName string) (status kubeprobev1.Pr
 	status = kubeprobev1.ProbeCheckerStatus{
 		Name:    pItemName,
 		Status:  kubeprobev1.CheckerStatusUNKNOWN,
-		Message: fmt.Sprintf("pod running failed, reason:%s, message:%s", reason, msg),
+		Message: fmt.Sprintf("pod running failed, reason: %s, message: %s", reason, msg),
 		LastRun: &now,
 	}
 	return
@@ -174,6 +174,7 @@ func ReportProbeResult(c client.Client, r probestatus.ReportProbeStatusSpec) err
 	}
 
 	needUpdate, ups := mergeProbeStatus(r, ps)
+	logger.Log.V(2).Info("status merge info", "incoming probe item status", r, "need update", needUpdate, "before merge", ps, "after merge", ups)
 	// TODO: optimize using patch method
 	if needUpdate {
 		err = c.Update(ctx, &ups)

@@ -1,38 +1,62 @@
 apiVersion: kubeprober.erda.cloud/v1
 kind: Probe
 metadata:
-  name: probe-link-test1
+  name: probe-link-test
 spec:
-  # Add fields here
+  # probe items
   probeList:
-    # Probe item1
-    - name: probe-item-test1-success
+    # probe item1: probe status with level -- ERROR
+    - name: probe-link-test-item1
       spec:
         containers:
-          - name: hello
-            image: busybox
-            command: ['sh', '-c', 'echo "Hello, Kubernetes!" && sleep 10']
+          - name: demo-error
+            image: kubeprober/demo-error:v0.0.1
+            resources:
+              requests:
+                cpu: 10m
+                memory: 50Mi
         restartPolicy: Never
-    - name: probe-item-test1-failed
+    # probe item2: probe status with level -- INFO
+    - name: probe-link-test-item2
       spec:
-        activeDeadlineSeconds: 30
         containers:
-          - name: hello-failed
-            image: busybox
-            command: ['sh', '-c', 'echo "Hello, Kubernetes!" && sleep 40']
+          - name: demo-info
+            image: kubeprober/demo-info:v0.0.1
+            resources:
+              requests:
+                cpu: 10m
+                memory: 50Mi
         restartPolicy: Never
-    - name: probe-item-test1-pending
+    # probe item3: probe pod pending lead to probe status with level -- UNKNOWN
+    - name: probe-link-test-item3
       spec:
         affinity:
           nodeAffinity:
             requiredDuringSchedulingIgnoredDuringExecution:
               nodeSelectorTerms:
                 - matchExpressions:
-                    - key: dice/platform-test
+                    - key: kubeprober/platform-test
                       operator: Exists
         activeDeadlineSeconds: 10
         containers:
           - name: hello-pending
             image: busybox
             command: ['sh', '-c', 'echo "Hello, Kubernetes!" && sleep 10']
+            resources:
+              requests:
+                cpu: 10m
+                memory: 50Mi
+        restartPolicy: Never
+    # probe item4: probe pod failed lead to probe status with level -- UNKNOWN
+    - name: probe-link-test-item4
+      spec:
+        activeDeadlineSeconds: 30
+        containers:
+          - name: hello-failed
+            image: busybox
+            command: ['sh', '-c', 'echo "Hello, Kubernetes!" && sleep 40']
+            resources:
+              requests:
+                cpu: 10m
+                memory: 50Mi
         restartPolicy: Never

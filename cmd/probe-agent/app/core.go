@@ -18,11 +18,15 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 
 	"context"
-	"os"
+	"fmt"
+	"strings"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
+	"go.uber.org/zap/zapcore"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -30,11 +34,11 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
-	"k8s.io/klog"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	kubeprobev1 "github.com/erda-project/kubeprober/apis/v1"
 	"github.com/erda-project/kubeprober/cmd/probe-agent/options"
@@ -57,41 +61,99 @@ func init() {
 
 // NewCmdProbeAgentManager creates a *cobra.Command object with default parameters
 func NewCmdProbeAgentManager(stopCh <-chan struct{}) *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:   "probe-agent",
 		Short: "Launch probe-agent",
 		Long:  "Launch probe-agent",
-		Run: func(cmd *cobra.Command, args []string) {
+		PreRunE: func(cmd *cobra.Command, _ []string) error {
+			// enable using dashed notation in flags and underscores in env
+			viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+
+			if err := viper.BindPFlags(cmd.Flags()); err != nil {
+				return fmt.Errorf("failed to bind flags: %w", err)
+			}
+
+			viper.AutomaticEnv()
+
+			if err := options.ProbeAgentConf.LoadConfig(); err != nil {
+				return err
+			}
+
+			err := options.ProbeAgentConf.ValidateOptions()
+			if err != nil {
+				return fmt.Errorf("validate option failed, error: %v", err)
+			}
+
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-				klog.V(1).Infof("FLAG: --%s=%q", flag.Name, flag.Value)
+				// klog.V(0).Infof("FLAG: --%s=%q", flag.Name, flag.Value)
+				logrus.Infof("FLAG: --%s=%q", flag.Name, flag.Value)
 			})
 
-			Run(options.ProbeAgentConf)
+			return doRun()
 		},
 	}
 
 	options.ProbeAgentConf.AddFlags(cmd.Flags())
-	err := options.ProbeAgentConf.PostConfig()
-	if err != nil {
-		panic(err)
-	}
-	err = options.ProbeAgentConf.ValidateOptions()
-	if err != nil {
-		panic(err)
-	}
-	logrus.Infof("config: %+v", options.ProbeAgentConf)
 	return cmd
 }
 
-func Run(opts *options.ProbeAgentOptions) {
+func doRun() error {
+	ctx := signals.SetupSignalHandler()
+
+	// receive config file update events over a channel
+	confUpdateChan := make(chan struct{}, 1)
+
+	viper.OnConfigChange(func(evt fsnotify.Event) {
+		if evt.Op&fsnotify.Write == fsnotify.Write || evt.Op&fsnotify.Create == fsnotify.Create {
+			confUpdateChan <- struct{}{}
+		}
+	})
+
+	// start the operator in a goroutine
+	errChan := make(chan error, 1)
+	ctx, cancelFunc := context.WithCancel(ctx)
+	defer cancelFunc()
+
+	go func() {
+		err := startOperator(ctx)
+		if err != nil {
+			logrus.Errorf("start operator failed, error: %v", err)
+		}
+		errChan <- err
+	}()
+
+	// watch for events
+	for {
+		select {
+		case err := <-errChan: // operator failed
+			logrus.Errorf("shutting down due to error: %v", err)
+			return err
+		case <-ctx.Done(): // signal received
+			logrus.Infof("shutting down due to signal")
+			return nil
+		case <-confUpdateChan: // config file updated
+			logrus.Infof("shutting down to apply updated configuration")
+			return nil
+		}
+	}
+}
+
+func startOperator(ctx context.Context) error {
+	opts := options.ProbeAgentConf
 	zapopt := zap.Options{
 		Development: true,
+		Level:       zapcore.Level(-opts.DebugLevel),
 	}
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zapopt)))
 
+	setupLog.V(int(opts.DebugLevel)).Info("", "log level", opts.DebugLevel)
+	// setupLog.Info("probe agent", "config", opts)
+
 	// if debug probe agent, disable tunnel service
-	if opts.ProbeAgentDebug != "true" {
+	if !opts.AgentDebug {
 		ctx := context.Background()
 		go client.Start(ctx, &client.Config{
 			Debug:           false,
@@ -126,7 +188,7 @@ func Run(opts *options.ProbeAgentOptions) {
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
-		os.Exit(1)
+		return fmt.Errorf("start manager failed, error: %v", err)
 	}
 
 	if err = (&controllers.ProbeReconciler{
@@ -134,7 +196,7 @@ func Run(opts *options.ProbeAgentOptions) {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Probe")
-		os.Exit(1)
+		return fmt.Errorf("create probe controller failed, error: %v", err)
 	}
 
 	if err = (&controllers.ProbeStatusReconciler{
@@ -142,17 +204,17 @@ func Run(opts *options.ProbeAgentOptions) {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ProbeResult")
-		os.Exit(1)
+		return fmt.Errorf("create probe status controller failed, error: %v", err)
 	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
-		os.Exit(1)
+		return fmt.Errorf("set up health check failed, error: %v", err)
 	}
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up ready check")
-		os.Exit(1)
+		return fmt.Errorf("set ready check failed, error: %v", err)
 	}
 
 	setupLog.Info("starting probe server")
@@ -160,9 +222,10 @@ func Run(opts *options.ProbeAgentOptions) {
 	s.Start()
 
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
-		os.Exit(1)
+		return fmt.Errorf("running managet failed, error: %v", err)
 	}
-
+	setupLog.Info("start manager successfully")
+	return nil
 }

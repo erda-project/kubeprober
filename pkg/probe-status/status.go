@@ -35,9 +35,14 @@ func ReportProbeStatus(status []kubeprobev1.ProbeCheckerStatus) error {
 		return err
 	}
 
+	err = ValidateProbeStatus(status)
+	if err != nil {
+		logrus.Errorf("validate checker status failed, content: %+v, error: %v", status, err)
+	}
+
 	pss, err := renderProbeStatus(status, info)
 	if err != nil {
-		logrus.Errorf("render checker status failed, content:%v, error:%v", status, err)
+		logrus.Errorf("render checker status failed, content: %+v, error: %v", status, err)
 		return err
 	}
 
@@ -48,6 +53,16 @@ func ReportProbeStatus(status []kubeprobev1.ProbeCheckerStatus) error {
 	}
 
 	return nil
+}
+
+func ValidateProbeStatus(status []kubeprobev1.ProbeCheckerStatus) (err error) {
+	for _, s := range status {
+		err = s.Validate()
+		if err != nil {
+			return
+		}
+	}
+	return
 }
 
 func sendProbeStatus(ps ReportProbeStatusSpec, info ProbeStatusReportInfo) error {
@@ -88,6 +103,7 @@ func sendProbeStatus(ps ReportProbeStatusSpec, info ProbeStatusReportInfo) error
 		logrus.Errorf("send probe status failed, error:%v", err)
 		return err
 	}
+	logrus.Infof("send probe status successfully, status: %+v", ps)
 	return nil
 }
 

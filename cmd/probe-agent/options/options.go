@@ -19,28 +19,47 @@ import (
 	"os"
 
 	"github.com/sirupsen/logrus"
-
-	kubeprobev1 "github.com/erda-project/kubeprober/apis/v1"
 	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
+)
+
+const (
+	MetricsAddrFlag             = "metrics-addr"
+	PprofAddrFlag               = "pprof-addr"
+	HealthProbeAddrFlag         = "health-probe-addr"
+	EnableLeaderElectionFlag    = "enable-leader-election"
+	EnablePprofFlag             = "enable-pprof"
+	LeaderElectionNamespaceFlag = "leader-election-namespace"
+	NamespaceFlag               = "namespace"
+	ProbeMasterAddrFalg         = "probe-master-addr"
+	ClusterNameFalg             = "cluster-name"
+	SecretKeyFalg               = "secret-key"
+	ProbeStatusReportUrlFalg    = "probestatus-report-url"
+	ProbeListenAddrFalg         = "probe-listen-addr"
+	AgentDebugFalg              = "agent-debug"
+	DebugLevelFalg              = "debug-level"
+	ConfigFileFalg              = "config-file"
 )
 
 var ProbeAgentConf = NewProbeAgentOptions()
 
 type ProbeAgentOptions struct {
-	MetricsAddr             string
-	PprofAddr               string
-	HealthProbeAddr         string
-	EnableLeaderElection    bool
-	EnablePprof             bool
-	LeaderElectionNamespace string
-	LeaderElectionID        string
-	Namespace               string
-	ProbeMasterAddr         string
-	ClusterName             string
-	SecretKey               string
-	ProbeStatusReportUrl    string
-	ProbeListenAddr         string
-	ProbeAgentDebug         string
+	MetricsAddr             string `mapstructure:"metrics_addr" yaml:"metrics_addr"`
+	PprofAddr               string `mapstructure:"pprof_addr" yaml:"pprof_addr"`
+	HealthProbeAddr         string `mapstructure:"health_probe_addr" yaml:"health_probe_addr"`
+	EnableLeaderElection    bool   `mapstructure:"enable_leader_election" yaml:"enable_leader_election"`
+	EnablePprof             bool   `mapstructure:"enable_pprof" yaml:"enable_pprof"`
+	LeaderElectionNamespace string `mapstructure:"leader_election_namespace" yaml:"leader_election_namespace"`
+	LeaderElectionID        string `mapstructure:"leader_election_id" yaml:"leader_election_id"`
+	Namespace               string `mapstructure:"namespace" yaml:"namespace"`
+	ProbeMasterAddr         string `mapstructure:"probe_master_addr" yaml:"probe_master_addr"`
+	ClusterName             string `mapstructure:"cluster_name" yaml:"cluster_name"`
+	SecretKey               string `mapstructure:"secret_key" yaml:"secret_key"`
+	ProbeStatusReportUrl    string `mapstructure:"probe_status_report_url" yaml:"probe_status_report_url"`
+	ProbeListenAddr         string `mapstructure:"probe_listen_addr" yaml:"probe_listen_addr"`
+	AgentDebug              bool   `mapstructure:"agent_debug" yaml:"agent_debug"`
+	DebugLevel              int8   `mapstructure:"debug_level" yaml:"debug_level"`
+	ConfigFile              string
 }
 
 // NewProbeAgentOptions creates a new NewProbeAgentOptions with a default config.
@@ -53,9 +72,11 @@ func NewProbeAgentOptions() *ProbeAgentOptions {
 		EnablePprof:             false,
 		LeaderElectionNamespace: "kube-system",
 		LeaderElectionID:        "88d8007a.erda.cloud",
-		Namespace:               "kubeprober",
+		Namespace:               "default",
 		ProbeListenAddr:         ":8082",
 		ProbeStatusReportUrl:    "",
+		DebugLevel:              1,
+		ConfigFile:              "",
 	}
 
 	return o
@@ -75,18 +96,32 @@ func (o *ProbeAgentOptions) ValidateOptions() error {
 	return nil
 }
 
-func (o *ProbeAgentOptions) PostConfig() error {
-	if o.Namespace == "" {
-		o.Namespace = "kubeprober"
+func (o *ProbeAgentOptions) LoadConfig() error {
+	if o.ConfigFile != "" {
+		logrus.Infof("read config file: %s", o.ConfigFile)
+		viper.SetConfigFile(o.ConfigFile)
+		if err := viper.ReadInConfig(); err != nil {
+			return fmt.Errorf("failed to read config file %s: %w", o.ConfigFile, err)
+		}
+		err := viper.Unmarshal(o)
+		if err != nil {
+			return err
+		}
+		viper.WatchConfig()
+	}
+	// pod running namespace with higher priority
+	ns := os.Getenv("POD_NAMESPACE")
+	if ns != "" {
+		o.Namespace = ns
 	}
 	if o.ProbeStatusReportUrl == "" && o.Namespace == "" {
-		err := fmt.Errorf("both ProbeStatusReportUrl and POD_NAMESPACE environment is empty")
+		err := fmt.Errorf("both probe_status_report_url and namespace environment is empty")
 		return err
 	}
 	if o.ProbeStatusReportUrl == "" {
 		o.ProbeStatusReportUrl = fmt.Sprintf("http://probeagent.%s.svc.cluster.local%s/probe-status", o.Namespace, o.ProbeListenAddr)
 	}
-	logrus.Infof("probe status report url %s", o.ProbeStatusReportUrl)
+	logrus.Infof("current config: %+v", o)
 	return nil
 }
 
@@ -100,16 +135,19 @@ func (o ProbeAgentOptions) GetNamespace() string {
 
 // AddFlags returns flags for a specific yurthub by section name
 func (o *ProbeAgentOptions) AddFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&o.MetricsAddr, "metrics-addr", o.MetricsAddr, "The address the metric endpoint binds to.")
-	fs.StringVar(&o.PprofAddr, "pprof-addr", o.PprofAddr, "The address the pprof binds to.")
-	fs.StringVar(&o.HealthProbeAddr, "health-probe-addr", o.HealthProbeAddr, "The address the healthz/readyz endpoint binds to.")
-	fs.BoolVar(&o.EnableLeaderElection, "enable-leader-election", o.EnableLeaderElection, "Whether you need to enable leader election.")
-	fs.BoolVar(&o.EnablePprof, "enable-pprof", o.EnablePprof, "Enable pprof for controller manager.")
-	fs.StringVar(&o.LeaderElectionNamespace, "leader-election-namespace", o.LeaderElectionNamespace, "This determines the namespace in which the leader election configmap will be created, it will use in-cluster namespace if empty.")
-	fs.StringVar(&o.Namespace, "namespace", os.Getenv("POD_NAMESPACE"), "Namespace if specified restricts the manager's cache to watch objects in the desired namespace. Defaults to kubeprober.")
-	fs.StringVar(&o.ProbeMasterAddr, "probe-master-addr", os.Getenv("PROBE_MASTER_ADDR"), "The address of the probe-master")
-	fs.StringVar(&o.ClusterName, "cluster-name", os.Getenv("CLUSTER_NAME"), "cluster name.")
-	fs.StringVar(&o.SecretKey, "secret-key", os.Getenv("SECRET_KEY"), "secret key of this cluster.")
-	fs.StringVar(&o.ProbeStatusReportUrl, "probestatus-report-url", os.Getenv(kubeprobev1.ProbeStatusReportUrl), "probe status report url for probe check pod")
-	fs.StringVar(&o.ProbeAgentDebug, "probe-agent-debug", os.Getenv("PROBE_AGENT_DEBUG"), "whether debug probe agent, if debug stop tunnel service")
+	fs.StringVar(&o.MetricsAddr, MetricsAddrFlag, o.MetricsAddr, "The address the metric endpoint binds to.")
+	fs.StringVar(&o.PprofAddr, PprofAddrFlag, o.PprofAddr, "The address the pprof binds to.")
+	fs.StringVar(&o.HealthProbeAddr, HealthProbeAddrFlag, o.HealthProbeAddr, "The address the healthz/readyz endpoint binds to.")
+	fs.BoolVar(&o.EnableLeaderElection, EnableLeaderElectionFlag, o.EnableLeaderElection, "Whether you need to enable leader election.")
+	fs.BoolVar(&o.EnablePprof, EnablePprofFlag, o.EnablePprof, "Enable pprof for controller manager.")
+	fs.StringVar(&o.LeaderElectionNamespace, LeaderElectionNamespaceFlag, o.LeaderElectionNamespace, "This determines the namespace in which the leader election configmap will be created, it will use in-cluster namespace if empty.")
+	fs.StringVar(&o.Namespace, NamespaceFlag, o.Namespace, "Namespace if specified restricts the manager's cache to watch objects in the desired namespace. Defaults to default namespace.")
+	fs.StringVar(&o.ProbeMasterAddr, ProbeMasterAddrFalg, o.ProbeMasterAddr, "The address of the probe-master")
+	fs.StringVar(&o.ClusterName, ClusterNameFalg, o.ClusterName, "cluster name.")
+	fs.StringVar(&o.SecretKey, SecretKeyFalg, o.SecretKey, "secret key of this cluster.")
+	fs.StringVar(&o.ProbeStatusReportUrl, ProbeStatusReportUrlFalg, o.ProbeStatusReportUrl, "probe status report url for probe check pod")
+	fs.StringVar(&o.ProbeListenAddr, ProbeListenAddrFalg, o.ProbeListenAddr, "probe agent listen address")
+	fs.BoolVar(&o.AgentDebug, AgentDebugFalg, o.AgentDebug, "whether debug probe agent; if debug,  stop tunnel service")
+	fs.Int8Var(&o.DebugLevel, DebugLevelFalg, o.DebugLevel, "a debug level is a logging priority. higher levels meaning more debug log.")
+	fs.StringVar(&o.ConfigFile, ConfigFileFalg, o.ConfigFile, "read configurations from config file if set.")
 }

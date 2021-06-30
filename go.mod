@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/cenkalti/backoff v2.2.1+incompatible
+	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-logr/logr v0.4.0
 	github.com/google/go-cmp v0.5.5
 	github.com/gorilla/mux v1.8.0
@@ -16,7 +17,9 @@ require (
 	github.com/sirupsen/logrus v1.7.0
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5
+	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.7.0
+	go.uber.org/zap v1.17.0
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.21.1
 	k8s.io/apimachinery v0.21.1

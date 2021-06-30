@@ -11,9 +11,10 @@ import (
 )
 
 func initEvn() {
-	_ = os.Setenv(kubeprobev1.ProbeNamespace, "default")
-	_ = os.Setenv(kubeprobev1.ProbeName, "probe-link-test1")
+	_ = os.Setenv(kubeprobev1.ProbeNamespace, "kubeprober")
+	_ = os.Setenv(kubeprobev1.ProbeName, "probe-link-test")
 	_ = os.Setenv(kubeprobev1.ProbeItemName, "probe-item-test2")
+	// _ = os.Setenv(kubeprobev1.ProbeStatusReportUrl, "http://probeagent.kubeprober.svc.cluster.local:8082/probe-status")
 	_ = os.Setenv(kubeprobev1.ProbeStatusReportUrl, "http://localhost:8082/probe-status")
 }
 
