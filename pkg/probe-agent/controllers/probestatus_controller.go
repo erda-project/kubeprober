@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -276,7 +277,7 @@ func (p *PodPredicates) Delete(e event.DeleteEvent) bool {
 }
 
 func (p *PodPredicates) Update(e event.UpdateEvent) bool {
-
+	n := getNamespaceName(e.ObjectNew)
 	oldObject := e.ObjectOld.(*corev1.Pod)
 	newObject := e.ObjectNew.(*corev1.Pod)
 
@@ -284,13 +285,10 @@ func (p *PodPredicates) Update(e event.UpdateEvent) bool {
 		return false
 	}
 
-	if oldObject.Status.Phase == newObject.Status.Phase &&
-		oldObject.Status.Reason == newObject.Status.Reason {
+	if cmp.Equal(oldObject.Status, newObject.Status) {
 		return false
 	}
-
-	n := getNamespaceName(e.ObjectNew)
-	logger.Log.V(2).Info("update event for probe pod", "pod", n)
+	logger.Log.V(2).Info("update event for probe pod, status change", "pod", n, "status new", newObject.Status, "status old", oldObject.Status)
 	return true
 }
 
