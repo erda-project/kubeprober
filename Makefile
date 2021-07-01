@@ -64,7 +64,7 @@ build: generate fmt vet ## Build manager binary.
 	go build -o _bin/${APP} ./cmd/${APP}/${APP}.go
 
 run: manifests generate fmt vet ## Run a controller from your host.
-	go run ./cmd/${APP}/${APP}.go
+	if [ -z ${CONF} ]; then go run ./cmd/${APP}/${APP}.go; else go run ./cmd/${APP}/${APP}.go --config-file=${CONF}; fi
 
 docker-build: ## Build docker image with the manager.
 	docker build --build-arg APP=${APP} -t ${project}/${APP}:${V} .

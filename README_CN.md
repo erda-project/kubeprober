@@ -58,6 +58,7 @@ kubectl get cluster
 ```
 vim config/manager-probe-agent/manager.yaml
 
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -69,6 +70,27 @@ data:
     cluster_name: moon
     secret_key: 2f5079a5-425c-4fb7-8518-562e1685c9b4
 ```
+
+如果只需要部署probe-agent，比如只是针对probe-agent开发调试，或者是仅仅需要在单集群执行探测用例，则可以开启如下配置，
+使得probe-agent独立运行而无需通probe-master通信
+
+```
+vim config/manager-probe-agent/manager.yaml
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: probeagent
+  namespace: system
+data:
+  probe-conf.yaml: |
+    # default disabled, if enabled, probe-agent will stop communication with master
+    agent_debug: true
+    # default 1, if more verbose info needed, increase it
+    debug_level: 1
+```
+
 安装probe-agent
 ```
 APP=probe-agent make deploy
@@ -85,12 +107,20 @@ make dev
 APP=probe-master make run
 ```
 #### 运行probe-agent
+运行probe-agent前，需要先创建一个 cluster CRD 资源，具体参考[agent端安装方法]章节
 ```
-export PROBE_MASTER_ADDR="http://127.0.0.1:8088"
-export CLUSTER_NAME="moon"
-export SECRET_KEY="a944499f-97f3-4986-89fa-bc7dfc7e009a" 
+# create local config yaml file
+touch probe-conf.yaml
 
-APP=probe-agent make run
+# input configurations, eg. cluster info
+cat << EOF > probe-conf.yaml
+probe_master_addr: http://kubeprober-probe-master.kubeprober.svc.cluster.local:8088
+cluster_name: moon
+secret_key: 2f5079a5-425c-4fb7-8518-562e1685c9b4
+EOF
+
+# run probe-agent with config file
+APP=probe-agent CONF=./probe-conf.yaml make run
 ```
 #### 编译为二进制文件
 ```
@@ -99,8 +129,22 @@ APP=probe-agent make build
 ```
 #### 构建镜像
 ```
+# build with default version: latest
+# output image format: kubeprober/probe-master:latest
 APP=probe-master make docker-build
+
+# build with custom version: v0.0.1
+# output image format: kubeprober/probe-master:v0.0.1
+APP=probe-master V=v0.0.1 make docker-build
+
+# build with default version: latest
 APP=probe-agent make docker-build
+
+# push with default version: latest
+APP=probe-agent make docker-push
+
+# build & push
+APP=probe-agent make docker-build-push
 ```
 ### 自定义prober
 TODO

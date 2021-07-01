@@ -6,7 +6,7 @@ spec:
   # probe items
   probeList:
     # probe item1: probe status with level -- ERROR
-    - name: probe-link-test-item1
+    - name: link-test-item1-demo-error
       spec:
         containers:
           - name: demo-error
@@ -17,7 +17,7 @@ spec:
                 memory: 50Mi
         restartPolicy: Never
     # probe item2: probe status with level -- INFO
-    - name: probe-link-test-item2
+    - name: link-test-item2-demo-info
       spec:
         containers:
           - name: demo-info
@@ -28,7 +28,7 @@ spec:
                 memory: 50Mi
         restartPolicy: Never
     # probe item3: probe pod pending lead to probe status with level -- UNKNOWN
-    - name: probe-link-test-item3
+    - name: link-test-item3-pending
       spec:
         affinity:
           nodeAffinity:
@@ -48,7 +48,7 @@ spec:
                 memory: 50Mi
         restartPolicy: Never
     # probe item4: probe pod failed lead to probe status with level -- UNKNOWN
-    - name: probe-link-test-item4
+    - name: ink-test-item4-failed
       spec:
         activeDeadlineSeconds: 30
         containers:

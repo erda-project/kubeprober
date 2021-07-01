@@ -17,7 +17,7 @@ RUN pwd && \
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM scratch
+FROM alpine:latest
 ARG APP
 ENV APP=${APP}
 WORKDIR /
