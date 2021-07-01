@@ -145,7 +145,8 @@ APP=probe-agent make docker-push
 APP=probe-agent make docker-build-push
 ```
 ### Write your prober
-TODO
+[custom probes](./probers/README.md)
+
 ## Contributing
 Contributions are always welcomed. Please refer to [Contributing to KubeProber](CONTRIBUTING.md) for details.
 
