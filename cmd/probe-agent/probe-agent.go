@@ -14,7 +14,6 @@
 package main
 
 import (
-	"flag"
 	"math/rand"
 	"time"
 
@@ -29,7 +28,6 @@ func main() {
 	defer klog.Flush()
 
 	cmd := app.NewCmdProbeAgentManager(wait.NeverStop)
-	cmd.Flags().AddGoFlagSet(flag.CommandLine)
 	if err := cmd.Execute(); err != nil {
 		panic(err)
 	}

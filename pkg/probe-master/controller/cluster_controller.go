@@ -112,8 +112,8 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	//update status of cluster
 	statusPatch := kubeprobev1.Cluster{
-		Status:     kubeprobev1.ClusterStatus{
-			AttachedProbes:  labelKeys,
+		Status: kubeprobev1.ClusterStatus{
+			AttachedProbes: labelKeys,
 		},
 	}
 	if patch, err = json.Marshal(statusPatch); err != nil {
@@ -121,8 +121,8 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 	if err = r.Status().Patch(ctx, &kubeprobev1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:                       cluster.Name,
-			Namespace:                  metav1.NamespaceDefault,
+			Name:      cluster.Name,
+			Namespace: metav1.NamespaceDefault,
 		},
 	}, client.RawPatch(types.MergePatchType, patch)); err != nil {
 		klog.Errorf("update cluster [%s] status error: %+v\n", req.Name, err)

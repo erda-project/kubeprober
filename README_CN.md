@@ -109,19 +109,26 @@ APP=probe-master make run
 #### 运行probe-agent
 运行probe-agent前，需要先创建一个 cluster CRD 资源，具体参考[agent端安装方法]章节
 ```
-# create local config yaml file
-touch probe-conf.yaml
+# export env get from the create cluster crd
+export PROBE_MASTER_ADDR="http://127.0.0.1:8088"
+export CLUSTER_NAME="moon"
+export SECRET_KEY="a944499f-97f3-4986-89fa-bc7dfc7e009a" 
 
-# input configurations, eg. cluster info
-cat << EOF > probe-conf.yaml
-probe_master_addr: http://kubeprober-probe-master.kubeprober.svc.cluster.local:8088
-cluster_name: moon
-secret_key: 2f5079a5-425c-4fb7-8518-562e1685c9b4
-EOF
-
-# run probe-agent with config file
-APP=probe-agent CONF=./probe-conf.yaml make run
+# run probe-agent
+APP=probe-agent make run
 ```
+
+probe-agent 参数优先级与格式
+```
+# 优先级从上到下依次降低 (e.g --cluster-name)
+flag       --cluster-name
+env          CLUSTER_NAME
+config       cluster_name
+default
+```
+
+
+
 #### 编译为二进制文件
 ```
 APP=probe-master make build
