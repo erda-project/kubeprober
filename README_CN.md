@@ -162,4 +162,4 @@ APP=probe-agent make docker-build-push
     ![Erda WeChat](./docs/assets/wechat-small.jpg)
     
 ## 许可证
-KubeProber 遵循 AGPL 3.0 许可证。有关详细信息请参见 [LICENSE](LICENSE) 文件。
+KubeProber 遵循 Apache 2.0 许可证。有关详细信息请参见 [LICENSE](LICENSE) 文件。
