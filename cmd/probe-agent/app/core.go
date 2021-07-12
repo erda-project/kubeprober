@@ -44,7 +44,6 @@ import (
 	"github.com/erda-project/kubeprober/cmd/probe-agent/options"
 	"github.com/erda-project/kubeprober/cmd/probe-agent/webserver"
 	"github.com/erda-project/kubeprober/pkg/probe-agent/controllers"
-	client "github.com/erda-project/kubeprober/pkg/probe-agent/tunnel"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -157,17 +156,6 @@ func startOperator(ctx context.Context) error {
 
 	setupLog.V(int(opts.DebugLevel)).Info("", "log level", opts.DebugLevel)
 	// setupLog.Info("probe agent", "config", opts)
-
-	// if debug probe agent, disable tunnel service
-	if !opts.AgentDebug {
-		ctx := context.Background()
-		go client.Start(ctx, &client.Config{
-			Debug:           false,
-			ProbeMasterAddr: opts.ProbeMasterAddr,
-			ClusterName:     opts.ClusterName,
-			SecretKey:       opts.SecretKey,
-		})
-	}
 
 	// listwatch pod for failed probe pod, listwatch cronjob for reconcile
 	// TODO: add list label selector in related controller & merge them here

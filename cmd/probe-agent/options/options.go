@@ -35,7 +35,6 @@ const (
 	SecretKeyFalg               = "secret-key"
 	ProbeStatusReportUrlFalg    = "probestatus-report-url"
 	ProbeListenAddrFalg         = "probe-listen-addr"
-	AgentDebugFalg              = "agent-debug"
 	DebugLevelFalg              = "debug-level"
 	ConfigFileFalg              = "config-file"
 )
@@ -56,7 +55,6 @@ type ProbeAgentOptions struct {
 	SecretKey               string `mapstructure:"secret_key" yaml:"secret_key"`
 	ProbeStatusReportUrl    string `mapstructure:"probe_status_report_url" yaml:"probe_status_report_url"`
 	ProbeListenAddr         string `mapstructure:"probe_listen_addr" yaml:"probe_listen_addr"`
-	AgentDebug              bool   `mapstructure:"agent_debug" yaml:"agent_debug"`
 	DebugLevel              int8   `mapstructure:"debug_level" yaml:"debug_level"`
 	ConfigFile              string
 }
@@ -135,7 +133,6 @@ func (o *ProbeAgentOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.SecretKey, SecretKeyFalg, o.SecretKey, "secret key of this cluster.")
 	fs.StringVar(&o.ProbeStatusReportUrl, ProbeStatusReportUrlFalg, o.ProbeStatusReportUrl, "probe status report url for probe check pod")
 	fs.StringVar(&o.ProbeListenAddr, ProbeListenAddrFalg, o.ProbeListenAddr, "probe agent listen address")
-	fs.BoolVar(&o.AgentDebug, AgentDebugFalg, o.AgentDebug, "whether debug probe agent; if debug,  stop tunnel service")
 	fs.Int8Var(&o.DebugLevel, DebugLevelFalg, o.DebugLevel, "a debug level is a logging priority. higher levels meaning more debug log.")
 	fs.StringVar(&o.ConfigFile, ConfigFileFalg, o.ConfigFile, "read configurations from config file if set.")
 }

@@ -106,7 +106,7 @@ make dev
 ```
 APP=probe-master make run
 ```
-#### 运行probe-agent
+#### 运行probe-tunnel
 运行probe-agent前，需要先创建一个 cluster CRD 资源，具体参考[agent端安装方法]章节
 ```
 # export env get from the create cluster crd
@@ -115,9 +115,13 @@ export CLUSTER_NAME="moon"
 export SECRET_KEY="a944499f-97f3-4986-89fa-bc7dfc7e009a" 
 
 # run probe-agent
-APP=probe-agent make run
+APP=probe-tunnel make run
 ```
 
+#### 运行probe-agent
+```
+APP=probe-agent make run
+```
 probe-agent 参数优先级与格式
 ```
 # 优先级从上到下依次降低 (e.g --cluster-name)
