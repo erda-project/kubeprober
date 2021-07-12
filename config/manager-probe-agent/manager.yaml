@@ -104,3 +104,60 @@ data:
     secret_key: 92782ee2-5a07-41c7-a1fc-7ff58e529114
     agent_debug: false
     debug_level: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: probe-tunnel
+  namespace: system
+  labels:
+    app: probe-tunnel
+spec:
+  selector:
+    matchLabels:
+      app: probe-tunnel
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: probe-tunnel
+    spec:
+      containers:
+        - image: kubeprober/probe-tunnel:v0.0.1
+          imagePullPolicy: "Always"
+          name: probe-agent
+          command: ["/bin/sh"]
+          args: ["-c", "/probe-tunnel --config-file=/opt/probe-conf.yaml"]
+          securityContext:
+            allowPrivilegeEscalation: false
+          livenessProbe:
+            exec:
+              command: ["echo","ok"]
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            exec:
+              command: ["echo","ok"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            limits:
+              cpu: 100m
+              memory: 100Mi
+            requests:
+              cpu: 100m
+              memory: 20Mi
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          volumeMounts:
+            - name: probe-config-volume
+              mountPath: /opt
+      volumes:
+        - name: probe-config-volume
+          configMap:
+            name: probeagent
+      serviceAccountName: kubeprober
+      terminationGracePeriodSeconds: 10

@@ -104,7 +104,7 @@ make dev
 ```
 APP=probe-master make run
 ```
-#### run probe-agent
+#### run probe-tunnel
 Before run probe-agent, a cluster crd resource should be created, same as section [Deploy probe-agent]
 ```
 # export env get from the create cluster crd
@@ -113,9 +113,12 @@ export CLUSTER_NAME="moon"
 export SECRET_KEY="a944499f-97f3-4986-89fa-bc7dfc7e009a" 
 
 # run probe-agent
+APP=probe-tunnel make run
+```
+#### run probe-agent
+```
 APP=probe-agent make run
 ```
-
 probe-agent parameters precedence order and format
 ```
 # precedence order and format, each item takes precedence over the item below it, (e.g --cluster-name)
