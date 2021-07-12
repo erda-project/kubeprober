@@ -20,7 +20,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
 )
 
 const (
@@ -97,18 +96,7 @@ func (o *ProbeAgentOptions) ValidateOptions() error {
 }
 
 func (o *ProbeAgentOptions) LoadConfig() error {
-	if o.ConfigFile != "" {
-		logrus.Infof("read config file: %s", o.ConfigFile)
-		viper.SetConfigFile(o.ConfigFile)
-		if err := viper.ReadInConfig(); err != nil {
-			return fmt.Errorf("failed to read config file %s: %w", o.ConfigFile, err)
-		}
-		err := viper.Unmarshal(o)
-		if err != nil {
-			return err
-		}
-		viper.WatchConfig()
-	}
+
 	// pod running namespace with higher priority
 	ns := os.Getenv("POD_NAMESPACE")
 	if ns != "" {
@@ -121,7 +109,7 @@ func (o *ProbeAgentOptions) LoadConfig() error {
 	if o.ProbeStatusReportUrl == "" {
 		o.ProbeStatusReportUrl = fmt.Sprintf("http://probeagent.%s.svc.cluster.local%s/probe-status", o.Namespace, o.ProbeListenAddr)
 	}
-	logrus.Infof("current config: %+v", o)
+	logrus.Infof("probe-agent config: %+v", o)
 	return nil
 }
 

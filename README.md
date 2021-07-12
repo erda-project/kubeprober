@@ -107,19 +107,24 @@ APP=probe-master make run
 #### run probe-agent
 Before run probe-agent, a cluster crd resource should be created, same as section [Deploy probe-agent]
 ```
-# create local config yaml file
-touch probe-conf.yaml
+# export env get from the create cluster crd
+export PROBE_MASTER_ADDR="http://127.0.0.1:8088"
+export CLUSTER_NAME="moon"
+export SECRET_KEY="a944499f-97f3-4986-89fa-bc7dfc7e009a" 
 
-# input configurations, eg. cluster info
-cat << EOF > probe-conf.yaml
-probe_master_addr: http://kubeprober-probe-master.kubeprober.svc.cluster.local:8088
-cluster_name: moon
-secret_key: 2f5079a5-425c-4fb7-8518-562e1685c9b4
-EOF
-
-# run probe-agent with config file
-APP=probe-agent CONF=./probe-conf.yaml make run
+# run probe-agent
+APP=probe-agent make run
 ```
+
+probe-agent parameters precedence order and format
+```
+# precedence order and format, each item takes precedence over the item below it, (e.g --cluster-name)
+flag       --cluster-name
+env          CLUSTER_NAME
+config       cluster_name
+default
+```
+
 #### build binary file
 ```
 APP=probe-master make build

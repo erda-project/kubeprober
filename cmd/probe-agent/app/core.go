@@ -66,14 +66,20 @@ func NewCmdProbeAgentManager(stopCh <-chan struct{}) *cobra.Command {
 		Short: "Launch probe-agent",
 		Long:  "Launch probe-agent",
 		PreRunE: func(cmd *cobra.Command, _ []string) error {
-			// enable using dashed notation in flags and underscores in env
-			viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+			viper.AutomaticEnv()
 
-			if err := viper.BindPFlags(cmd.Flags()); err != nil {
-				return fmt.Errorf("failed to bind flags: %w", err)
+			// Read from config file
+			configFile := options.ProbeAgentConf.ConfigFile
+			if configFile != "" {
+				logrus.Infof("read config file: %s", configFile)
+				viper.SetConfigFile(configFile)
+				if err := viper.ReadInConfig(); err != nil {
+					return fmt.Errorf("failed to read config file %s: %w", configFile, err)
+				}
+				viper.WatchConfig()
 			}
 
-			viper.AutomaticEnv()
+			bindFlags(cmd, viper.GetViper())
 
 			if err := options.ProbeAgentConf.LoadConfig(); err != nil {
 				return err
@@ -228,4 +234,25 @@ func startOperator(ctx context.Context) error {
 	}
 	setupLog.Info("start manager successfully")
 	return nil
+}
+
+// Bind each cobra flag to its associated viper configuration (config file and environment variable)
+func bindFlags(cmd *cobra.Command, v *viper.Viper) {
+	cmd.Flags().VisitAll(func(f *pflag.Flag) {
+		if strings.Contains(f.Name, "-") {
+			// Environment variables can't have dashes in them, so bind them to their equivalent
+			// keys with underscores, e.g. --cluster-name to CLUSTER_NAME
+			envVar := strings.ToUpper(strings.ReplaceAll(f.Name, "-", "_"))
+			_ = v.BindEnv(f.Name, envVar)
+			// Config file keys must be same as flag keys by default, but usually keys with underscores is more widely used.
+			// So alias can be bind to the flag, e.g. --cluster-name to cluster_name
+			v.RegisterAlias(strings.ReplaceAll(f.Name, "-", "_"), f.Name)
+		}
+
+		// Apply the viper config value to the flag when the flag is not set and viper has a value
+		if !f.Changed && v.IsSet(f.Name) {
+			val := v.Get(f.Name)
+			_ = cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
+		}
+	})
 }
