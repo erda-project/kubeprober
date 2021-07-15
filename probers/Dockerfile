@@ -26,5 +26,3 @@ COPY --from=builder /workspace/probers/${APP}/${APP} .
 #USER 65532:65532
 
 CMD [ "sh", "-c", "/${APP}"]
-
-

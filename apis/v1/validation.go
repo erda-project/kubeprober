@@ -20,7 +20,7 @@ func (in ProbeCheckerStatus) Validate() error {
 		err := fmt.Errorf("probe checker name is empty")
 		return err
 	}
-	if in.Status != CheckerStatusInfo && in.Message == "" {
+	if in.Status != CheckerStatusInfo && in.Status != CheckerStatusPass && in.Message == "" {
 		err := fmt.Errorf("non info level status with empty message")
 		return err
 	}

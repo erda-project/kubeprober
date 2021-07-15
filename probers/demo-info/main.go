@@ -23,16 +23,19 @@ import (
 func main() {
 	report := []kubeprobev1.ProbeCheckerStatus{
 		{
-			Name:   "checker1",
-			Status: kubeprobev1.CheckerStatusInfo,
+			Name:    "checker1",
+			Status:  kubeprobev1.CheckerStatusInfo,
+			Message: "checker1 status is info",
 		},
 		{
-			Name:   "checker2",
-			Status: kubeprobev1.CheckerStatusInfo,
+			Name:    "checker2",
+			Status:  kubeprobev1.CheckerStatusInfo,
+			Message: "checker2 status is info",
 		},
 		{
-			Name:   "checker3",
-			Status: kubeprobev1.CheckerStatusInfo,
+			Name:    "checker3",
+			Status:  kubeprobev1.CheckerStatusError,
+			Message: "checker3 is error",
 		},
 	}
 	if err := status.ReportProbeStatus(report); err != nil {

@@ -1,7 +1,7 @@
 apiVersion: kubeprober.erda.cloud/v1
 kind: Probe
 metadata:
-  name: probe-cron-link-test
+  name: dns-resolution-check
   namespace: kubeprober
 spec:
   policy:
@@ -9,7 +9,7 @@ spec:
     runInterval: 2
   probeList:
     # probe item1:
-    - name: item1-dns-resolution-check
+    - name: dns-resolution-check
       spec:
         containers:
           - env:
@@ -24,18 +24,7 @@ spec:
                   fieldRef:
                     fieldPath: spec.nodeName
             name: dns-resolution-check
-            image: kubeprober/dns-resolution-check:v0.0.1
-            resources:
-              requests:
-                cpu: 10m
-                memory: 50Mi
-        restartPolicy: Never
-    # probe item2: probe status with level -- INFO
-    - name: item2-demo-info
-      spec:
-        containers:
-          - name: demo-info
-            image: kubeprober/demo-info:v0.0.1
+            image: kubeprober/dns-resolution-check:v0.0.3
             resources:
               requests:
                 cpu: 10m
