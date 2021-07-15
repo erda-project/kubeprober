@@ -27,6 +27,7 @@ const (
 	CheckerStatusWARN    CheckerStatus = "WARN"
 	CheckerStatusUNKNOWN CheckerStatus = "UNKNOWN"
 	CheckerStatusInfo    CheckerStatus = "INFO"
+	CheckerStatusPass    CheckerStatus = "PASS"
 )
 
 func (c CheckerStatus) Priority() int {

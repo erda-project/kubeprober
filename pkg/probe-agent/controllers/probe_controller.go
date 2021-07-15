@@ -69,7 +69,7 @@ func (r *ProbeReconciler) initLogger(ctx context.Context) {
 func (r *ProbeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.initLogger(ctx)
 	r.log.V(1).Info("reconcile probe task")
-
+	fmt.Printf("____________________probe_____________________________________, %+v\n", req.NamespacedName)
 	// check whether probe been deleted
 	var probe kubeprobev1.Probe
 	err := r.Get(ctx, req.NamespacedName, &probe)

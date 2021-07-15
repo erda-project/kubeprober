@@ -35,6 +35,7 @@ import (
 
 const maxTimeInFailure = 60 * time.Second
 const defaultCheckTimeout = 5 * time.Minute
+const TestPublicDomain = "www.baidu.com"
 
 // KubeConfigFile is a variable containing file path of Kubernetes config files
 var KubeConfigFile = filepath.Join(os.Getenv("HOME"), ".kube", "config")
@@ -131,7 +132,7 @@ func (dc *Checker) Run(client *kubernetes.Clientset) error {
 	now := metav1.Now()
 	dnsChecker := probev1.ProbeCheckerStatus{
 		Name:    "dns-resolution-check",
-		Status:  probev1.CheckerStatusInfo,
+		Status:  probev1.CheckerStatusPass,
 		Message: "",
 		LastRun: &now,
 	}
@@ -232,6 +233,11 @@ func (dc *Checker) checkEndpoints() error {
 			}
 			//run a lookup for each ip if we successfully created a resolver, return error
 			err = dnsLookup(r, dc.Hostname)
+			if err != nil {
+				return err
+			}
+			//
+			err = dnsLookup(r, TestPublicDomain)
 			if err != nil {
 				return err
 			}
