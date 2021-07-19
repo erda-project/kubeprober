@@ -4202,6 +4202,27 @@ metadata:
   name: kubeprober
   namespace: kubeprober
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kubeprober-readonly
+  namespace: kubeprober
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: kubeprober-readonly-role
+rules:
+- apiGroups:
+  - '*'
+  resources:
+  - '*'
+  verbs:
+  - get
+  - list
+  - watch
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -4328,6 +4349,19 @@ rules:
   - get
   - patch
   - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubeprober-readonly-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kubeprober-readonly-role
+subjects:
+- kind: ServiceAccount
+  name: kubeprober-readonly
+  namespace: kubeprober
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

@@ -1,0 +1,24 @@
+apiVersion: kubeprober.erda.cloud/v1
+kind: Probe
+metadata:
+  name: k8s
+  namespace: kubeprober
+spec:
+  policy:
+    # unit: minute
+    runInterval: 2
+  probeList:
+    # probe item1:
+    - name: node-check
+      spec:
+        containers:
+          - env:
+              - name: PROBE_LIST
+                value: "node_ready.sh,ab,c"
+            name: node-check
+            image: kubeprober/node-check:v0.0.1
+            resources:
+              requests:
+                cpu: 10m
+                memory: 50Mi
+        restartPolicy: Never

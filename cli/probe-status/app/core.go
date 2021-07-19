@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
 var (
 	ProbeRestClient client.Client
 )
@@ -51,22 +52,33 @@ func NewCmdProbeStatusManager(stopCh <-chan struct{}) *cobra.Command {
 
 func Run() error {
 	var err error
+	var probeNames []string
 	probeStatus := &kubeprobev1.ProbeStatusList{}
+	probes := &kubeprobev1.ProbeList{}
 	if err = ProbeRestClient.List(context.Background(), probeStatus, client.InNamespace("kubeprober")); err != nil {
 		return err
 	}
+
+	if err = ProbeRestClient.List(context.Background(), probes, client.InNamespace("kubeprober")); err != nil {
+		return err
+	}
+
+	for _, i := range probes.Items {
+		probeNames = append(probeNames, i.Name)
+	}
 	tbl := table.New("SCENE", "PROBE", "CHECKER", "STATUS", "MESSAGE", "LASTRUN")
 	for _, i := range probeStatus.Items {
-		for _, j := range i.Spec.Detail {
-			for _, m := range j.Checkers {
-				tbl.AddRow(i.Name, j.Name, m.Name, m.Status, m.Message, m.LastRun)
+		if IsContain(probeNames, i.Name) {
+			for _, j := range i.Spec.Detail {
+				for _, m := range j.Checkers {
+					tbl.AddRow(i.Name, j.Name, m.Name, m.Status, m.Message, m.LastRun)
+				}
 			}
 		}
 	}
 	tbl.Print()
 	return nil
 }
-
 
 func init() {
 	userHomeDir, err := os.UserHomeDir()
@@ -89,4 +101,13 @@ func init() {
 	if err != nil {
 		return
 	}
+}
+
+func IsContain(items []string, item string) bool {
+	for _, eachItem := range items {
+		if eachItem == item {
+			return true
+		}
+	}
+	return false
 }

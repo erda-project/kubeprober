@@ -270,6 +270,7 @@ func genJob(pItem kubeprobev1.ProbeItem, probe *kubeprobev1.Probe) (j batchv1.Jo
 		return
 	}
 	envInject(&pItem, probe)
+	pItem.Spec.ServiceAccountName = "kubeprober-readonly"
 	trueVar := true
 	// TODO: put this config in specific area
 	activeDeadlineSecond := int64(60 * 30)

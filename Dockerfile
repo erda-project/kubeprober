@@ -22,8 +22,7 @@ ENV APP=${APP}
 WORKDIR /
 
 COPY --from=builder /workspace/${APP} .
+#COPY bin/kubectl /bin
 #USER 65532:65532
 
 CMD [ "sh", "-c", "/${APP}"]
-
-
