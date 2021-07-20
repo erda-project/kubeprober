@@ -19,7 +19,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-
 var VersionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print the version number of ChenJian",
