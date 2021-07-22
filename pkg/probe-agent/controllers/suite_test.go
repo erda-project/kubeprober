@@ -86,17 +86,12 @@ var probe = kubeprobev1.Probe{
 		Name:      "probe-test1",
 	},
 	Spec: kubeprobev1.ProbeSpec{
-		ProbeList: []kubeprobev1.ProbeItem{
-			{
-				Name: "probe-item-test1",
-				Spec: apiv1.PodSpec{
-					Containers: []apiv1.Container{
-						{
-							Name:    "hello",
-							Image:   "busybox",
-							Command: []string{"echo hello"},
-						},
-					},
+		Template: apiv1.PodSpec{
+			Containers: []apiv1.Container{
+				{
+					Name:    "hello",
+					Image:   "busybox",
+					Command: []string{"echo hello"},
 				},
 			},
 		},
@@ -105,7 +100,7 @@ var probe = kubeprobev1.Probe{
 }
 
 func TestEnvInject(t *testing.T) {
-	pItem := probe.Spec.ProbeList[0]
-	envInject(&pItem, &probe)
+	pItem := probe.Spec
+	envInject(&probe)
 	logrus.Infof("probe item:%++v", pItem)
 }

@@ -21,7 +21,6 @@ import (
 const (
 	ProbeNamespace       = "KUBEPROBER_PROBE_NAMESPACE"
 	ProbeName            = "KUBEPROBER_PROBE_NAME"
-	ProbeItemName        = "KUBEPROBER_PROBE_ITEM_NAME"
 	ProbeStatusReportUrl = "KUBEPROBER_STATUS_REPORT_URL"
 
 	LabelKeyApp            = "app"
@@ -34,13 +33,6 @@ const (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-type ProbeItem struct {
-	// prob item type: golang/shell/...
-	Name string        `json:"name,omitempty"`
-	Type string        `json:"type,omitempty"`
-	Spec apiv1.PodSpec `json:"spec,omitempty"`
-}
-
 type Policy struct {
 	// unit: minute
 	RunInterval int `json:"runInterval,omitempty"`
@@ -48,8 +40,8 @@ type Policy struct {
 
 // ProbeSpec defines the desired state of Probe
 type ProbeSpec struct {
-	ProbeList []ProbeItem `json:"probeList,omitempty"`
-	Policy    Policy      `json:"policy,omitempty"`
+	Policy   Policy        `json:"policy,omitempty"`
+	Template apiv1.PodSpec `json:"template,omitempty"`
 }
 
 // ProbeStatus defines the observed state of Probe

@@ -54,15 +54,10 @@ type ProbeCheckerStatus struct {
 	LastRun *metav1.Time `json:"lastRun,omitempty"`
 }
 
-type ProbeItemStatus struct {
-	ProbeCheckerStatus `json:",inline"`
-	Checkers           []ProbeCheckerStatus `json:"checkers,omitempty"`
-}
-
 type ProbeStatusSpec struct {
 	ProbeCheckerStatus `json:",inline"`
-	Namespace          string            `json:"namespace,omitempty"`
-	Detail             []ProbeItemStatus `json:"detail,omitempty"`
+	Namespace          string               `json:"namespace,omitempty"`
+	Checkers           []ProbeCheckerStatus `json:"checkers,omitempty"`
 }
 
 // ProbeStatusStatus defines the observed state of ProbeStatus

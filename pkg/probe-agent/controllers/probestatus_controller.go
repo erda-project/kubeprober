@@ -65,6 +65,7 @@ func (r *ProbeStatusReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	r.initLogger(ctx)
 	pod := corev1.Pod{}
 	err := r.Get(ctx, req.NamespacedName, &pod)
+	fmt.Printf("____________________probestatus_____________________________________, %+v\n", req.NamespacedName)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			r.log.V(1).Info("could not found probe pod")
@@ -87,11 +88,9 @@ func (r *ProbeStatusReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	rps := probestatus.ReportProbeStatusSpec{
-		ProbeNamespace: pod.Labels[kubeprobev1.LabelKeyProbeNameSpace],
-		ProbeName:      pod.Labels[kubeprobev1.LabelKeyProbeName],
-		ProbeItemStatus: kubeprobev1.ProbeItemStatus{
-			ProbeCheckerStatus: status,
-		},
+		ProbeNamespace:     pod.Labels[kubeprobev1.LabelKeyProbeNameSpace],
+		ProbeName:          pod.Labels[kubeprobev1.LabelKeyProbeName],
+		ProbeCheckerStatus: status,
 	}
 
 	err = ReportProbeResult(r.Client, rps)
@@ -144,9 +143,8 @@ func probeLabelsCheck(labels map[string]string) (err error) {
 	}
 	pNamespace := labels[kubeprobev1.LabelKeyProbeNameSpace]
 	pName := labels[kubeprobev1.LabelKeyProbeName]
-	pItemName := labels[kubeprobev1.LabelKeyProbeItemName]
-	if pNamespace == "" || pName == "" || pItemName == "" {
-		err = fmt.Errorf("invalid probe label info, some is empty, probeNamespace:%s, probeName:%s, pItemName:%s", pNamespace, pName, pItemName)
+	if pNamespace == "" || pName == "" {
+		err = fmt.Errorf("invalid probe label info, some is empty, probeNamespace:%s, probeName:%s", pNamespace, pName)
 		return
 	}
 	return
@@ -199,13 +197,7 @@ func newProbeStatus(r probestatus.ReportProbeStatusSpec) (s kubeprobev1.ProbeSta
 		},
 		Spec: kubeprobev1.ProbeStatusSpec{
 			Namespace: r.ProbeNamespace,
-			ProbeCheckerStatus: kubeprobev1.ProbeCheckerStatus{
-				Name:    r.ProbeName,
-				Status:  r.Status,
-				Message: r.Message,
-				LastRun: r.LastRun,
-			},
-			Detail: []kubeprobev1.ProbeItemStatus{r.ProbeItemStatus},
+			Checkers:  r.Checkers,
 		},
 	}
 	return
@@ -213,38 +205,20 @@ func newProbeStatus(r probestatus.ReportProbeStatusSpec) (s kubeprobev1.ProbeSta
 
 func mergeProbeStatus(r probestatus.ReportProbeStatusSpec, s kubeprobev1.ProbeStatus) (bool, kubeprobev1.ProbeStatus) {
 
-	lastRun := r.LastRun
-	// check whether overview status change
-	overwrite := true
-	// check whether incoming probe item already exist
-	exist := false
+	var existCheckerList []string
 	// check whether need to update probe status
 	update := true
-
-	for i, j := range s.Spec.Detail {
-		if j.Name != r.Name && j.Status.Priority() > r.Status.Priority() {
-			overwrite = false
-		}
-		if j.Name == r.Name {
-			s.Spec.Detail[i] = r.ProbeItemStatus
-			if !needUpdate(r.ProbeCheckerStatus, j.ProbeCheckerStatus) {
-				update = false
-			}
-			exist = true
-		}
-		if j.LastRun.After(lastRun.Time) {
-			lastRun = j.LastRun
-		}
+	for _, i := range s.Spec.Checkers {
+		existCheckerList = append(existCheckerList, i.Name)
 	}
-
-	if !exist {
-		s.Spec.Detail = append(s.Spec.Detail, r.ProbeItemStatus)
-	}
-
-	s.Spec.LastRun = lastRun
-	if overwrite {
-		s.Spec.Status = r.Status
-		s.Spec.Message = r.Message
+	for _, i := range r.Checkers {
+		index, flag := IsContain(existCheckerList, i.Name)
+		if flag {
+			s.Spec.Checkers[index].Status = i.Status
+			s.Spec.Checkers[index].Message = i.Message
+		} else {
+			s.Spec.Checkers = append(s.Spec.Checkers, i)
+		}
 	}
 	return update, s
 }
@@ -307,4 +281,13 @@ func (r *ProbeStatusReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// watch probe status but do nothing, only cache & sync probe status
 		Watches(&source.Kind{Type: &kubeprobev1.ProbeStatus{}}, handler.Funcs{}).
 		Complete(r)
+}
+
+func IsContain(items []string, item string) (int, bool) {
+	for index, eachItem := range items {
+		if eachItem == item {
+			return index, true
+		}
+	}
+	return 0, false
 }

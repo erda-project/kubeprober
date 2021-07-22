@@ -1,10 +1,10 @@
 #!/bin/bash
 
-ErrorStatus = "ERROR"
-WarnStatus = "WARN"
-UnknowStatus = "UNKNOWN"
-InfoStatus = "INFO"
-PassStatus = "PASS"
+ErrorStatus="ERROR"
+WarnStatus="WARN"
+UnknowStatus="UNKNOWN"
+InfoStatus="INFO"
+PassStatus="PASS"
 
 
 function report_status() {
@@ -21,3 +21,4 @@ function check_node_ready() {
 }
 
 check_node_ready
+

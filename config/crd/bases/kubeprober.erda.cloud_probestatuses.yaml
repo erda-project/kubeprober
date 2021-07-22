@@ -48,28 +48,9 @@ spec:
             type: object
           spec:
             properties:
-              detail:
+              checkers:
                 items:
                   properties:
-                    checkers:
-                      items:
-                        properties:
-                          lastRun:
-                            format: date-time
-                            type: string
-                          message:
-                            description: if not ok, keep error message
-                            type: string
-                          name:
-                            description: checker name
-                            type: string
-                          status:
-                            description: ERROR/WARN/WARN/UNKNOWN
-                            type: string
-                        required:
-                        - name
-                        type: object
-                      type: array
                     lastRun:
                       format: date-time
                       type: string
