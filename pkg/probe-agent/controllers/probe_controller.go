@@ -69,7 +69,6 @@ func (r *ProbeReconciler) initLogger(ctx context.Context) {
 func (r *ProbeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.initLogger(ctx)
 	r.log.V(1).Info("reconcile probe task")
-	fmt.Printf("____________________probe_____________________________________, %+v\n", req.NamespacedName)
 	// check whether probe been deleted
 	var probe kubeprobev1.Probe
 	err := r.Get(ctx, req.NamespacedName, &probe)
@@ -104,18 +103,16 @@ func (r *ProbeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 }
 
 func (r *ProbeReconciler) ReconcileJobs(ctx context.Context, probe *kubeprobev1.Probe) (ctrl.Result, error) {
-	for _, j := range probe.Spec.ProbeList {
-		_, err := r.ReconcileJob(ctx, j, probe)
-		if err != nil {
-			r.log.V(1).Error(err, "reconcile job failed")
-			return ctrl.Result{}, err
-		}
+	_, err := r.ReconcileJob(ctx, probe)
+	if err != nil {
+		r.log.V(1).Error(err, "reconcile job failed")
+		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, nil
 }
 
-func (r *ProbeReconciler) ReconcileJob(ctx context.Context, pItem kubeprobev1.ProbeItem, probe *kubeprobev1.Probe) (ctrl.Result, error) {
-	n := client.ObjectKey{Namespace: probe.Namespace, Name: pItem.Name}
+func (r *ProbeReconciler) ReconcileJob(ctx context.Context, probe *kubeprobev1.Probe) (ctrl.Result, error) {
+	n := client.ObjectKey{Namespace: probe.Namespace, Name: probe.Name}
 	r.log.V(0).Info("reconcile probe job", "job", n)
 
 	// check whether probe been deleted
@@ -125,7 +122,7 @@ func (r *ProbeReconciler) ReconcileJob(ctx context.Context, pItem kubeprobev1.Pr
 		if apierrors.IsNotFound(err) {
 			// job crate, if not found
 			r.log.V(1).Info("could not found probe job, create it", "job", n)
-			if err := r.createJob(ctx, pItem, probe); err != nil {
+			if err := r.createJob(ctx, probe); err != nil {
 				r.log.V(1).Error(err, "create probe job failed")
 				return ctrl.Result{}, err
 			}
@@ -143,18 +140,16 @@ func (r *ProbeReconciler) ReconcileJob(ctx context.Context, pItem kubeprobev1.Pr
 }
 
 func (r *ProbeReconciler) ReconcileCronJobs(ctx context.Context, probe *kubeprobev1.Probe) (ctrl.Result, error) {
-	for _, j := range probe.Spec.ProbeList {
-		_, err := r.ReconcileCronJob(ctx, j, probe)
-		if err != nil {
-			r.log.V(1).Error(err, "reconcile cron job failed")
-			return ctrl.Result{}, err
-		}
+	_, err := r.ReconcileCronJob(ctx, probe)
+	if err != nil {
+		r.log.V(1).Error(err, "reconcile cron job failed")
+		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, nil
 }
 
-func (r *ProbeReconciler) ReconcileCronJob(ctx context.Context, pItem kubeprobev1.ProbeItem, probe *kubeprobev1.Probe) (ctrl.Result, error) {
-	n := client.ObjectKey{Namespace: probe.Namespace, Name: pItem.Name}
+func (r *ProbeReconciler) ReconcileCronJob(ctx context.Context, probe *kubeprobev1.Probe) (ctrl.Result, error) {
+	n := client.ObjectKey{Namespace: probe.Namespace, Name: probe.Name}
 	r.log.V(0).Info("reconcile probe cron job", "cronjob", n)
 
 	// check whether probe been deleted
@@ -164,7 +159,7 @@ func (r *ProbeReconciler) ReconcileCronJob(ctx context.Context, pItem kubeprobev
 		if apierrors.IsNotFound(err) {
 			// job crate, if not found
 			r.log.V(1).Info("could not found probe cron job, create it", "cronjob", n)
-			if err := r.CreateCronJob(ctx, pItem, probe); err != nil {
+			if err := r.CreateCronJob(ctx, probe); err != nil {
 				r.log.V(1).Error(err, "create probe cron job failed", "cronjob", n)
 				return ctrl.Result{}, err
 			}
@@ -177,15 +172,15 @@ func (r *ProbeReconciler) ReconcileCronJob(ctx context.Context, pItem kubeprobev
 
 	// cron job update
 	r.log.V(0).Info("update probe cron job", "cronjob", n)
-	err = r.UpdateCronJob(ctx, pItem, probe)
+	err = r.UpdateCronJob(ctx, probe)
 	if err != nil {
 		r.log.V(0).Error(err, "update probe cron job failed", "cronjob", n)
 	}
 	return ctrl.Result{}, nil
 }
 
-func (r *ProbeReconciler) CreateCronJob(ctx context.Context, pItem kubeprobev1.ProbeItem, probe *kubeprobev1.Probe) error {
-	cj, err := genCronJob(pItem, probe)
+func (r *ProbeReconciler) CreateCronJob(ctx context.Context, probe *kubeprobev1.Probe) error {
+	cj, err := genCronJob(probe)
 	if err != nil {
 		return err
 	}
@@ -196,8 +191,8 @@ func (r *ProbeReconciler) CreateCronJob(ctx context.Context, pItem kubeprobev1.P
 	return nil
 }
 
-func (r *ProbeReconciler) UpdateCronJob(ctx context.Context, pItem kubeprobev1.ProbeItem, probe *kubeprobev1.Probe) error {
-	cj, err := genCronJob(pItem, probe)
+func (r *ProbeReconciler) UpdateCronJob(ctx context.Context, probe *kubeprobev1.Probe) error {
+	cj, err := genCronJob(probe)
 	if err != nil {
 		return err
 	}
@@ -208,8 +203,8 @@ func (r *ProbeReconciler) UpdateCronJob(ctx context.Context, pItem kubeprobev1.P
 	return nil
 }
 
-func (r *ProbeReconciler) createJob(ctx context.Context, pItem kubeprobev1.ProbeItem, probe *kubeprobev1.Probe) error {
-	j, err := genJob(pItem, probe)
+func (r *ProbeReconciler) createJob(ctx context.Context, probe *kubeprobev1.Probe) error {
+	j, err := genJob(probe)
 	if err != nil {
 		return err
 	}
@@ -220,8 +215,8 @@ func (r *ProbeReconciler) createJob(ctx context.Context, pItem kubeprobev1.Probe
 	return nil
 }
 
-func genCronJob(pItem kubeprobev1.ProbeItem, probe *kubeprobev1.Probe) (cj batchv1beta1.CronJob, err error) {
-	j, err := genJob(pItem, probe)
+func genCronJob(probe *kubeprobev1.Probe) (cj batchv1beta1.CronJob, err error) {
+	j, err := genJob(probe)
 	if err != nil {
 		return
 	}
@@ -230,7 +225,7 @@ func genCronJob(pItem kubeprobev1.ProbeItem, probe *kubeprobev1.Probe) (cj batch
 	cj = batchv1beta1.CronJob{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: probe.Namespace,
-			Name:      pItem.Name,
+			Name:      probe.Name,
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion: probe.APIVersion,
@@ -244,7 +239,6 @@ func genCronJob(pItem kubeprobev1.ProbeItem, probe *kubeprobev1.Probe) (cj batch
 				kubeprobev1.LabelKeyApp:            kubeprobev1.LabelValueApp,
 				kubeprobev1.LabelKeyProbeNameSpace: probe.Namespace,
 				kubeprobev1.LabelKeyProbeName:      probe.Name,
-				kubeprobev1.LabelKeyProbeItemName:  pItem.Name,
 			},
 		},
 		Spec: batchv1beta1.CronJobSpec{
@@ -264,20 +258,16 @@ func genCronJob(pItem kubeprobev1.ProbeItem, probe *kubeprobev1.Probe) (cj batch
 	return
 }
 
-func genJob(pItem kubeprobev1.ProbeItem, probe *kubeprobev1.Probe) (j batchv1.Job, err error) {
-	if pItem.Name == "" {
-		err = fmt.Errorf("prob item with empty name is not allowed")
-		return
-	}
-	envInject(&pItem, probe)
-	pItem.Spec.ServiceAccountName = "kubeprober-readonly"
+func genJob(probe *kubeprobev1.Probe) (j batchv1.Job, err error) {
+	envInject(probe)
+	probe.Spec.Template.ServiceAccountName = "kubeprober-readonly"
 	trueVar := true
 	// TODO: put this config in specific area
 	activeDeadlineSecond := int64(60 * 30)
 	backoffLimit := int32(0)
 	j = batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      pItem.Name,
+			Name:      probe.Name,
 			Namespace: probe.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -292,7 +282,6 @@ func genJob(pItem kubeprobev1.ProbeItem, probe *kubeprobev1.Probe) (j batchv1.Jo
 				kubeprobev1.LabelKeyApp:            kubeprobev1.LabelValueApp,
 				kubeprobev1.LabelKeyProbeNameSpace: probe.Namespace,
 				kubeprobev1.LabelKeyProbeName:      probe.Name,
-				kubeprobev1.LabelKeyProbeItemName:  pItem.Name,
 			},
 		},
 		Spec: batchv1.JobSpec{
@@ -302,10 +291,9 @@ func genJob(pItem kubeprobev1.ProbeItem, probe *kubeprobev1.Probe) (j batchv1.Jo
 						kubeprobev1.LabelKeyApp:            kubeprobev1.LabelValueApp,
 						kubeprobev1.LabelKeyProbeNameSpace: probe.Namespace,
 						kubeprobev1.LabelKeyProbeName:      probe.Name,
-						kubeprobev1.LabelKeyProbeItemName:  pItem.Name,
 					},
 				},
-				Spec: pItem.Spec,
+				Spec: probe.Spec.Template,
 			},
 			ActiveDeadlineSeconds: &activeDeadlineSecond,
 			BackoffLimit:          &backoffLimit,
@@ -315,11 +303,10 @@ func genJob(pItem kubeprobev1.ProbeItem, probe *kubeprobev1.Probe) (j batchv1.Jo
 	return
 }
 
-func envInject(pItem *kubeprobev1.ProbeItem, probe *kubeprobev1.Probe) {
+func envInject(probe *kubeprobev1.Probe) {
 	set := map[string]string{
 		kubeprobev1.ProbeNamespace: "",
 		kubeprobev1.ProbeName:      "",
-		kubeprobev1.ProbeItemName:  "",
 	}
 	ienvs := []corev1.EnvVar{
 		{
@@ -331,23 +318,19 @@ func envInject(pItem *kubeprobev1.ProbeItem, probe *kubeprobev1.Probe) {
 			Value: probe.Name,
 		},
 		{
-			Name:  kubeprobev1.ProbeItemName,
-			Value: pItem.Name,
-		},
-		{
 			Name:  kubeprobev1.ProbeStatusReportUrl,
 			Value: options.ProbeAgentConf.GetProbeStatusReportUrl(),
 		},
 	}
-	for i := range pItem.Spec.Containers {
-		env := pItem.Spec.Containers[i].Env
+	for i := range probe.Spec.Template.Containers {
+		env := probe.Spec.Template.Containers[i].Env
 		for j, e := range env {
 			if _, ok := set[e.Name]; ok {
 				env = remove(env, j)
 			}
 		}
 		env = append(env, ienvs...)
-		pItem.Spec.Containers[i].Env = env
+		probe.Spec.Template.Containers[i].Env = env
 	}
 }
 

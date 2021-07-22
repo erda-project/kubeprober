@@ -1,4 +1,4 @@
-FROM kubeprober/probe-base:v0.0.1
+FROM kubeprober/probe-base:v0.0.2
 WORKDIR /
 
 COPY checker/ /checker/

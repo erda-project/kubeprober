@@ -66,13 +66,11 @@ func Run() error {
 	for _, i := range probes.Items {
 		probeNames = append(probeNames, i.Name)
 	}
-	tbl := table.New("SCENE", "PROBE", "CHECKER", "STATUS", "MESSAGE", "LASTRUN")
+	tbl := table.New("PROBE", "CHECKER", "STATUS", "MESSAGE", "LASTRUN")
 	for _, i := range probeStatus.Items {
 		if IsContain(probeNames, i.Name) {
-			for _, j := range i.Spec.Detail {
-				for _, m := range j.Checkers {
-					tbl.AddRow(i.Name, j.Name, m.Name, m.Status, m.Message, m.LastRun)
-				}
+			for _, j := range i.Spec.Checkers {
+				tbl.AddRow(i.Name, j.Name, j.Status, j.Message, j.LastRun)
 			}
 		}
 	}

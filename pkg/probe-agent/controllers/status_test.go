@@ -30,32 +30,24 @@ const (
 
 func TestUpdateProbeStatus(t *testing.T) {
 	now := metav1.Now()
-	item1 := kubeprobev1.ProbeItemStatus{
-		ProbeCheckerStatus: kubeprobev1.ProbeCheckerStatus{
-			Name:    "probe-item-test1",
+	checker := []kubeprobev1.ProbeCheckerStatus{
+		{
+			Name:    "probe-checker1",
+			Status:  kubeprobev1.CheckerStatusInfo,
+			LastRun: &now,
+		},
+		{
+			Name:    "probe-checker2",
 			Status:  kubeprobev1.CheckerStatusError,
 			Message: "probe-checker2 error",
 			LastRun: &now,
 		},
-		Checkers: []kubeprobev1.ProbeCheckerStatus{
-			{
-				Name:    "probe-checker1",
-				Status:  kubeprobev1.CheckerStatusInfo,
-				LastRun: &now,
-			},
-			{
-				Name:    "probe-checker2",
-				Status:  kubeprobev1.CheckerStatusError,
-				Message: "probe-checker2 error",
-				LastRun: &now,
-			},
-		},
 	}
 
 	r := probestatus.ReportProbeStatusSpec{
-		ProbeName:       probeName,
-		ProbeNamespace:  probeNamespace,
-		ProbeItemStatus: item1,
+		ProbeName:      probeName,
+		ProbeNamespace: probeNamespace,
+		Checkers:       checker,
 	}
 
 	s := kubeprobev1.ProbeStatus{
@@ -65,7 +57,7 @@ func TestUpdateProbeStatus(t *testing.T) {
 				Status: kubeprobev1.CheckerStatusInfo,
 			},
 			Namespace: probeNamespace,
-			Detail:    []kubeprobev1.ProbeItemStatus{},
+			Checkers:  checker,
 		},
 	}
 

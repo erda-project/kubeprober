@@ -7,18 +7,15 @@ spec:
   policy:
     # unit: minute
     runInterval: 2
-  probeList:
-    # probe item1:
-    - name: node-check
-      spec:
-        containers:
-          - env:
-              - name: PROBE_LIST
-                value: "node_ready.sh,ab,c"
-            name: node-check
-            image: kubeprober/node-check:v0.0.1
-            resources:
-              requests:
-                cpu: 10m
-                memory: 50Mi
-        restartPolicy: Never
+  template:
+    containers:
+      - name: k8s
+        image: kubeprober/node-check:v0.0.3
+        env:
+          - name: PROBE_LIST
+            value: "node_ready.sh"
+        resources:
+          requests:
+            cpu: 10m
+            memory: 50Mi
+    restartPolicy: Never
