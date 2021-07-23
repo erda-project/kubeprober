@@ -4,9 +4,9 @@ project = kubeprober
 V ?= latest
 
 docker-build: ## build docker image.
-	docker build --build-arg APP=${APP} -t ${project}/${APP}:${V} -f Dockerfile ../
+	docker build --build-arg PROBER=${PROBER} --build-arg APPS=${APPS} -t ${project}/${PROBER}:${V} -f Dockerfile ../
 
 docker-push: ## push docker image.
-	docker push ${project}/${APP}:${V}
+	docker push ${project}/${PROBER}:${V}
 
 docker-build-push: docker-build docker-push
