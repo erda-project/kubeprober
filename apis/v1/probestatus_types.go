@@ -62,15 +62,19 @@ type ProbeStatusSpec struct {
 
 // ProbeStatusStatus defines the observed state of ProbeStatus
 type ProbeStatusStates struct {
+	Status CheckerStatus `json:"status,omitempty"`
+	// if not ok, keep error message
+	Message string       `json:"message,omitempty"`
+	LastRun *metav1.Time `json:"lastRun,omitempty"`
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name="STATUS",type="string",JSONPath=".spec.status"
-//+kubebuilder:printcolumn:name="LASTRUN",type="string",JSONPath=".spec.lastRun"
-//+kubebuilder:printcolumn:name="MESSAGE",type="string",JSONPath=".spec.message"
+//+kubebuilder:printcolumn:name="STATUS",type="string",JSONPath=".status.status"
+//+kubebuilder:printcolumn:name="MESSAGE",type="string",JSONPath=".status.message"
+//+kubebuilder:printcolumn:name="LASTRUN",type="string",JSONPath=".status.lastRun"
 //+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 
 // ProbeStatus is the Schema for the probestatuses API

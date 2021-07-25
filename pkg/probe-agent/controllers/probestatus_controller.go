@@ -18,6 +18,13 @@ import (
 	"fmt"
 	"time"
 
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/json"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	kubeprobev1 "github.com/erda-project/kubeprober/apis/v1"
+	probestatus "github.com/erda-project/kubeprober/pkg/probe-status"
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
@@ -28,13 +35,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logger "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	kubeprobev1 "github.com/erda-project/kubeprober/apis/v1"
-	probestatus "github.com/erda-project/kubeprober/pkg/probe-status"
 )
 
 // ProbeStatusReconciler reconciles a ProbeStatus object
@@ -63,9 +65,53 @@ func (r *ProbeStatusReconciler) initLogger(ctx context.Context) {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *ProbeStatusReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.initLogger(ctx)
+	var patch []byte
+	var err error
+	fmt.Printf("probestatus:___ %+v\n", req)
+
+	//update status of probestatus
+	ps := kubeprobev1.ProbeStatus{}
+	if err = r.Get(ctx, req.NamespacedName, &ps); err != nil {
+		r.log.V(1).Error(err, "could not get probestatus")
+	}
+
+	var fStatus kubeprobev1.CheckerStatus
+	var fMessage string
+	var fLastRun *metav1.Time
+	for _, i := range ps.Spec.Checkers {
+		if i.Status.Priority() > fStatus.Priority() {
+			fStatus = i.Status
+			fMessage = i.Message
+		}
+		if fLastRun == nil {
+			fLastRun = i.LastRun
+		}
+		if fLastRun.Before(i.LastRun) {
+			fLastRun = i.LastRun
+		}
+	}
+	statusPatch := kubeprobev1.ProbeStatus{
+		Status: kubeprobev1.ProbeStatusStates{
+			Message: fMessage,
+			Status:  fStatus,
+			LastRun: fLastRun,
+		},
+	}
+	if patch, err = json.Marshal(statusPatch); err != nil {
+		return ctrl.Result{}, err
+	}
+	if err = r.Status().Patch(ctx, &kubeprobev1.ProbeStatus{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ps.Name,
+			Namespace: ps.Namespace,
+		},
+	}, client.RawPatch(types.MergePatchType, patch)); err != nil {
+		r.log.V(1).Error(err, "update probestatus status error", "probestatus", ps.Name)
+		return ctrl.Result{}, err
+	}
+
 	pod := corev1.Pod{}
-	err := r.Get(ctx, req.NamespacedName, &pod)
-	fmt.Printf("____________________probestatus_____________________________________, %+v\n", req.NamespacedName)
+	err = r.Get(ctx, req.NamespacedName, &pod)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			r.log.V(1).Info("could not found probe pod")
@@ -216,6 +262,7 @@ func mergeProbeStatus(r probestatus.ReportProbeStatusSpec, s kubeprobev1.ProbeSt
 		if flag {
 			s.Spec.Checkers[index].Status = i.Status
 			s.Spec.Checkers[index].Message = i.Message
+			s.Spec.Checkers[index].LastRun = i.LastRun
 		} else {
 			s.Spec.Checkers = append(s.Spec.Checkers, i)
 		}
@@ -234,6 +281,11 @@ func needUpdate(new, old kubeprobev1.ProbeCheckerStatus) bool {
 
 // filter exception pod
 type PodPredicates struct {
+	predicate.Funcs
+}
+
+// filter probestatus
+type ProbeStatusPredicates struct {
 	predicate.Funcs
 }
 
@@ -276,10 +328,10 @@ func (p *PodPredicates) Generic(e event.GenericEvent) bool {
 func (r *ProbeStatusReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	podPredicates := builder.WithPredicates(&PodPredicates{})
 	return ctrl.NewControllerManagedBy(mgr).
-		// watch pod, get failed probe pod and update related probe status
+		//watch pod, get failed probe pod and update related probe status
 		For(&corev1.Pod{}, podPredicates).
 		// watch probe status but do nothing, only cache & sync probe status
-		Watches(&source.Kind{Type: &kubeprobev1.ProbeStatus{}}, handler.Funcs{}).
+		Watches(&source.Kind{Type: &kubeprobev1.ProbeStatus{}}, &handler.EnqueueRequestForObject{}).
 		Complete(r)
 }
 
