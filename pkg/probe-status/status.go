@@ -127,31 +127,6 @@ func renderProbeStatus(status []kubeprobev1.ProbeCheckerStatus, info ProbeStatus
 		return nil, err
 	}
 
-	//now := metav1.Now()
-	//pcs := kubeprobev1.ProbeCheckerStatus{
-	//	Status:  kubeprobev1.CheckerStatusInfo,
-	//	LastRun: &now,
-	//}
-
-	//for i, s := range status {
-	//	err := s.Validate()
-	//	if err != nil {
-	//		logrus.Errorf("status validate failed, content:%v, error:%v", s, err)
-	//		return nil, err
-	//	}
-	//	if s.LastRun == nil {
-	//		status[i].LastRun = &now
-	//	}
-	//	if s.Status == kubeprobev1.CheckerStatusUNKNOWN {
-	//		logrus.Warnf("probe checker status should not be UNKNOWN")
-	//		continue
-	//	}
-	//	if pcs.Status != kubeprobev1.CheckerStatusError && s.Status != kubeprobev1.CheckerStatusInfo {
-	//		pcs.Status = s.Status
-	//		pcs.Message = s.Message
-	//	}
-	//}
-
 	rp := ReportProbeStatusSpec{
 		ProbeName:      info.ProbeName,
 		ProbeNamespace: info.ProbeNamespace,
