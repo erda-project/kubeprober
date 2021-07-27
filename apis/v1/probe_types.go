@@ -27,7 +27,6 @@ const (
 	LabelValueApp          = "kubeprober.erda.cloud"
 	LabelKeyProbeNameSpace = "kubeprober.erda.cloud/probe-namespace"
 	LabelKeyProbeName      = "kubeprober.erda.cloud/probe-name"
-	LabelKeyProbeItemName  = "kubeprober.erda.cloud/probe-item-name"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -42,6 +41,13 @@ type Policy struct {
 type ProbeSpec struct {
 	Policy   Policy        `json:"policy,omitempty"`
 	Template apiv1.PodSpec `json:"template,omitempty"`
+	Configs  []Config      `json:"configs,omitempty"`
+}
+
+// Checker defines the desired state of Checker
+type Config struct {
+	Name string         `json:"name,omitempty"`
+	Env  []apiv1.EnvVar `json:"env,omitempty"`
 }
 
 // ProbeStatus defines the observed state of Probe

@@ -52,12 +52,7 @@ func TestUpdateProbeStatus(t *testing.T) {
 
 	s := kubeprobev1.ProbeStatus{
 		Spec: kubeprobev1.ProbeStatusSpec{
-			ProbeCheckerStatus: kubeprobev1.ProbeCheckerStatus{
-				Name:   probeName,
-				Status: kubeprobev1.CheckerStatusInfo,
-			},
-			Namespace: probeNamespace,
-			Checkers:  checker,
+			Checkers: checker,
 		},
 	}
 
