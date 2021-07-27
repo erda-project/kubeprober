@@ -67,18 +67,27 @@ func (r *ProbeStatusReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	r.initLogger(ctx)
 	var patch []byte
 	var err error
-	fmt.Printf("probestatus:___ %+v\n", req)
 
 	//update status of probestatus
 	ps := kubeprobev1.ProbeStatus{}
 	if err = r.Get(ctx, req.NamespacedName, &ps); err != nil {
-		r.log.V(1).Error(err, "could not get probestatus")
+		if apierrors.IsNotFound(err) {
+			//r.log.V(1).Info("could not found probestatus")
+			return ctrl.Result{}, nil
+		} else {
+			r.log.V(1).Error(err, "could not get probestatus")
+			return ctrl.Result{}, err
+		}
 	}
 
 	var fStatus kubeprobev1.CheckerStatus
 	var fMessage string
 	var fLastRun *metav1.Time
 	for _, i := range ps.Spec.Checkers {
+		if fStatus == "" {
+			fStatus = i.Status
+			fMessage = i.Message
+		}
 		if i.Status.Priority() > fStatus.Priority() {
 			fStatus = i.Status
 			fMessage = i.Message
@@ -89,6 +98,9 @@ func (r *ProbeStatusReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		if fLastRun.Before(i.LastRun) {
 			fLastRun = i.LastRun
 		}
+	}
+	if fMessage == "" {
+		fMessage = "-"
 	}
 	statusPatch := kubeprobev1.ProbeStatus{
 		Status: kubeprobev1.ProbeStatusStates{
@@ -114,7 +126,7 @@ func (r *ProbeStatusReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	err = r.Get(ctx, req.NamespacedName, &pod)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			r.log.V(1).Info("could not found probe pod")
+			//r.log.V(1).Info("could not found probe pod")
 			return ctrl.Result{}, nil
 		} else {
 			r.log.V(1).Error(err, "could not get probe pod")
@@ -156,25 +168,25 @@ func FilterFailedStatus(p corev1.PodStatus, labels map[string]string) (failed bo
 		for _, c := range p.Conditions {
 			if c.Type == corev1.PodScheduled && c.Status == corev1.ConditionFalse {
 				failed = true
-				pItemName := labels[kubeprobev1.LabelKeyProbeItemName]
-				status = genProbeCheckerStatus(c.Reason, c.Message, pItemName)
+				pName := labels[kubeprobev1.LabelKeyProbeName]
+				status = genProbeCheckerStatus(c.Reason, c.Message, pName)
 				return
 			}
 		}
 	}
 	if p.Phase == corev1.PodFailed && p.Reason != "" {
 		failed = true
-		pItemName := labels[kubeprobev1.LabelKeyProbeItemName]
-		status = genProbeCheckerStatus(p.Reason, p.Message, pItemName)
+		pName := labels[kubeprobev1.LabelKeyProbeName]
+		status = genProbeCheckerStatus(p.Reason, p.Message, pName)
 		return
 	}
 	return
 }
 
-func genProbeCheckerStatus(reason, msg, pItemName string) (status kubeprobev1.ProbeCheckerStatus) {
+func genProbeCheckerStatus(reason, msg, pName string) (status kubeprobev1.ProbeCheckerStatus) {
 	now := metav1.Now()
 	status = kubeprobev1.ProbeCheckerStatus{
-		Name:    pItemName,
+		Name:    pName,
 		Status:  kubeprobev1.CheckerStatusUNKNOWN,
 		Message: fmt.Sprintf("pod running failed, reason: %s, message: %s", reason, msg),
 		LastRun: &now,
@@ -219,7 +231,7 @@ func ReportProbeResult(c client.Client, r probestatus.ReportProbeStatusSpec) err
 	}
 
 	needUpdate, ups := mergeProbeStatus(r, ps)
-	logger.Log.V(2).Info("status merge info", "incoming probe item status", r, "need update", needUpdate, "before merge", ps, "after merge", ups)
+	logger.Log.V(2).Info("status merge info", "incoming probe status", r, "need update", needUpdate, "before merge", ps, "after merge", ups)
 	// TODO: optimize using patch method
 	if needUpdate {
 		err = c.Update(ctx, &ups)
@@ -242,8 +254,7 @@ func newProbeStatus(r probestatus.ReportProbeStatusSpec) (s kubeprobev1.ProbeSta
 			Namespace: r.ProbeNamespace,
 		},
 		Spec: kubeprobev1.ProbeStatusSpec{
-			Namespace: r.ProbeNamespace,
-			Checkers:  r.Checkers,
+			Checkers: r.Checkers,
 		},
 	}
 	return

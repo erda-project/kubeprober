@@ -35,7 +35,6 @@ import (
 
 const maxTimeInFailure = 60 * time.Second
 const defaultCheckTimeout = 5 * time.Minute
-const TestPublicDomain = "www.baidu.com"
 
 // KubeConfigFile is a variable containing file path of Kubernetes config files
 var KubeConfigFile = filepath.Join(os.Getenv("HOME"), ".kube", "config")
@@ -55,6 +54,7 @@ var namespace string
 // Label selector used for dns pods
 var labelSelector string
 
+var TestPublicDomain string
 var now time.Time
 
 // Checker validates that DNS is functioning correctly
@@ -91,7 +91,7 @@ func init() {
 	if len(labelSelector) > 0 {
 		log.Infoln("Looking for DNS pods with label:", labelSelector)
 	}
-
+	TestPublicDomain = os.Getenv("TEST_PUBLIC_DOMAIN")
 	now = time.Now()
 }
 
@@ -131,7 +131,7 @@ func (dc *Checker) Run(client *kubernetes.Clientset) error {
 
 	now := metav1.Now()
 	dnsChecker := probev1.ProbeCheckerStatus{
-		Name:    "dns-resolution-check",
+		Name:    "check-dns-resolution",
 		Status:  probev1.CheckerStatusPass,
 		Message: "",
 		LastRun: &now,
@@ -146,7 +146,7 @@ func (dc *Checker) Run(client *kubernetes.Clientset) error {
 		dnsChecker.Message = errorMessage
 		err := status.ReportProbeStatus([]probev1.ProbeCheckerStatus{dnsChecker})
 		if err != nil {
-			log.Println("Error reporting failure to Kuberhealthy servers:", err)
+			log.Println("Error reporting failure to probeagent servers:", err)
 			return err
 		}
 		return err
@@ -224,6 +224,7 @@ func (dc *Checker) checkEndpoints() error {
 	}
 
 	//given that we got valid ips from endpoint list, parse them
+	log.Infof("valid ips from endpoint list is %+v\n", ips)
 	if len(ips) > 0 {
 		for ip := 0; ip < len(ips); ip++ {
 			//create a resolver for each ip and return any error
@@ -251,6 +252,8 @@ func (dc *Checker) checkEndpoints() error {
 // doChecks does validations on the DNS call to the endpoint
 func (dc *Checker) doChecks() error {
 
+	var err error
+
 	log.Infoln("DNS Status check testing hostname:", dc.Hostname)
 
 	// if there's a label selector, do checks against endpoints
@@ -263,12 +266,20 @@ func (dc *Checker) doChecks() error {
 	}
 
 	// otherwise do lookup against service endpoint
-	_, err := net.LookupHost(dc.Hostname)
+	_, err = net.LookupHost(dc.Hostname)
 	if err != nil {
 		errorMessage := "DNS Status check determined that " + dc.Hostname + " is DOWN: " + err.Error()
 		log.Errorln(errorMessage)
 		return errors.New(errorMessage)
 	}
+
+	_, err = net.LookupHost(TestPublicDomain)
+	if err != nil {
+		errorMessage := "DNS Status check determined that " + TestPublicDomain + " is DOWN: " + err.Error()
+		log.Errorln(errorMessage)
+		return errors.New(errorMessage)
+	}
+
 	log.Infoln("DNS Status check from service endpoint determined that", dc.Hostname, "was OK.")
 	return nil
 }

@@ -1,0 +1,34 @@
+apiVersion: kubeprober.erda.cloud/v1
+kind: Probe
+metadata:
+  name: k8s
+  namespace: kubeprober
+spec:
+  policy:
+    # unit: minute
+    runInterval: 2
+  template:
+    containers:
+      - env:
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+        name: k8s
+        image: kubeprober/probe-k8s:v0.0.5
+        resources:
+          requests:
+            cpu: 10m
+            memory: 50Mi
+    restartPolicy: Never
+  configs:
+    - name: check-dns-resolution
+      env:
+        - name: HOSTNAME
+          value: "kubernetes.default"
+        - name: NAMESPACE
+          value: "kube-system"
+        - name: DNS_NODE_SELECTOR
+          value: apps=k8s-dns
+        - name: TEST_PUBLIC_DOMAIN
+          value: "www.baidu.com"

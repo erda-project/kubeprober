@@ -322,6 +322,11 @@ func envInject(probe *kubeprobev1.Probe) {
 			Value: options.ProbeAgentConf.GetProbeStatusReportUrl(),
 		},
 	}
+	for i := range probe.Spec.Configs {
+		for j := range probe.Spec.Configs[i].Env {
+			ienvs = append(ienvs, probe.Spec.Configs[i].Env[j])
+		}
+	}
 	for i := range probe.Spec.Template.Containers {
 		env := probe.Spec.Template.Containers[i].Env
 		for j, e := range env {
@@ -332,6 +337,7 @@ func envInject(probe *kubeprobev1.Probe) {
 		env = append(env, ienvs...)
 		probe.Spec.Template.Containers[i].Env = env
 	}
+
 }
 
 func remove(slice []corev1.EnvVar, s int) []corev1.EnvVar {

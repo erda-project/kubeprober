@@ -55,9 +55,7 @@ type ProbeCheckerStatus struct {
 }
 
 type ProbeStatusSpec struct {
-	ProbeCheckerStatus `json:",inline"`
-	Namespace          string               `json:"namespace,omitempty"`
-	Checkers           []ProbeCheckerStatus `json:"checkers,omitempty"`
+	Checkers []ProbeCheckerStatus `json:"checkers,omitempty"`
 }
 
 // ProbeStatusStatus defines the observed state of ProbeStatus
