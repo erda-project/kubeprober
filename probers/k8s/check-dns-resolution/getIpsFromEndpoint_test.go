@@ -28,7 +28,7 @@ func TestGetIpsFromEndpoint(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to create kube client")
 	}
-	endpoints, err := client.CoreV1().Endpoints(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: labelSelector})
+	endpoints, err := client.CoreV1().Endpoints("kube-system").List(context.TODO(), metav1.ListOptions{LabelSelector: "k8s-app=kube-dns"})
 	if err != nil {
 		t.Fatalf("Unable to get endpoint list")
 	}
