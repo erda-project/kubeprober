@@ -161,3 +161,71 @@ spec:
             name: probeagent
       serviceAccountName: kubeprober
       terminationGracePeriodSeconds: 10
+
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  generation: 2
+  labels:
+    name: nsenter
+  name: nsenter
+spec:
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      name: nsenter
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        name: nsenter
+    spec:
+      containers:
+        - command:
+            - nsenter
+            - --target
+            - "1"
+            - --mount
+            - --uts
+            - --ipc
+            - --net
+            - --pid
+            - --
+            - env
+            - TMOUT=0
+            - bash
+            - --noprofile
+            - -l
+          image: docker.io/library/alpine
+          imagePullPolicy: IfNotPresent
+          resources:
+            limits:
+              cpu: 100m
+              memory: 100Mi
+            requests:
+              cpu: 100m
+              memory: 20Mi
+          name: nsenter
+          securityContext:
+            privileged: true
+          stdin: true
+          stdinOnce: true
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          tty: true
+      dnsPolicy: ClusterFirst
+      enableServiceLinks: true
+      hostNetwork: true
+      hostPID: true
+      priority: 0
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: default
+      serviceAccountName: default
+      terminationGracePeriodSeconds: 30
+  updateStrategy:
+    rollingUpdate:
+      maxUnavailable: 1
+    type: RollingUpdate
