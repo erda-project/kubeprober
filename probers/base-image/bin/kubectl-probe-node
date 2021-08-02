@@ -1,0 +1,67 @@
+#!/bin/bash
+
+if [[ $1 == "" ]]
+then
+    echo "usage: kubectl probe name <script-file-name>"
+    exit 1
+fi
+NAMESPACE="kubeprober"
+LABEL="nsenter"
+SCRIPT=$1
+
+function format_output() {
+    cat $1 | awk -v ignore_info_flag="$ignore_info_flag" '
+        {
+            if($3 == "error" || $3 == "info")
+            {
+                num[$2]++
+                type[$2]=$3
+                msg=""
+                node=sprintf("%-50s", $1);
+                item=sprintf("%-40s", $2);
+                result=sprintf("%-10s", $3);
+                for (i=4;i<=NF;i++) {msg=msg" "$i}
+                result_list[$2] = result_list[$2]"\n"node item result "|"msg
+            } else {
+                num[$2]
+            }
+        }
+        END{
+            for (i in num) {
+                count=num[i]
+                i_type=type[i]
+                if (num[i] == "") {count = 0}
+                print "========= " i, count, i_type " ========="
+                print result_list[i]
+            }
+        }
+    '
+}
+
+
+for i in $(kubectl get pods -l name=$LABEL -o=custom-columns=NAME:.metadata.name  -n $NAMESPACE  --no-headers)
+do
+    kubectl cp $SCRIPT $i:/tmp -n $NAMESPACE
+    nodeName=$(kubectl get pod $i -n kubeprober -o=jsonpath='{.spec.nodeName}')
+    kubectl exec $i -n $NAMESPACE -- bash /tmp/$SCRIPT | sed  "s/^/$nodeName /g"
+done > /tmp/.probe_host_origin_result
+format_output /tmp/.probe_host_origin_result > /tmp/.probe_host_result
+
+IFS_old=$IFS
+IFS=$'\n'
+for item in $(cat /tmp/.probe_host_result | grep "=======" | sort -k3)
+do
+    name=$(echo $item | awk -F" " '{print $2}')
+    number=$(echo $item | awk -F" " '{print $3}')
+    # append_line $name $number ""
+    if [[ $number == 0 ]]
+    then
+        report-status --name=$name --status=PASS --message="-"
+    else
+        type=$(echo $item | awk -F" " '{print $4}')
+        minfo=$(cat /tmp/.probe_host_result | grep -v "=======" | grep $name | grep $type | awk '{print $NF}' | head -n 1 )
+        nodeList=$(cat /tmp/.probe_host_result | grep $name | grep $type | grep -v "====" | awk '{print $1}' | xargs echo)
+        message="$minfo, $type node: [ $nodeList ]"
+        report-status --name=$name --status=$type --message="$message"
+    fi
+done
