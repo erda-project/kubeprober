@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	kubeprobev1 "github.com/erda-project/kubeprober/apis/v1"
+	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 	"github.com/erda-project/kubeprober/apistructs"
 	"github.com/gorilla/mux"
 	"github.com/rancher/remotedialer"
@@ -43,10 +43,10 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 		rw.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	patchBody := kubeprobev1.Cluster{
-		Spec: kubeprobev1.ClusterSpec{
+	patchBody := kubeproberv1.Cluster{
+		Spec: kubeproberv1.ClusterSpec{
 			K8sVersion: hbData.Version,
-			ClusterConfig: kubeprobev1.ClusterConfig{
+			ClusterConfig: kubeproberv1.ClusterConfig{
 				Address:         hbData.Address,
 				Token:           hbData.Token,
 				CACert:          hbData.CaData,
@@ -58,7 +58,7 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 		},
 	}
 	patch, _ := json.Marshal(patchBody)
-	err = clusterRestClient.Patch(context.Background(), &kubeprobev1.Cluster{
+	err = clusterRestClient.Patch(context.Background(), &kubeproberv1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      hbData.Name,
 			Namespace: metav1.NamespaceDefault,
@@ -71,13 +71,13 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 		rw.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	statusPatchBody := kubeprobev1.Cluster{
-		Status: kubeprobev1.ClusterStatus{
+	statusPatchBody := kubeproberv1.Cluster{
+		Status: kubeproberv1.ClusterStatus{
 			HeartBeatTimeStamp: time.Now().Format("2006-01-02 15:04:05"),
 		},
 	}
 	statusPatch, _ := json.Marshal(statusPatchBody)
-	err = clusterRestClient.Status().Patch(context.Background(), &kubeprobev1.Cluster{
+	err = clusterRestClient.Status().Patch(context.Background(), &kubeproberv1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      hbData.Name,
 			Namespace: metav1.NamespaceDefault,

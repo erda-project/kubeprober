@@ -13,14 +13,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	kubeprobev1 "github.com/erda-project/kubeprober/apis/v1"
+	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 )
 
 // Checker validates that DNS is functioning correctly
 type DnsChecker struct {
 	client  *kubernetes.Clientset
 	Name    string
-	Status  kubeprobev1.CheckerStatus
+	Status  kubeproberv1.CheckerStatus
 	Timeout time.Duration
 }
 
@@ -47,11 +47,11 @@ func (dc *DnsChecker) SetName(n string) {
 	dc.Name = n
 }
 
-func (dc *DnsChecker) GetStatus() kubeprobev1.CheckerStatus {
+func (dc *DnsChecker) GetStatus() kubeproberv1.CheckerStatus {
 	return dc.Status
 }
 
-func (dc *DnsChecker) SetStatus(s kubeprobev1.CheckerStatus) {
+func (dc *DnsChecker) SetStatus(s kubeproberv1.CheckerStatus) {
 	dc.Status = s
 }
 
@@ -133,7 +133,7 @@ func (dc *DnsChecker) checkEndpoints() error {
 				return err
 			}
 		}
-		logrus.Infof("DNS Status check from service endpoint determined that", "private domain: %s, public domain: %s was OK.", cfg.PrivateDomain, cfg.PublicDomain)
+		logrus.Infof("DNS Status check from service endpoint determined, private domain: %s, public domain: %s was OK.", cfg.PrivateDomain, cfg.PublicDomain)
 		return nil
 	}
 	return errors.New("No ips found in endpoint with label: " + cfg.LabelSelector)

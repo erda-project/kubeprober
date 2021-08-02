@@ -15,7 +15,7 @@ package app
 
 import (
 	"fmt"
-	kubeprobev1 "github.com/erda-project/kubeprober/apis/v1"
+	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 	"github.com/erda-project/kubeprober/cli/report-status/options"
 	status "github.com/erda-project/kubeprober/pkg/probe-status"
 	"github.com/spf13/cobra"
@@ -43,13 +43,13 @@ func NewCmdReportStatusManager(stopCh <-chan struct{}) *cobra.Command {
 
 func Run(opts *options.ReportStatusOptions) {
 	now := metav1.Now()
-	dnsChecker := kubeprobev1.ProbeCheckerStatus{
+	dnsChecker := kubeproberv1.ProbeCheckerStatus{
 		Name:    opts.CheckerName,
-		Status:  kubeprobev1.CheckerStatus(opts.Status),
+		Status:  kubeproberv1.CheckerStatus(opts.Status),
 		Message: opts.Message,
 		LastRun: &now,
 	}
-	if err := status.ReportProbeStatus([]kubeprobev1.ProbeCheckerStatus{dnsChecker}); err != nil {
+	if err := status.ReportProbeStatus([]kubeproberv1.ProbeCheckerStatus{dnsChecker}); err != nil {
 		fmt.Printf("%+v\n", err)
 	}
 }

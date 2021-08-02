@@ -15,7 +15,7 @@ package app
 
 import (
 	"context"
-	kubeprobev1 "github.com/erda-project/kubeprober/apis/v1"
+	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 	"github.com/rodaine/table"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -53,8 +53,8 @@ func NewCmdProbeStatusManager(stopCh <-chan struct{}) *cobra.Command {
 func Run() error {
 	var err error
 	var probeNames []string
-	probeStatus := &kubeprobev1.ProbeStatusList{}
-	probes := &kubeprobev1.ProbeList{}
+	probeStatus := &kubeproberv1.ProbeStatusList{}
+	probes := &kubeproberv1.ProbeList{}
 	if err = ProbeRestClient.List(context.Background(), probeStatus, client.InNamespace("kubeprober")); err != nil {
 		return err
 	}
@@ -94,7 +94,7 @@ func init() {
 	}
 
 	scheme := runtime.NewScheme()
-	kubeprobev1.AddToScheme(scheme)
+	kubeproberv1.AddToScheme(scheme)
 	ProbeRestClient, err = client.New(config, client.Options{Scheme: scheme})
 	if err != nil {
 		return

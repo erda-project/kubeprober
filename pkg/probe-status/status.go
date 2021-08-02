@@ -25,7 +25,7 @@ import (
 
 	"github.com/cenkalti/backoff"
 
-	kubeprobev1 "github.com/erda-project/kubeprober/apis/v1"
+	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -33,7 +33,7 @@ const (
 	maxReportTime = time.Second * 30
 )
 
-func ReportProbeStatus(status []kubeprobev1.ProbeCheckerStatus) error {
+func ReportProbeStatus(status []kubeproberv1.ProbeCheckerStatus) error {
 	MOCK := os.Getenv("USE_MOCK")
 	if MOCK == "true" {
 		logrus.Infof("MOCK MODE, probe status: %v", status)
@@ -67,7 +67,7 @@ func ReportProbeStatus(status []kubeprobev1.ProbeCheckerStatus) error {
 	return nil
 }
 
-func ValidateProbeStatus(status []kubeprobev1.ProbeCheckerStatus) (err error) {
+func ValidateProbeStatus(status []kubeproberv1.ProbeCheckerStatus) (err error) {
 	for _, s := range status {
 		err = s.Validate()
 		if err != nil {
@@ -77,7 +77,7 @@ func ValidateProbeStatus(status []kubeprobev1.ProbeCheckerStatus) (err error) {
 	return
 }
 
-func sendProbeStatus(ps kubeprobev1.ReportProbeStatusSpec, info ProbeStatusReportInfo) error {
+func sendProbeStatus(ps kubeproberv1.ReportProbeStatusSpec, info ProbeStatusReportInfo) error {
 	b, err := json.Marshal(ps)
 	if err != nil {
 		logrus.Errorf("marshal probe status failed, content:%v, error:%v", ps, err)
@@ -119,14 +119,14 @@ func sendProbeStatus(ps kubeprobev1.ReportProbeStatusSpec, info ProbeStatusRepor
 	return nil
 }
 
-func renderProbeStatus(status []kubeprobev1.ProbeCheckerStatus, info ProbeStatusReportInfo) (*kubeprobev1.ReportProbeStatusSpec, error) {
+func renderProbeStatus(status []kubeproberv1.ProbeCheckerStatus, info ProbeStatusReportInfo) (*kubeproberv1.ReportProbeStatusSpec, error) {
 	if len(status) == 0 {
 		err := fmt.Errorf("empty report status")
 		logrus.Errorf(err.Error())
 		return nil, err
 	}
 
-	rp := kubeprobev1.ReportProbeStatusSpec{
+	rp := kubeproberv1.ReportProbeStatusSpec{
 		ProbeName:      info.ProbeName,
 		ProbeNamespace: info.ProbeNamespace,
 		Checkers:       status,
@@ -174,7 +174,7 @@ func (p *ProbeStatusReportInfo) InitProbeNamespace() error {
 	if len(data) != 0 {
 		namespace = string(data)
 	} else {
-		namespace = os.Getenv(kubeprobev1.ProbeNamespace)
+		namespace = os.Getenv(kubeproberv1.ProbeNamespace)
 	}
 
 	if namespace == "" {
@@ -197,7 +197,7 @@ func (p *ProbeStatusReportInfo) InitProbeName() error {
 		return nil
 	}
 
-	name := os.Getenv(kubeprobev1.ProbeName)
+	name := os.Getenv(kubeproberv1.ProbeName)
 	if name == "" {
 		err := fmt.Errorf("cannot get probe name from environment")
 		logrus.Errorf(err.Error())
@@ -215,7 +215,7 @@ func (p *ProbeStatusReportInfo) InitProbeStatusReportUrl() error {
 		return nil
 	}
 
-	u := os.Getenv(kubeprobev1.ProbeStatusReportUrl)
+	u := os.Getenv(kubeproberv1.ProbeStatusReportUrl)
 	if u == "" {
 		err := fmt.Errorf("cannot get probe status report url from environment")
 		logrus.Errorf(err.Error())

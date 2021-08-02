@@ -66,7 +66,7 @@ import (
     "github.com/sirupsen/logrus"
     
     # define check status level: CheckerStatusInfo ... CheckerStatusError
-    kubeprobev1 "github.com/erda-project/kubeprober/apis/v1"
+    kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
     # define ReportProbeStatus api used to send checkers result
     status "github.com/erda-project/kubeprober/pkg/probe-status"
 )
@@ -76,23 +76,23 @@ func main() {
     # do real check work
     ...
     # result of the checkers
-    report := []kubeprobev1.ProbeCheckerStatus{
+    report := []kubeproberv1.ProbeCheckerStatus{
 		{
 			Name:   "REDIS-GET",
-			Status: kubeprobev1.CheckerStatusInfo,
+			Status: kubeproberv1.CheckerStatusInfo,
 		},
 		{
 			Name:    "REDIS-UPDATE",
-			Status:  kubeprobev1.CheckerStatusInfo,
+			Status:  kubeproberv1.CheckerStatusInfo,
 		},
 		{
 			Name:    "REDIS-DELETE",
-			Status:  kubeprobev1.CheckerStatusWARN,
+			Status:  kubeproberv1.CheckerStatusWARN,
 			Message: "WARN: non info level status message cannot be empty",
 		},
 		{
 			Name:    "REDIS-ADD",
-			Status:  kubeprobev1.CheckerStatusError,
+			Status:  kubeproberv1.CheckerStatusError,
 			Message: "ERROR: non info level status message cannot be empty, message: add failed, error: xxxx",
 		},
 	}
