@@ -19,7 +19,7 @@ import (
 	"gotest.tools/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kubeprobev1 "github.com/erda-project/kubeprober/apis/v1"
+	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 )
 
 const (
@@ -29,15 +29,15 @@ const (
 
 func TestUpdateProbeStatus(t *testing.T) {
 	now := metav1.Now()
-	checker := []kubeprobev1.ProbeCheckerStatus{
+	checker := []kubeproberv1.ProbeCheckerStatus{
 		{
 			Name:    "probe-checker1",
-			Status:  kubeprobev1.CheckerStatusInfo,
+			Status:  kubeproberv1.CheckerStatusInfo,
 			LastRun: &now,
 		},
 		{
 			Name:    "probe-checker2",
-			Status:  kubeprobev1.CheckerStatusError,
+			Status:  kubeproberv1.CheckerStatusError,
 			Message: "probe-checker2 error",
 			LastRun: &now,
 		},
@@ -49,8 +49,8 @@ func TestUpdateProbeStatus(t *testing.T) {
 		Checkers:       checker,
 	}
 
-	s := kubeprobev1.ProbeStatus{
-		Spec: kubeprobev1.ProbeStatusSpec{
+	s := kubeproberv1.ProbeStatus{
+		Spec: kubeproberv1.ProbeStatusSpec{
 			Checkers: checker,
 		},
 	}

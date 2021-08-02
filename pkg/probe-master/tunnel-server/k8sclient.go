@@ -17,7 +17,7 @@ import (
 	"os"
 	"path/filepath"
 
-	kubeprobev1 "github.com/erda-project/kubeprober/apis/v1"
+	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -45,7 +45,7 @@ func init() {
 	}
 
 	scheme := runtime.NewScheme()
-	kubeprobev1.AddToScheme(scheme)
+	kubeproberv1.AddToScheme(scheme)
 	clusterRestClient, err = client.New(config, client.Options{Scheme: scheme})
 	if err != nil {
 		return

@@ -17,7 +17,7 @@ import (
 	"context"
 	"net/http"
 
-	kubeprobev1 "github.com/erda-project/kubeprober/apis/v1"
+	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,7 +40,7 @@ func Authorizer(req *http.Request) (string, bool, error) {
 }
 
 func getUidByClusterName(name string) (string, error) {
-	cluster := &kubeprobev1.Cluster{}
+	cluster := &kubeproberv1.Cluster{}
 	err := clusterRestClient.Get(context.Background(), client.ObjectKey{
 		Name:      name,
 		Namespace: metav1.NamespaceDefault,

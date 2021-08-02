@@ -22,7 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	kubeprobev1 "github.com/erda-project/kubeprober/apis/v1"
+	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -55,8 +55,8 @@ type ProbeReconciler struct {
 func (r *ProbeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var err error
 
-	probe := &kubeprobev1.Probe{}
-	clusterList := &kubeprobev1.ClusterList{}
+	probe := &kubeproberv1.Probe{}
+	clusterList := &kubeproberv1.ClusterList{}
 
 	klog.Errorf("____________________probe_____________________________________, %+v\n", req.NamespacedName)
 	//delete probe
@@ -85,7 +85,7 @@ func (r *ProbeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	//update probe of cluster attatched
 	for i := range clusterList.Items {
-		remoteProbe := &kubeprobev1.Probe{}
+		remoteProbe := &kubeproberv1.Probe{}
 		cluster := clusterList.Items[i]
 		if IsContain(cluster.Status.AttachedProbes, probe.Name) {
 			klog.Infof("get probe [%s] of cluster [%s]\n", probe.Name, cluster.Name)
@@ -109,7 +109,7 @@ func (r *ProbeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 // SetupWithManager sets up the controller wibth the Manager.
 func (r *ProbeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&kubeprobev1.Probe{}).WithEventFilter(&ProbePredicate{}).
+		For(&kubeproberv1.Probe{}).WithEventFilter(&ProbePredicate{}).
 		Complete(r)
 }
 
@@ -119,8 +119,8 @@ type ProbePredicate struct {
 
 func (rl *ProbePredicate) Update(e event.UpdateEvent) bool {
 	klog.Errorf("update update\n")
-	oldObject := e.ObjectOld.(*kubeprobev1.Probe)
-	newObject := e.ObjectNew.(*kubeprobev1.Probe)
+	oldObject := e.ObjectOld.(*kubeproberv1.Probe)
+	newObject := e.ObjectNew.(*kubeproberv1.Probe)
 	ns := newObject.GetNamespace()
 	if ns != metav1.NamespaceDefault {
 		return false

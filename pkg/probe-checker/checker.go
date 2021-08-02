@@ -8,15 +8,15 @@ import (
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kubeprobev1 "github.com/erda-project/kubeprober/apis/v1"
+	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 	probestatus "github.com/erda-project/kubeprober/pkg/probe-status"
 )
 
 type Checker interface {
 	GetName() string
 	SetName(string)
-	GetStatus() kubeprobev1.CheckerStatus
-	SetStatus(kubeprobev1.CheckerStatus)
+	GetStatus() kubeproberv1.CheckerStatus
+	SetStatus(kubeproberv1.CheckerStatus)
 	GetTimeout() time.Duration
 	SetTimeout(time.Duration)
 	DoCheck() error
@@ -26,20 +26,20 @@ type CheckerList []Checker
 
 func RunCheckers(cs CheckerList) error {
 	var sg sync.WaitGroup
-	ss := make([]kubeprobev1.ProbeCheckerStatus, 0)
+	ss := make([]kubeproberv1.ProbeCheckerStatus, 0)
 	sg.Add(len(cs))
 	for _, c := range cs {
 		go func(cr Checker) {
 			defer func() {
 				sg.Done()
 			}()
-			s := kubeprobev1.ProbeCheckerStatus{
+			s := kubeproberv1.ProbeCheckerStatus{
 				Name:   cr.GetName(),
-				Status: kubeprobev1.CheckerStatusInfo,
+				Status: kubeproberv1.CheckerStatusInfo,
 			}
 			err := RunChecker(cr)
 			if err != nil {
-				s.Status = kubeprobev1.CheckerStatusError
+				s.Status = kubeproberv1.CheckerStatusError
 				s.Message = err.Error()
 			}
 			now := metav1.Now()

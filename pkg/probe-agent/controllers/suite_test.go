@@ -22,7 +22,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kubeprobev1 "github.com/erda-project/kubeprober/apis/v1"
+	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -63,7 +63,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	err = kubeprobev1.AddToScheme(scheme.Scheme)
+	err = kubeproberv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme
@@ -80,12 +80,12 @@ var _ = AfterSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 })
 
-var probe = kubeprobev1.Probe{
+var probe = kubeproberv1.Probe{
 	ObjectMeta: metav1.ObjectMeta{
 		Namespace: "default",
 		Name:      "probe-test1",
 	},
-	Spec: kubeprobev1.ProbeSpec{
+	Spec: kubeproberv1.ProbeSpec{
 		Template: apiv1.PodSpec{
 			Containers: []apiv1.Container{
 				{
@@ -95,7 +95,7 @@ var probe = kubeprobev1.Probe{
 				},
 			},
 		},
-		Policy: kubeprobev1.Policy{},
+		Policy: kubeproberv1.Policy{},
 	},
 }
 
