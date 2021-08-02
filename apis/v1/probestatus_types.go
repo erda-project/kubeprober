@@ -93,6 +93,14 @@ type ProbeStatusList struct {
 	Items           []ProbeStatus `json:"items"`
 }
 
+// Client report probe status struct in sdk
+type ReportProbeStatusSpec struct {
+	ProbeName          string `json:"probeName"`
+	ProbeNamespace     string `json:"probeNamespace"`
+	ProbeCheckerStatus `json:",inline"`
+	Checkers           []ProbeCheckerStatus `json:"checkers"`
+}
+
 func init() {
 	SchemeBuilder.Register(&ProbeStatus{}, &ProbeStatusList{})
 }
