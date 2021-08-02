@@ -3,9 +3,10 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net"
 	"time"
+
+	"github.com/erda-project/kubeprober/pkg/kubeclient"
 
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
@@ -13,72 +14,57 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	kubeprobev1 "github.com/erda-project/kubeprober/apis/v1"
-	"github.com/erda-project/kubeprober/pkg/kubeclient"
-	probestatus "github.com/erda-project/kubeprober/pkg/probe-status"
 )
 
 // Checker validates that DNS is functioning correctly
-type Checker struct {
-	client *kubernetes.Clientset
+type DnsChecker struct {
+	client  *kubernetes.Clientset
+	Name    string
+	Status  kubeprobev1.CheckerStatus
+	Timeout time.Duration
 }
 
 // New returns a new DNS Checker
-func NewChecker() (*Checker, error) {
+func NewDnsChecker() (*DnsChecker, error) {
 	// get kubernetes client
 	client, err := kubeclient.Client(cfg.KubeConfigFile)
 	if err != nil {
 		logrus.Fatalln("Unable to create kubernetes client", err)
 		return nil, err
 	}
-	return &Checker{
-		client: client,
+	return &DnsChecker{
+		client:  client,
+		Name:    "dns-resolution-check",
+		Timeout: cfg.CheckTimeout,
 	}, nil
 }
 
-// Run implements the entrypoint for check execution
-func (dc *Checker) Run() error {
-	logrus.Infoln("Running DNS status checker")
-	doneChan := make(chan error)
+func (dc *DnsChecker) GetName() string {
+	return dc.Name
+}
 
-	// run the check in a goroutine and notify the doneChan when completed
-	go func(doneChan chan error) {
-		err := dc.doChecks()
-		doneChan <- err
-	}(doneChan)
+func (dc *DnsChecker) SetName(n string) {
+	dc.Name = n
+}
 
-	now := metav1.Now()
-	// init dns check status
-	dnsChecker := kubeprobev1.ProbeCheckerStatus{
-		Name:    "check-dns-resolution",
-		Status:  kubeprobev1.CheckerStatusPass,
-		Message: "",
-		LastRun: &now,
-	}
+func (dc *DnsChecker) GetStatus() kubeprobev1.CheckerStatus {
+	return dc.Status
+}
 
-	// wait for either a timeout or job completion
-	select {
-	case <-time.After(cfg.CheckTimeout):
-		// The check has timed out after its specified timeout period
-		dnsChecker.Status = kubeprobev1.CheckerStatusError
-		dnsChecker.Message = fmt.Sprintf("Failed to complete DNS Status check in time! Timeout(%s) was reached.", cfg.CheckTimeout)
-		err := probestatus.ReportProbeStatus([]kubeprobev1.ProbeCheckerStatus{dnsChecker})
-		if err != nil {
-			logrus.Println("Error reporting failure to probeagent:", err)
-			return err
-		}
-		return err
-	case err := <-doneChan:
-		if err != nil {
-			dnsChecker.Status = kubeprobev1.CheckerStatusError
-			dnsChecker.Message = err.Error()
-			return probestatus.ReportProbeStatus([]kubeprobev1.ProbeCheckerStatus{dnsChecker})
-		}
-		return probestatus.ReportProbeStatus([]kubeprobev1.ProbeCheckerStatus{dnsChecker})
-	}
+func (dc *DnsChecker) SetStatus(s kubeprobev1.CheckerStatus) {
+	dc.Status = s
+}
+
+func (dc *DnsChecker) GetTimeout() time.Duration {
+	return dc.Timeout
+}
+
+func (dc *DnsChecker) SetTimeout(t time.Duration) {
+	dc.Timeout = t
 }
 
 // doChecks does validations on the DNS call to the endpoint
-func (dc *Checker) doChecks() error {
+func (dc *DnsChecker) DoCheck() error {
 
 	var err error
 
@@ -112,7 +98,7 @@ func (dc *Checker) doChecks() error {
 	return nil
 }
 
-func (dc *Checker) checkEndpoints() error {
+func (dc *DnsChecker) checkEndpoints() error {
 	// get dns endpoint
 	endpoints, err := dc.client.CoreV1().Endpoints(cfg.Namespace).List(context.Background(), metav1.ListOptions{LabelSelector: cfg.LabelSelector})
 	if err != nil {
@@ -147,7 +133,7 @@ func (dc *Checker) checkEndpoints() error {
 				return err
 			}
 		}
-		logrus.Infoln("DNS Status check from service endpoint determined that", cfg.PrivateDomain, cfg.PublicDomain, "was OK.")
+		logrus.Infof("DNS Status check from service endpoint determined that", "private domain: %s, public domain: %s was OK.", cfg.PrivateDomain, cfg.PublicDomain)
 		return nil
 	}
 	return errors.New("No ips found in endpoint with label: " + cfg.LabelSelector)
