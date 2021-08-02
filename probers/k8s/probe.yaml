@@ -29,7 +29,7 @@ spec:
         - name: NAMESPACE
           value: "kube-system"
         - name: DNS_NODE_SELECTOR
-          value: apps=k8s-dns
+          value: "k8s-app=kube-dns"
         - name: TEST_PUBLIC_DOMAIN
           value: "www.baidu.com"
 

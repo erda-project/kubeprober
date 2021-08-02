@@ -33,14 +33,13 @@ const (
 	maxReportTime = time.Second * 30
 )
 
-type ReportProbeStatusSpec struct {
-	ProbeName                      string `json:"probeName"`
-	ProbeNamespace                 string `json:"probeNamespace"`
-	kubeprobev1.ProbeCheckerStatus `json:",inline"`
-	Checkers                       []kubeprobev1.ProbeCheckerStatus `json:"checkers"`
-}
-
 func ReportProbeStatus(status []kubeprobev1.ProbeCheckerStatus) error {
+	MOCK := os.Getenv("USE_MOCK")
+	if MOCK == "true" {
+		logrus.Infof("MOCK MODE, probe status: %v", status)
+		return nil
+	}
+
 	info := ProbeStatusReportInfo{}
 	err := info.Init()
 	if err != nil {
@@ -78,7 +77,7 @@ func ValidateProbeStatus(status []kubeprobev1.ProbeCheckerStatus) (err error) {
 	return
 }
 
-func sendProbeStatus(ps ReportProbeStatusSpec, info ProbeStatusReportInfo) error {
+func sendProbeStatus(ps kubeprobev1.ReportProbeStatusSpec, info ProbeStatusReportInfo) error {
 	b, err := json.Marshal(ps)
 	if err != nil {
 		logrus.Errorf("marshal probe status failed, content:%v, error:%v", ps, err)
@@ -120,14 +119,14 @@ func sendProbeStatus(ps ReportProbeStatusSpec, info ProbeStatusReportInfo) error
 	return nil
 }
 
-func renderProbeStatus(status []kubeprobev1.ProbeCheckerStatus, info ProbeStatusReportInfo) (*ReportProbeStatusSpec, error) {
+func renderProbeStatus(status []kubeprobev1.ProbeCheckerStatus, info ProbeStatusReportInfo) (*kubeprobev1.ReportProbeStatusSpec, error) {
 	if len(status) == 0 {
 		err := fmt.Errorf("empty report status")
 		logrus.Errorf(err.Error())
 		return nil, err
 	}
 
-	rp := ReportProbeStatusSpec{
+	rp := kubeprobev1.ReportProbeStatusSpec{
 		ProbeName:      info.ProbeName,
 		ProbeNamespace: info.ProbeNamespace,
 		Checkers:       status,
@@ -159,9 +158,14 @@ func (p *ProbeStatusReportInfo) Init() error {
 }
 
 func (p *ProbeStatusReportInfo) InitProbeNamespace() error {
+	MOCK := os.Getenv("USE_MOCK")
+	if MOCK == "true" {
+		logrus.Infof("MOCK MODE, probe namespace: %v", "probe-namespace-mock")
+		p.ProbeNamespace = "probe-namespace-mock"
+		return nil
+	}
 
 	var namespace string
-
 	data, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
 	if err != nil {
 		logrus.Warnf("failed to open namespace file, error:%v", err.Error())
@@ -186,6 +190,13 @@ func (p *ProbeStatusReportInfo) InitProbeNamespace() error {
 }
 
 func (p *ProbeStatusReportInfo) InitProbeName() error {
+	MOCK := os.Getenv("USE_MOCK")
+	if MOCK == "true" {
+		logrus.Infof("MOCK MODE, probe name: %v", "probe-name-mock")
+		p.ProbeNamespace = "probe-name-mock"
+		return nil
+	}
+
 	name := os.Getenv(kubeprobev1.ProbeName)
 	if name == "" {
 		err := fmt.Errorf("cannot get probe name from environment")
@@ -197,6 +208,13 @@ func (p *ProbeStatusReportInfo) InitProbeName() error {
 }
 
 func (p *ProbeStatusReportInfo) InitProbeStatusReportUrl() error {
+	MOCK := os.Getenv("USE_MOCK")
+	if MOCK == "true" {
+		logrus.Infof("MOCK MODE, probe status report url: %v", "http://probe-status-report/mock")
+		p.ProbeStatusReportUrl = "http://probeagent.probe-namespace-mock.svc.cluster.local:8082/probe-status"
+		return nil
+	}
+
 	u := os.Getenv(kubeprobev1.ProbeStatusReportUrl)
 	if u == "" {
 		err := fmt.Errorf("cannot get probe status report url from environment")

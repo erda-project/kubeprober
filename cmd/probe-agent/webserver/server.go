@@ -24,7 +24,6 @@ import (
 	logger "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/erda-project/kubeprober/pkg/probe-agent/controllers"
-	probestatus "github.com/erda-project/kubeprober/pkg/probe-status"
 )
 
 type Server struct {
@@ -71,7 +70,7 @@ func (s *Server) ProbeResultHandler(w http.ResponseWriter, r *http.Request) erro
 		return nil
 	}
 
-	rp := probestatus.ReportProbeStatusSpec{}
+	rp := kubeproberv1.ReportProbeStatusSpec{}
 	err = json.Unmarshal(b, &rp)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)

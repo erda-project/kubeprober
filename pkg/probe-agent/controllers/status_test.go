@@ -20,7 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kubeprobev1 "github.com/erda-project/kubeprober/apis/v1"
-	probestatus "github.com/erda-project/kubeprober/pkg/probe-status"
 )
 
 const (
@@ -44,7 +43,7 @@ func TestUpdateProbeStatus(t *testing.T) {
 		},
 	}
 
-	r := probestatus.ReportProbeStatusSpec{
+	r := kubeproberv1.ReportProbeStatusSpec{
 		ProbeName:      probeName,
 		ProbeNamespace: probeNamespace,
 		Checkers:       checker,
