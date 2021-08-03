@@ -12,7 +12,7 @@ import (
 func main() {
 	var (
 		err error
-		dc  *DnsChecker
+		dc  *DeployServiceChecker
 	)
 
 	defer func() {
@@ -23,7 +23,11 @@ func main() {
 
 	// load config
 	ConfigLoad()
-
+	err = ParseConfig()
+	if err != nil {
+		err = fmt.Errorf("parse config failed, error: %v", err)
+		return
+	}
 	// check log debug level
 	if cfg.Debug {
 		logrus.SetLevel(logrus.DebugLevel)
@@ -32,7 +36,7 @@ func main() {
 
 	// create checkers
 	// dns checker
-	dc, err = NewDnsChecker()
+	dc, err = NewDeployServiceChecker()
 	if err != nil {
 		err = fmt.Errorf("new dns checker failed, error: %v", err)
 		return
@@ -41,8 +45,8 @@ func main() {
 	// run checkers
 	err = proberchecker.RunCheckers(proberchecker.CheckerList{dc})
 	if err != nil {
-		err = fmt.Errorf("run dns checker failed, private domain: %s, public domain: %s, error: %v", cfg.PrivateDomain, cfg.PublicDomain, err)
+		err = fmt.Errorf("run deployment service checker failed, error: %v", err)
 		return
 	}
-	logrus.Infof("run dns check success for for private domain: %s, public domain: %s", cfg.PrivateDomain, cfg.PublicDomain)
+	logrus.Infof("run deployment service checker successfully")
 }
