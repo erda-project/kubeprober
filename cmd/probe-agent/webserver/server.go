@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -73,6 +74,10 @@ func (s *Server) ProbeResultHandler(w http.ResponseWriter, r *http.Request) erro
 
 	rp := kubeproberv1.ReportProbeStatusSpec{}
 	err = json.Unmarshal(b, &rp)
+	for i := range rp.Checkers {
+		s := strings.ToUpper(string(rp.Checkers[i].Status))
+		rp.Checkers[i].Status = kubeproberv1.CheckerStatus(s)
+	}
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		logger.Log.Error(err, "unmarshal request body failed", "body", string(b))

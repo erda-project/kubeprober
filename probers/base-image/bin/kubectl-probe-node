@@ -8,6 +8,7 @@ fi
 NAMESPACE="kubeprober"
 LABEL="nsenter"
 SCRIPT=$1
+SCRIPT_PARAM=$(echo $@ | sed -e 's/[^ ]* //')
 SCRIPT_FILE_NAME=$(basename $1)
 
 function format_output() {
@@ -39,13 +40,28 @@ function format_output() {
     '
 }
 
+[ -e /tmp/fd1 ] || mkfifo /tmp/fd1
+exec 3<>/tmp/fd1
+rm -rf /tmp/fd1
+for ((i=1;i<=10;i++))
+do
+    echo >&3
+done
+
 
 for i in $(kubectl get pods -l name=$LABEL -o=custom-columns=NAME:.metadata.name  -n $NAMESPACE  --no-headers)
 do
+read -u 3
+{
     kubectl cp $SCRIPT $i:/tmp -n $NAMESPACE
     nodeName=$(kubectl get pod $i -n kubeprober -o=jsonpath='{.spec.nodeName}')
-    kubectl exec $i -n $NAMESPACE -- bash /tmp/$SCRIPT_FILE_NAME | sed  "s/^/$nodeName /g"
+    kubectl exec $i -n $NAMESPACE -- bash /tmp/$SCRIPT_FILE_NAME $SCRIPT_PARAM | sed  "s/^/$nodeName /g"
+    echo >&3
+} &
 done > /tmp/.probe_host_origin_result
+
+wait
+
 format_output /tmp/.probe_host_origin_result > /tmp/.probe_host_result
 
 IFS_old=$IFS
