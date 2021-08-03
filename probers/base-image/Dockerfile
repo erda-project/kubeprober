@@ -1,4 +1,4 @@
-## lastet version: kubeprober/probe-base:v0.0.5
+## lastet version: kubeprober/probe-base:v0.0.7
 FROM centos:7
 WORKDIR /
 
