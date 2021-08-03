@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 if [[ $1 == "" ]]
 then
@@ -8,6 +8,7 @@ fi
 NAMESPACE="kubeprober"
 LABEL="nsenter"
 SCRIPT=$1
+SCRIPT_FILE_NAME=$(basename $1)
 
 function format_output() {
     cat $1 | awk -v ignore_info_flag="$ignore_info_flag" '
@@ -43,7 +44,7 @@ for i in $(kubectl get pods -l name=$LABEL -o=custom-columns=NAME:.metadata.name
 do
     kubectl cp $SCRIPT $i:/tmp -n $NAMESPACE
     nodeName=$(kubectl get pod $i -n kubeprober -o=jsonpath='{.spec.nodeName}')
-    kubectl exec $i -n $NAMESPACE -- bash /tmp/$SCRIPT | sed  "s/^/$nodeName /g"
+    kubectl exec $i -n $NAMESPACE -- bash /tmp/$SCRIPT_FILE_NAME | sed  "s/^/$nodeName /g"
 done > /tmp/.probe_host_origin_result
 format_output /tmp/.probe_host_origin_result > /tmp/.probe_host_result
 
@@ -59,7 +60,7 @@ do
         report-status --name=$name --status=PASS --message="-"
     else
         type=$(echo $item | awk -F" " '{print $4}')
-        minfo=$(cat /tmp/.probe_host_result | grep -v "=======" | grep $name | grep $type | awk '{print $NF}' | head -n 1 )
+        minfo=$(cat /tmp/.probe_host_result | grep -v "=======" | grep $name | grep $type | awk -F"|" '{print $NF}' | head -n 1 )
         nodeList=$(cat /tmp/.probe_host_result | grep $name | grep $type | grep -v "====" | awk '{print $1}' | xargs echo)
         message="$minfo, $type node: [ $nodeList ]"
         report-status --name=$name --status=$type --message="$message"
