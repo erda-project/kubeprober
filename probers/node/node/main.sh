@@ -1,3 +1,3 @@
 #!/bin/bash
 
-kubectl probe node node.sh
+kubectl probe node /checkers/node/node.sh
