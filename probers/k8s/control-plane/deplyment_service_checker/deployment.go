@@ -1,4 +1,4 @@
-package main
+package deployment_service_checker
 
 import (
 	"context"
@@ -74,7 +74,7 @@ func createDeployment(ctx context.Context, client *kubernetes.Clientset) error {
 		watch, err := client.AppsV1().Deployments(cfg.CheckNamespace).Watch(ctx, metav1.ListOptions{
 			Watch:         true,
 			FieldSelector: "metadata.name=" + deployment.Name,
-			// LabelSelector: defaultLabelKey + "=" + defaultLabelValueBase + strconv.Itoa(int(now.Unix())),
+			// DnsLabelSelector: defaultLabelKey + "=" + defaultLabelValueBase + strconv.Itoa(int(now.Unix())),
 		})
 		if err != nil {
 			return err

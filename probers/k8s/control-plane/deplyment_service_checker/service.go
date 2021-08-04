@@ -1,4 +1,4 @@
-package main
+package deployment_service_checker
 
 import (
 	"context"
@@ -47,7 +47,7 @@ func createService(ctx context.Context, client *kubernetes.Clientset) error {
 			watch, err := client.CoreV1().Services(cfg.CheckNamespace).Watch(ctx, metav1.ListOptions{
 				Watch:         true,
 				FieldSelector: "metadata.name=" + service.Name,
-				// LabelSelector: defaultLabelKey + "=" + defaultLabelValueBase + strconv.Itoa(int(now.Unix())),
+				// DnsLabelSelector: defaultLabelKey + "=" + defaultLabelValueBase + strconv.Itoa(int(now.Unix())),
 			})
 			if err != nil {
 				createChan <- err
@@ -118,7 +118,7 @@ func deleteServiceAndWait(ctx context.Context, client *kubernetes.Clientset) err
 			// Watch that it is gone by listing repeatedly.
 			serviceList, err := client.CoreV1().Services(cfg.CheckNamespace).List(ctx, metav1.ListOptions{
 				FieldSelector: "metadata.name=" + cfg.CheckServiceName,
-				// LabelSelector: defaultLabelKey + "=" + defaultLabelValueBase + strconv.Itoa(int(now.Unix())),
+				// DnsLabelSelector: defaultLabelKey + "=" + defaultLabelValueBase + strconv.Itoa(int(now.Unix())),
 			})
 			if err != nil {
 				log.Errorln("Error creating service listing client:", err.Error())

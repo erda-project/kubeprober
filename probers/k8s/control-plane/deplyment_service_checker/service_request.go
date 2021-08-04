@@ -1,4 +1,4 @@
-package main
+package deployment_service_checker
 
 import (
 	"context"

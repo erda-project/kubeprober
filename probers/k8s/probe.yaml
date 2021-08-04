@@ -22,15 +22,15 @@ spec:
             memory: 50Mi
     restartPolicy: Never
   configs:
-    - name: check-dns-resolution
+    - name: control-plane
       env:
-        - name: HOSTNAME
+        - name: PRIVATE_DOMAIN
           value: "kubernetes.default"
-        - name: NAMESPACE
+        - name: DNS_CHECK_NAMESPACE
           value: "kube-system"
         - name: DNS_NODE_SELECTOR
           value: "k8s-app=kube-dns"
-        - name: TEST_PUBLIC_DOMAIN
+        - name: PUBLIC_DOMAIN
           value: "www.baidu.com"
 
 

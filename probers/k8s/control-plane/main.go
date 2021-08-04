@@ -4,15 +4,18 @@ import (
 	"fmt"
 
 	"github.com/sirupsen/logrus"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 
 	proberchecker "github.com/erda-project/kubeprober/pkg/probe-checker"
+	"github.com/erda-project/kubeprober/probers/k8s/control-plane/config"
+	svc "github.com/erda-project/kubeprober/probers/k8s/control-plane/deplyment_service_checker"
+	dns "github.com/erda-project/kubeprober/probers/k8s/control-plane/dns_resolution_checker"
 )
 
 func main() {
 	var (
 		err error
-		dc  *DeployServiceChecker
+		s   *svc.DeployServiceChecker
+		d   *dns.DnsChecker
 	)
 
 	defer func() {
@@ -22,28 +25,35 @@ func main() {
 	}()
 
 	// load config
-	ConfigLoad()
-	err = ParseConfig()
+	config.Load()
+	err = config.ParseConfig()
 	if err != nil {
 		err = fmt.Errorf("parse config failed, error: %v", err)
 		return
 	}
 	// check log debug level
-	if cfg.Debug {
+	if config.Cfg.Debug {
 		logrus.SetLevel(logrus.DebugLevel)
 		logrus.Debug("DEBUG MODE")
 	}
 
 	// create checkers
+	// deployment service checker
+	s, err = svc.NewDeployServiceChecker()
+	if err != nil {
+		err = fmt.Errorf("new deployment service checker failed, error: %v", err)
+		return
+	}
+
 	// dns checker
-	dc, err = NewDeployServiceChecker()
+	d, err = dns.NewDnsChecker()
 	if err != nil {
 		err = fmt.Errorf("new dns checker failed, error: %v", err)
 		return
 	}
 
 	// run checkers
-	err = proberchecker.RunCheckers(proberchecker.CheckerList{dc})
+	err = proberchecker.RunCheckers(proberchecker.CheckerList{s, d})
 	if err != nil {
 		err = fmt.Errorf("run deployment service checker failed, error: %v", err)
 		return
