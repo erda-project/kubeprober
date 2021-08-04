@@ -14,36 +14,31 @@ import (
 
 type Conf struct {
 	// default images used for check.
-	CheckImage              string `env:"CHECK_IMAGE" default:"nginxinc/nginx-unprivileged:1.17.8"`
-	CheckImageRoll          string `env:"CHECK_IMAGE_ROLL_TO" default:"nginxinc/nginx-unprivileged:1.17.9"`
-	CheckDeploymentName     string `env:"CHECK_DEPLOYMENT_NAME" default:"deploy-service-check"`
-	CheckServiceName        string `env:"CHECK_SERVICE_NAME" default:"deploy-service-check"`
-	CheckContainerPort      int32  `env:"CHECK_CONTAINER_PORT" default:"8080"`
-	CheckLoadBalancerPort   int32  `env:"CHECK_LOAD_BALANCER_PORT" default:"80"`
-	CheckNamespace          string `env:"CHECK_NAMESPACE" default:"kubeprober"`
-	CheckDeploymentReplicas int    `env:"CHECK_DEPLOYMENT_REPLICAS" default:"1"`
-	CheckServiceAccount     string `env:"CHECK_SERVICE_ACCOUNT" default:"default"`
-	CheckTolerationEnvs     string `env:"CHECK_TOLERATION_ENVS"`
-	CheckAdditionalEnvs     string `env:"CHECK_ADDITIONAL_ENVS"`
-	CheckNodeSelectorsEnvs  string `env:"CHECK_NODE_SELECTOR"`
-	// core unit: mini core
-	CpuRequest int `env:"CHECK_POD_CPU_REQUEST" default:"15"`
-	CpuLimit   int `env:"CHECK_POD_CPU_LIMIT" default:"75"`
-	// mem unit: Mi
-	MemoryRequest int `env:"CHECK_POD_MEM_REQUEST" default:"20"`
-	MemoryLimit   int `env:"CHECK_POD_MEM_LIMIT" default:"100"`
-
-	RollingUpdate       bool          `env:"CHECK_DEPLOYMENT_ROLLING_UPDATE" default:"true"`
-	ShutdownGracePeriod time.Duration `env:"SHUTDOWN_GRACE_PERIOD" default:"30s"`
-
-	CheckDeploymentToleration     []apiv1.Toleration
-	CheckDeploymentNodeSelectors  map[string]string
-	CheckDeploymentAdditionalEnvs map[string]string
+	CheckImage              string        `env:"CHECK_IMAGE" default:"nginxinc/nginx-unprivileged:1.17.8"`
+	CheckDeploymentName     string        `env:"CHECK_DEPLOYMENT_NAME" default:"deploy-service-check"`
+	CheckServiceName        string        `env:"CHECK_SERVICE_NAME" default:"deploy-service-check"`
+	CheckContainerPort      int32         `env:"CHECK_CONTAINER_PORT" default:"8080"`
+	CheckLoadBalancerPort   int32         `env:"CHECK_LOAD_BALANCER_PORT" default:"80"`
+	CheckNamespace          string        `env:"CHECK_NAMESPACE" default:"kubeprober-deploy-service-check"`
+	CheckDeploymentReplicas int           `env:"CHECK_DEPLOYMENT_REPLICAS" default:"1"`
+	CheckServiceAccount     string        `env:"CHECK_SERVICE_ACCOUNT" default:"default"`
+	CheckTolerationEnvs     string        `env:"CHECK_TOLERATION_ENVS"`
+	CheckAdditionalEnvs     string        `env:"CHECK_ADDITIONAL_ENVS"`
+	CheckNodeSelectorsEnvs  string        `env:"CHECK_NODE_SELECTOR"`
+	CpuRequest              string        `env:"CHECK_POD_CPU_REQUEST" default:"15m"`
+	MemoryRequest           string        `env:"CHECK_POD_MEM_REQUEST" default:"20Mi"`
+	CpuLimit                string        `env:"CHECK_POD_CPU_LIMIT" default:"75m"`
+	MemoryLimit             string        `env:"CHECK_POD_MEM_LIMIT" default:"100Mi"`
+	ShutdownGracePeriod     time.Duration `env:"SHUTDOWN_GRACE_PERIOD" default:"30s"`
 
 	// common config
 	CheckTimeout   time.Duration `env:"CHECK_TIMEOUT" default:"15m"`
 	KubeConfigFile string        `env:"KUBECONFIG_FILE"`
 	Debug          bool          `env:"DEBUG" default:"false"`
+
+	CheckDeploymentToleration     []apiv1.Toleration
+	CheckDeploymentNodeSelectors  map[string]string
+	CheckDeploymentAdditionalEnvs map[string]string
 }
 
 var cfg Conf
@@ -55,6 +50,9 @@ func ConfigLoad() {
 
 // parseInputValues parses all incoming environment variables for the program into globals and fatals on errors.
 func ParseConfig() error {
+
+	cfg.CheckNamespace = fmt.Sprintf("%s-%v", cfg.CheckNamespace, time.Now().Unix())
+
 	// Parse incoming deployment toleration
 	if len(cfg.CheckTolerationEnvs) > 0 {
 		cfg.CheckDeploymentToleration = make([]apiv1.Toleration, 0)
@@ -111,17 +109,6 @@ func ParseConfig() error {
 			}
 		}
 		logrus.Infoln("Parsed NODE_SELECTOR:", cfg.CheckDeploymentNodeSelectors)
-	}
-
-	// Parse incoming deployment rolling-update environment variable
-	logrus.Infoln("Parsed CHECK_DEPLOYMENT_ROLLING_UPDATE:", cfg.RollingUpdate)
-	if cfg.RollingUpdate {
-		if cfg.CheckImage == cfg.CheckImageRoll {
-			err := fmt.Errorf("same container image cannot be used for the rolling-update check, image: %s", cfg.CheckImage)
-			logrus.Infoln(err.Error())
-			return err
-		}
-		logrus.Infoln("Check deployment image will be rolled from [" + cfg.CheckImage + "] to [" + cfg.CheckImageRoll + "]")
 	}
 
 	// Parse incoming container environment variables

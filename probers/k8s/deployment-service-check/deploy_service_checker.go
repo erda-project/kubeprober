@@ -4,10 +4,15 @@ import (
 	"context"
 	"time"
 
-	"github.com/erda-project/kubeprober/pkg/kubeclient"
 	"github.com/sirupsen/logrus"
 
 	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
+	"github.com/erda-project/kubeprober/pkg/kubeclient"
+)
+
+const (
+	defaultCheckerKey   = "checker"
+	defaultCheckerValue = "deployment-service-checker"
 )
 
 // New returns a new DNS Checker
@@ -50,22 +55,38 @@ func (dc *DeployServiceChecker) SetTimeout(t time.Duration) {
 }
 
 // doChecks does validations on the DNS call to the endpoint
-func (dc *DeployServiceChecker) DoCheck() error {
+func (dc *DeployServiceChecker) DoCheck() (err error) {
 	ctx := context.Background()
-	err := createDeployment(ctx, dc.client)
+
+	defer func() {
+		// clean resource
+		err = deleteNamespace(ctx, dc.client)
+		if err != nil {
+			logrus.Errorf("clean resource, delete namespace failed, namespace: %s, error: %v", cfg.CheckNamespace, err)
+			return
+		}
+	}()
+
+	// create deployment
+	err = createDeployment(ctx, dc.client)
 	if err != nil {
 		logrus.Errorf("create deployment failed, error: %v", err)
 		return err
 	}
-	err = createService(ctx, dc.client, nil)
+
+	// create service
+	err = createService(ctx, dc.client)
 	if err != nil {
 		logrus.Errorf("create service failed, error: %v", err)
 		return err
 	}
+
+	// check service
 	err = makeRequestToDeploymentCheckService(ctx, dc.client)
 	if err != nil {
 		logrus.Errorf("request to service failed, error: %v", err)
 		return err
 	}
+
 	return nil
 }

@@ -27,6 +27,9 @@ const (
 	LabelValueApp          = "kubeprober.erda.cloud"
 	LabelKeyProbeNameSpace = "kubeprober.erda.cloud/probe-namespace"
 	LabelKeyProbeName      = "kubeprober.erda.cloud/probe-name"
+
+	DefaultSourceKey   = "source"
+	DefaultSourceValue = "kubeprober"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!

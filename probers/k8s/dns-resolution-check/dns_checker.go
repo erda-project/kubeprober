@@ -114,7 +114,7 @@ func (dc *DnsChecker) checkEndpoints() error {
 	}
 
 	// given that we got valid ips from endpoint list, parse them
-	logrus.Infof("valid ips from endpoint list is %+v\n", ips)
+	logrus.Infof("valid ips from endpoint list is %+v", ips)
 	if len(ips) > 0 {
 		for ip := 0; ip < len(ips); ip++ {
 			//create a resolver for each ip and return any error

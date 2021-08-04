@@ -147,10 +147,6 @@ func getRequestBackoff(hostname string) chan RequestResult {
 			retrySleep(attempts)
 			attempts++
 		}
-		if err != nil {
-			log.Errorln("Could not make a", http.MethodGet, "request to", hostname, "due to:", err.Error())
-			requestResult.Err = fmt.Errorf("failed to hit endpoint after backoff loop: %w", err)
-		}
 
 		requestResultChan <- requestResult
 		return

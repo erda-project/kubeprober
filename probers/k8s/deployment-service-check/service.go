@@ -7,18 +7,19 @@ import (
 	"strconv"
 	"time"
 
-	"k8s.io/client-go/kubernetes"
-
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/kubernetes"
+
+	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 )
 
 // createService creates a deployment in the cluster with a given deployment specification.
-func createService(ctx context.Context, client *kubernetes.Clientset, labels map[string]string) error {
+func createService(ctx context.Context, client *kubernetes.Clientset) error {
 
-	serviceConfig := createServiceConfig(labels)
+	serviceConfig := createServiceConfig()
 
 	createChan := make(chan error)
 
@@ -232,11 +233,7 @@ func serviceHasClusterIP(ctx context.Context, client *kubernetes.Clientset) chan
 }
 
 // createServiceConfig creates and configures a k8s service and returns the struct (ready to apply with client).
-func createServiceConfig(labels map[string]string) *corev1.Service {
-
-	// Make a k8s service.
-	service := &corev1.Service{}
-
+func createServiceConfig() *corev1.Service {
 	log.Infoln("Creating service resource for", cfg.CheckNamespace, "namespace.")
 
 	// Make and define a port for the service.
@@ -251,17 +248,25 @@ func createServiceConfig(labels map[string]string) *corev1.Service {
 	}
 	ports = append(ports, basicPort)
 
-	// Make a service spec.
-	serviceSpec := corev1.ServiceSpec{
-		Type:     corev1.ServiceTypeClusterIP,
-		Ports:    ports,
-		Selector: labels,
+	labels := map[string]string{
+		defaultCheckerKey:             defaultCheckerValue,
+		kubeproberv1.DefaultSourceKey: kubeproberv1.DefaultSourceValue,
 	}
 
-	// Define the service.
-	service.Spec = serviceSpec
-	service.Name = cfg.CheckServiceName //+ "-" + strconv.Itoa(int(now.Unix()))
-	service.Namespace = cfg.CheckNamespace
+	// Make a service spec.
+
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: cfg.CheckNamespace,
+			Name:      cfg.CheckServiceName,
+			Labels:    labels,
+		},
+		Spec: corev1.ServiceSpec{
+			Type:     corev1.ServiceTypeClusterIP,
+			Ports:    ports,
+			Selector: labels,
+		},
+	}
 
 	return service
 }
