@@ -1,0 +1,28 @@
+apiVersion: kubeprober.erda.cloud/v1
+kind: Probe
+metadata:
+  name: addon
+  namespace: kubeprober
+spec:
+  policy:
+    # unit: minute
+    runInterval: 5
+  template:
+    containers:
+      - env:
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+        name: k8s
+        image: kubeprober/probe-addon:v0.0.3
+        resources:
+          requests:
+            cpu: 10m
+            memory: 50Mi
+    restartPolicy: Never
+
+
+
+
+
