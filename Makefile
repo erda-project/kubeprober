@@ -83,7 +83,7 @@ deploy-build: manifests kustomize ## Deploy controller to the K8s cluster specif
 ##@ Deployment
 
 deploy:  ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	if [[ "${APP}" == "probe-agent" ]]; then cp bin/probe-status /usr/local/bin/kubectl-probe-status; fi
+	if [[ "${APP}" == "probe-agent" ]]; then cp dist/probe-status /usr/local/bin/kubectl-probe-status; fi
 	kubectl apply -f deployment/${APP}.yaml
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	kubectl delete -f deployment/${APP}.yaml

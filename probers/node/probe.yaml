@@ -15,7 +15,7 @@ spec:
               fieldRef:
                 fieldPath: spec.nodeName
         name: k8s
-        image: kubeprober/probe-node:v0.0.9
+        image: kubeprober/probe-node:v0.0.11
         resources:
           requests:
             cpu: 10m
