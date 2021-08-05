@@ -1,4 +1,4 @@
-package main
+package dns_resolution_checker
 
 import (
 	"context"

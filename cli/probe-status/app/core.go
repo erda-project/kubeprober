@@ -15,6 +15,9 @@ package app
 
 import (
 	"context"
+	"os"
+	"path/filepath"
+
 	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 	"github.com/rodaine/table"
 	"github.com/spf13/cobra"
@@ -23,8 +26,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog"
-	"os"
-	"path/filepath"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

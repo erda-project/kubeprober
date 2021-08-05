@@ -1,4 +1,4 @@
-package main
+package dns_resolution_checker
 
 import (
 	"context"
@@ -71,7 +71,7 @@ func (dc *DnsChecker) DoCheck() error {
 	logrus.Infof("dns check private domain: %s, public domain: %s", cfg.PrivateDomain, cfg.PublicDomain)
 
 	// if there's a label selector, do checks against endpoints
-	if len(cfg.LabelSelector) > 0 {
+	if len(cfg.DnsLabelSelector) > 0 {
 		err := dc.checkEndpoints()
 		if err != nil {
 			return err
@@ -100,7 +100,7 @@ func (dc *DnsChecker) DoCheck() error {
 
 func (dc *DnsChecker) checkEndpoints() error {
 	// get dns endpoint
-	endpoints, err := dc.client.CoreV1().Endpoints(cfg.Namespace).List(context.Background(), metav1.ListOptions{LabelSelector: cfg.LabelSelector})
+	endpoints, err := dc.client.CoreV1().Endpoints(cfg.DnsCheckNamespace).List(context.Background(), metav1.ListOptions{LabelSelector: cfg.DnsLabelSelector})
 	if err != nil {
 		message := "DNS status check unable to get dns endpoints from cluster: " + err.Error()
 		logrus.Errorln(message)
@@ -114,7 +114,7 @@ func (dc *DnsChecker) checkEndpoints() error {
 	}
 
 	// given that we got valid ips from endpoint list, parse them
-	logrus.Infof("valid ips from endpoint list is %+v\n", ips)
+	logrus.Infof("valid ips from endpoint list is %+v", ips)
 	if len(ips) > 0 {
 		for ip := 0; ip < len(ips); ip++ {
 			//create a resolver for each ip and return any error
@@ -136,7 +136,7 @@ func (dc *DnsChecker) checkEndpoints() error {
 		logrus.Infof("DNS Status check from service endpoint determined, private domain: %s, public domain: %s was OK.", cfg.PrivateDomain, cfg.PublicDomain)
 		return nil
 	}
-	return errors.New("No ips found in endpoint with label: " + cfg.LabelSelector)
+	return errors.New("No ips found in endpoint with label: " + cfg.DnsLabelSelector)
 }
 
 // create a Resolver object to use for DNS queries
