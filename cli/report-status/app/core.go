@@ -15,6 +15,7 @@ package app
 
 import (
 	"fmt"
+
 	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 	"github.com/erda-project/kubeprober/cli/report-status/options"
 	status "github.com/erda-project/kubeprober/pkg/probe-status"

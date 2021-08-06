@@ -17,8 +17,9 @@ import (
 	"context"
 	"crypto/md5"
 	"fmt"
-	"k8s.io/apimachinery/pkg/util/json"
 	"reflect"
+
+	"k8s.io/apimachinery/pkg/util/json"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 

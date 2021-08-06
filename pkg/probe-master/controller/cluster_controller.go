@@ -16,26 +16,25 @@ package controller
 import (
 	"context"
 	"encoding/base64"
-	"k8s.io/apimachinery/pkg/util/json"
 	"reflect"
 	"strings"
 
-	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
-	dialclient "github.com/erda-project/kubeprober/pkg/probe-master/tunnel-client"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/client-go/rest"
+	"k8s.io/klog"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/klog"
-
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
+	dialclient "github.com/erda-project/kubeprober/pkg/probe-master/tunnel-client"
 )
 
 // ClusterReconciler reconciles a Cluster object
