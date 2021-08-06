@@ -15,12 +15,14 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 
 	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 	"github.com/rodaine/table"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
@@ -30,37 +32,40 @@ import (
 )
 
 var (
-	ProbeRestClient client.Client
+	k8sRestClient client.Client
 )
 
 // NewCmdProbeStatusManager creates a *cobra.Command object with default parameters
 func NewCmdProbeStatusManager(stopCh <-chan struct{}) *cobra.Command {
+	var clusterName string
+	var status string
 	cmd := &cobra.Command{
 		Use:   "probe-status",
 		Short: "Launch probe-status",
 		Long:  "Launch probe-status",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			//cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-			//	klog.Infof("FLAG: --%s=%q", flag.Name, flag.Value)
-			//})
-
-			return Run()
+			if clusterName == "" {
+				return GetProbeStatusLocal(status)
+			} else {
+				return GetProbeStatusSpecifyCluster(clusterName, status)
+			}
 		},
 	}
-
+	cmd.PersistentFlags().StringVarP(&clusterName, "cluster", "c", "", "Print probestatus of specify cluster")
+	cmd.PersistentFlags().StringVarP(&status, "status", "s", "", "Print probestatus of specify status [PASS, ERROR, INFO, WARN]")
 	return cmd
 }
 
-func Run() error {
+func GetProbeStatusLocal(status string) error {
 	var err error
 	var probeNames []string
 	probeStatus := &kubeproberv1.ProbeStatusList{}
 	probes := &kubeproberv1.ProbeList{}
-	if err = ProbeRestClient.List(context.Background(), probeStatus, client.InNamespace("kubeprober")); err != nil {
+	if err = k8sRestClient.List(context.Background(), probeStatus, client.InNamespace("kubeprober")); err != nil {
 		return err
 	}
 
-	if err = ProbeRestClient.List(context.Background(), probes, client.InNamespace("kubeprober")); err != nil {
+	if err = k8sRestClient.List(context.Background(), probes, client.InNamespace("kubeprober")); err != nil {
 		return err
 	}
 
@@ -71,7 +76,12 @@ func Run() error {
 	for _, i := range probeStatus.Items {
 		if IsContain(probeNames, i.Name) {
 			for _, j := range i.Spec.Checkers {
-				tbl.AddRow(i.Name, j.Name, j.Status, j.Message, j.LastRun)
+				if string(j.Status) == status && status != "" {
+					tbl.AddRow(i.Name, j.Name, j.Status, j.Message, j.LastRun)
+				}
+				if status == "" {
+					tbl.AddRow(i.Name, j.Name, j.Status, j.Message, j.LastRun)
+				}
 			}
 		}
 	}
@@ -79,6 +89,53 @@ func Run() error {
 	return nil
 }
 
+func GetProbeStatusSpecifyCluster(clusterName string, status string) error {
+	var err error
+	var c client.Client
+	var probeNames []string
+	probeStatus := &kubeproberv1.ProbeStatusList{}
+	probes := &kubeproberv1.ProbeList{}
+
+	cluster := &kubeproberv1.Cluster{}
+	if err = k8sRestClient.Get(context.Background(), client.ObjectKey{
+		Namespace: metav1.NamespaceDefault,
+		Name:      clusterName,
+	}, cluster); err != nil {
+		fmt.Printf("Get cluster info error: %+v\n", err)
+		return err
+	}
+
+	c, err = GenerateProbeClient(cluster)
+	if err != nil {
+		return err
+	}
+	if err = c.List(context.Background(), probeStatus, client.InNamespace("kubeprober")); err != nil {
+		return err
+	}
+
+	if err = c.List(context.Background(), probes, client.InNamespace("kubeprober")); err != nil {
+		return err
+	}
+
+	for _, i := range probes.Items {
+		probeNames = append(probeNames, i.Name)
+	}
+	tbl := table.New("PROBER", "CHECKER", "STATUS", "MESSAGE", "LASTRUN")
+	for _, i := range probeStatus.Items {
+		if IsContain(probeNames, i.Name) {
+			for _, j := range i.Spec.Checkers {
+				if string(j.Status) == status && status != "" {
+					tbl.AddRow(i.Name, j.Name, j.Status, j.Message, j.LastRun)
+				}
+				if status == "" {
+					tbl.AddRow(i.Name, j.Name, j.Status, j.Message, j.LastRun)
+				}
+			}
+		}
+	}
+	tbl.Print()
+	return nil
+}
 func init() {
 	userHomeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -96,7 +153,7 @@ func init() {
 
 	scheme := runtime.NewScheme()
 	kubeproberv1.AddToScheme(scheme)
-	ProbeRestClient, err = client.New(config, client.Options{Scheme: scheme})
+	k8sRestClient, err = client.New(config, client.Options{Scheme: scheme})
 	if err != nil {
 		return
 	}

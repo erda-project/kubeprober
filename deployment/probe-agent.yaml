@@ -25,7 +25,7 @@ spec:
     - jsonPath: .spec.k8sVersion
       name: Version
       type: string
-    - jsonPath: .spec.nodeCount
+    - jsonPath: .status.nodeCount
       name: NodeCount
       type: string
     - jsonPath: .spec.clusterConfig.probeNamespaces
@@ -33,9 +33,6 @@ spec:
       type: string
     - jsonPath: .status.heartBeatTimeStamp
       name: HEARTBEATTIME
-      type: string
-    - jsonPath: .metadata.uid
-      name: SECRETKEY
       type: string
     - jsonPath: .status.attachedProbes
       name: PROBE
@@ -95,8 +92,6 @@ spec:
               k8sVersion:
                 description: Foo is an example field of Cluster. Edit cluster_types.go to remove/update
                 type: string
-              nodeCount:
-                type: integer
             type: object
           status:
             description: ClusterStatus defines the observed state of Cluster
@@ -108,6 +103,8 @@ spec:
               heartBeatTimeStamp:
                 description: 'INSERT ADDITIONAL STATUS FIELD - define observed state of cluster Important: Run "make" to regenerate code after modifying this file'
                 type: string
+              nodeCount:
+                type: integer
             type: object
         type: object
     served: true

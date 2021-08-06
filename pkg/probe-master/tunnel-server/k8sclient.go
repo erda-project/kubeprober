@@ -26,7 +26,7 @@ import (
 )
 
 var (
-	clusterRestClient client.Client
+	k8sRestClient client.Client
 )
 
 func init() {
@@ -46,7 +46,7 @@ func init() {
 
 	scheme := runtime.NewScheme()
 	kubeproberv1.AddToScheme(scheme)
-	clusterRestClient, err = client.New(config, client.Options{Scheme: scheme})
+	k8sRestClient, err = client.New(config, client.Options{Scheme: scheme})
 	if err != nil {
 		return
 	}

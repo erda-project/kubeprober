@@ -21,8 +21,8 @@ import (
 
 var VersionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "Print the version number of ChenJian",
-	Long:  `All software has versions. This is Hugo's`,
+	Short: "Print the version number of Kubeprober",
+	Long:  "Print the version number of Kubeprober",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Chen Jian Version: v1.0 -- HEAD")
 	},

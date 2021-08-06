@@ -26,6 +26,7 @@ import (
 	"github.com/erda-project/kubeprober/apistructs"
 	"github.com/gorilla/mux"
 	"github.com/rancher/remotedialer"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
@@ -38,12 +39,14 @@ func clusterRegister(server *remotedialer.Server, rw http.ResponseWriter, req *h
 
 func heartbeat(rw http.ResponseWriter, req *http.Request) {
 	hbData := apistructs.HeartBeatReq{}
+	cluster := &kubeproberv1.Cluster{}
 	var err error
+
 	if err := json.NewDecoder(req.Body).Decode(&hbData); err != nil {
 		rw.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	patchBody := kubeproberv1.Cluster{
+	clusterSpec := kubeproberv1.Cluster{
 		Spec: kubeproberv1.ClusterSpec{
 			K8sVersion: hbData.Version,
 			ClusterConfig: kubeproberv1.ClusterConfig{
@@ -54,30 +57,48 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 				KeyData:         hbData.KeyData,
 				ProbeNamespaces: hbData.ProbeNamespace,
 			},
-			NodeCount: hbData.NodeCount,
 		},
 	}
-	patch, _ := json.Marshal(patchBody)
-	err = clusterRestClient.Patch(context.Background(), &kubeproberv1.Cluster{
-		ObjectMeta: metav1.ObjectMeta{
+	err = k8sRestClient.Get(context.Background(), client.ObjectKey{
+		Namespace: metav1.NamespaceDefault,
+		Name:      hbData.Name,
+	}, cluster)
+
+	if apierrors.IsNotFound(err) {
+		clusterSpec.ObjectMeta = metav1.ObjectMeta{
 			Name:      hbData.Name,
 			Namespace: metav1.NamespaceDefault,
-		},
-	}, client.RawPatch(types.MergePatchType, patch))
-	if err != nil {
-		errMsg := fmt.Sprintf("[heartbeat] patch cluster[%s] spec error: %+v\n", hbData.Name, err)
-		klog.Errorf(errMsg)
-		rw.Write([]byte(errMsg))
-		rw.WriteHeader(http.StatusBadRequest)
-		return
+		}
+		if err = k8sRestClient.Create(context.Background(), &clusterSpec); err != nil {
+			errMsg := fmt.Sprintf("[heartbeat] failed to create cluster [%s]: %+v\n", hbData.Name, err)
+			rw.Write([]byte(errMsg))
+			rw.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	} else {
+		patch, _ := json.Marshal(clusterSpec)
+		err = k8sRestClient.Patch(context.Background(), &kubeproberv1.Cluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      hbData.Name,
+				Namespace: metav1.NamespaceDefault,
+			},
+		}, client.RawPatch(types.MergePatchType, patch))
+		if err != nil {
+			errMsg := fmt.Sprintf("[heartbeat] patch cluster[%s] spec error: %+v\n", hbData.Name, err)
+			klog.Errorf(errMsg)
+			rw.Write([]byte(errMsg))
+			rw.WriteHeader(http.StatusBadRequest)
+			return
+		}
 	}
 	statusPatchBody := kubeproberv1.Cluster{
 		Status: kubeproberv1.ClusterStatus{
 			HeartBeatTimeStamp: time.Now().Format("2006-01-02 15:04:05"),
+			NodeCount:          hbData.NodeCount,
 		},
 	}
 	statusPatch, _ := json.Marshal(statusPatchBody)
-	err = clusterRestClient.Status().Patch(context.Background(), &kubeproberv1.Cluster{
+	err = k8sRestClient.Status().Patch(context.Background(), &kubeproberv1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      hbData.Name,
 			Namespace: metav1.NamespaceDefault,
