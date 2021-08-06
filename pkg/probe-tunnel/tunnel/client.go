@@ -43,32 +43,45 @@ var connected = make(chan struct{})
 const (
 	dailEndPointSuffix      = "/clusteragent/connect"
 	heartBeatEndPointSuffix = "/heartbeat"
+	clusterInfoCm           = "dice-cluster-info"
 )
 
-func sendHeartBeat(heartBeatAddr string, clusterName string, secretKey string) error {
-	ctx := context.Background()
-	var rsp *http.Response
+func initClientSet() (*kubernetes.Clientset, *rest.Config, error) {
 	var err error
 	var clientset *kubernetes.Clientset
-	var version *version.Info
-	var nodes *v1.NodeList
+	var config *rest.Config
 
 	userHomeDir, err := os.UserHomeDir()
 	if err != nil {
 		userHomeDir = ""
 	}
 	kubeConfig := filepath.Join(userHomeDir, ".kube", "config")
-	config, err := rest.InClusterConfig()
+	config, err = rest.InClusterConfig()
 	if err != nil {
 		config, err = clientcmd.BuildConfigFromFlags("", kubeConfig)
 		if err != nil {
 			klog.Errorf("[remote dialer agent] get kubernetes client config error: %+v\n", err)
-			return err
+			return nil, nil, err
 		}
 	}
 
 	config.AcceptContentTypes = "application/json"
 	if clientset, err = kubernetes.NewForConfig(config); err != nil {
+		return nil, nil, err
+	}
+	return clientset, config, nil
+}
+
+func sendHeartBeat(heartBeatAddr string, clusterName string, secretKey string) error {
+	ctx := context.Background()
+	var rsp *http.Response
+	var err error
+	var clientset *kubernetes.Clientset
+	var config *rest.Config
+	var version *version.Info
+	var nodes *v1.NodeList
+
+	if clientset, config, err = initClientSet(); err != nil {
 		return err
 	}
 	if version, err = clientset.ServerVersion(); err != nil {
@@ -76,6 +89,12 @@ func sendHeartBeat(heartBeatAddr string, clusterName string, secretKey string) e
 	}
 	if nodes, err = clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{}); err != nil {
 		return err
+	}
+	if clusterName == "" {
+		if clusterName, err = getClusterName(clientset); err != nil {
+			klog.Error("[heartbeat] clusterName is not set or configmaps dice-cluster-info not found")
+			return err
+		}
 	}
 	hbData := apistructs.HeartBeatReq{
 		Name:           clusterName,
@@ -99,6 +118,15 @@ func sendHeartBeat(heartBeatAddr string, clusterName string, secretKey string) e
 	}
 	rsp.Body.Close()
 	return nil
+}
+
+func getClusterName(clientset *kubernetes.Clientset) (string, error) {
+	var cm *v1.ConfigMap
+	var err error
+	if cm, err = clientset.CoreV1().ConfigMaps(metav1.NamespaceDefault).Get(context.Background(), clusterInfoCm, metav1.GetOptions{}); err != nil {
+		return "", err
+	}
+	return cm.Data["DICE_CLUSTER_NAME"], nil
 }
 func Start(ctx context.Context, cfg *Config) {
 	var clusterDialEndpoint string

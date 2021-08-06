@@ -28,7 +28,6 @@ type ClusterSpec struct {
 	// Foo is an example field of Cluster. Edit cluster_types.go to remove/update
 	K8sVersion    string        `json:"k8sVersion,omitempty"`
 	ClusterConfig ClusterConfig `json:"clusterConfig,omitempty"`
-	NodeCount     int           `json:"nodeCount,omitempty"`
 	ExtraInfo     []ExtraVar    `json:"extraInfo,omitempty"`
 }
 
@@ -51,16 +50,16 @@ type ClusterStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 	HeartBeatTimeStamp string   `json:"heartBeatTimeStamp,omitempty"`
+	NodeCount          int      `json:"nodeCount,omitempty"`
 	AttachedProbes     []string `json:"attachedProbes,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Version",type=string,JSONPath=`.spec.k8sVersion`
-// +kubebuilder:printcolumn:name="NodeCount",type=string,JSONPath=`.spec.nodeCount`
+// +kubebuilder:printcolumn:name="NodeCount",type=string,JSONPath=`.status.nodeCount`
 // +kubebuilder:printcolumn:name="PROBENAMESPACES",type=string,JSONPath=`.spec.clusterConfig.probeNamespaces`
 // +kubebuilder:printcolumn:name="HEARTBEATTIME",type=string,JSONPath=`.status.heartBeatTimeStamp`
-// +kubebuilder:printcolumn:name="SECRETKEY",type=string,JSONPath=`.metadata.uid`
 // +kubebuilder:printcolumn:name="PROBE",type=string,JSONPath=`.status.attachedProbes`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
