@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"strings"
 	"time"
 
@@ -138,6 +140,12 @@ func Start(ctx context.Context, cfg *Config) error {
 		req *http.Request) {
 		clusterRegister(handler, rw, req)
 	})
+
+	router.HandleFunc("/robot/send", func(rw http.ResponseWriter,
+		req *http.Request) {
+		sendAlert(rw, req)
+	})
+
 	server := &http.Server{
 		BaseContext: func(net.Listener) context.Context {
 			return ctx
@@ -146,4 +154,54 @@ func Start(ctx context.Context, cfg *Config) error {
 		Handler: router,
 	}
 	return server.ListenAndServe()
+}
+
+func sendAlert(w http.ResponseWriter, r *http.Request) {
+	u, _ := url.Parse("https://oapi.dingtalk.com")
+	fmt.Printf("forwarding to -> %s\n", u)
+	proxy := NewProxy(u)
+	proxy.Transport = &DebugTransport{}
+	proxy.ServeHTTP(w, r)
+}
+
+type DebugTransport struct{}
+
+func (DebugTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	b, err := httputil.DumpRequestOut(r, false)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println(string(b))
+	return http.DefaultTransport.RoundTrip(r)
+}
+
+func NewProxy(target *url.URL) *httputil.ReverseProxy {
+	targetQuery := target.RawQuery
+	director := func(req *http.Request) {
+		req.Host = target.Host
+		req.URL.Scheme = target.Scheme
+		req.URL.Host = target.Host
+		req.URL.Path = singleJoiningSlash(target.Path, req.URL.Path)
+		if targetQuery == "" || req.URL.RawQuery == "" {
+			req.URL.RawQuery = targetQuery + req.URL.RawQuery
+		} else {
+			req.URL.RawQuery = targetQuery + "&" + req.URL.RawQuery
+		}
+		if _, ok := req.Header["User-Agent"]; !ok {
+			req.Header.Set("User-Agent", "")
+		}
+	}
+	return &httputil.ReverseProxy{Director: director}
+}
+
+func singleJoiningSlash(a, b string) string {
+	aslash := strings.HasSuffix(a, "/")
+	bslash := strings.HasPrefix(b, "/")
+	switch {
+	case aslash && bslash:
+		return a + b[1:]
+	case !aslash && !bslash:
+		return a + "/" + b
+	}
+	return a + b
 }
