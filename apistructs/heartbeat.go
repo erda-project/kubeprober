@@ -25,4 +25,5 @@ type HeartBeatReq struct {
 	Version        string `json:"version"`
 	NodeCount      int    `json:"nodeCount"`
 	ProbeNamespace string `json:"probeNamespace"`
+	Checkers       string `json:"checkers"`
 }

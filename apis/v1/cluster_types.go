@@ -52,6 +52,7 @@ type ClusterStatus struct {
 	HeartBeatTimeStamp string   `json:"heartBeatTimeStamp,omitempty"`
 	NodeCount          int      `json:"nodeCount,omitempty"`
 	AttachedProbes     []string `json:"attachedProbes,omitempty"`
+	Checkers           string   `json:"checkers,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -59,8 +60,9 @@ type ClusterStatus struct {
 // +kubebuilder:printcolumn:name="Version",type=string,JSONPath=`.spec.k8sVersion`
 // +kubebuilder:printcolumn:name="NodeCount",type=string,JSONPath=`.status.nodeCount`
 // +kubebuilder:printcolumn:name="PROBENAMESPACES",type=string,JSONPath=`.spec.clusterConfig.probeNamespaces`
-// +kubebuilder:printcolumn:name="HEARTBEATTIME",type=string,JSONPath=`.status.heartBeatTimeStamp`
 // +kubebuilder:printcolumn:name="PROBE",type=string,JSONPath=`.status.attachedProbes`
+// +kubebuilder:printcolumn:name="TOTAL/ERROR",type=string,JSONPath=`.status.checkers`
+// +kubebuilder:printcolumn:name="HEARTBEATTIME",type=string,JSONPath=`.status.heartBeatTimeStamp`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // Cluster is the Schema for the clusters API

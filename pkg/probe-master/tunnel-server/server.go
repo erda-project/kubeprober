@@ -95,6 +95,7 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 		Status: kubeproberv1.ClusterStatus{
 			HeartBeatTimeStamp: time.Now().Format("2006-01-02 15:04:05"),
 			NodeCount:          hbData.NodeCount,
+			Checkers:           hbData.Checkers,
 		},
 	}
 	statusPatch, _ := json.Marshal(statusPatchBody)
