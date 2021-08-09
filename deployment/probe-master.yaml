@@ -31,11 +31,14 @@ spec:
     - jsonPath: .spec.clusterConfig.probeNamespaces
       name: PROBENAMESPACES
       type: string
-    - jsonPath: .status.heartBeatTimeStamp
-      name: HEARTBEATTIME
-      type: string
     - jsonPath: .status.attachedProbes
       name: PROBE
+      type: string
+    - jsonPath: .status.checkers
+      name: TOTAL/ERROR
+      type: string
+    - jsonPath: .status.heartBeatTimeStamp
+      name: HEARTBEATTIME
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
@@ -100,6 +103,8 @@ spec:
                 items:
                   type: string
                 type: array
+              checkers:
+                type: string
               heartBeatTimeStamp:
                 description: 'INSERT ADDITIONAL STATUS FIELD - define observed state of cluster Important: Run "make" to regenerate code after modifying this file'
                 type: string

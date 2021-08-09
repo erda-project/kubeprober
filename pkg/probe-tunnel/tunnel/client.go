@@ -19,12 +19,17 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
+	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 	"io/ioutil"
+	"k8s.io/apimachinery/pkg/runtime"
 	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"strconv"
 	"time"
 
 	"github.com/erda-project/kubeprober/apistructs"
@@ -46,10 +51,11 @@ const (
 	clusterInfoCm           = "dice-cluster-info"
 )
 
-func initClientSet() (*kubernetes.Clientset, *rest.Config, error) {
+func initClientSet() (client.Client, *kubernetes.Clientset, *rest.Config, error) {
 	var err error
 	var clientset *kubernetes.Clientset
 	var config *rest.Config
+	var k8sRestClient client.Client
 
 	userHomeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -61,15 +67,23 @@ func initClientSet() (*kubernetes.Clientset, *rest.Config, error) {
 		config, err = clientcmd.BuildConfigFromFlags("", kubeConfig)
 		if err != nil {
 			klog.Errorf("[remote dialer agent] get kubernetes client config error: %+v\n", err)
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 
 	config.AcceptContentTypes = "application/json"
 	if clientset, err = kubernetes.NewForConfig(config); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	return clientset, config, nil
+
+	scheme := runtime.NewScheme()
+	kubeproberv1.AddToScheme(scheme)
+	k8sRestClient, err = client.New(config, client.Options{Scheme: scheme})
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return k8sRestClient, clientset, config, nil
 }
 
 func sendHeartBeat(heartBeatAddr string, clusterName string, secretKey string) error {
@@ -80,8 +94,10 @@ func sendHeartBeat(heartBeatAddr string, clusterName string, secretKey string) e
 	var config *rest.Config
 	var version *version.Info
 	var nodes *v1.NodeList
+	var checkerStatus string
+	var k8sRestClient client.Client
 
-	if clientset, config, err = initClientSet(); err != nil {
+	if k8sRestClient, clientset, config, err = initClientSet(); err != nil {
 		return err
 	}
 	if version, err = clientset.ServerVersion(); err != nil {
@@ -96,6 +112,11 @@ func sendHeartBeat(heartBeatAddr string, clusterName string, secretKey string) e
 			return err
 		}
 	}
+
+	if checkerStatus, err = getCheckerStatus(k8sRestClient); err != nil {
+		return err
+	}
+
 	hbData := apistructs.HeartBeatReq{
 		Name:           clusterName,
 		SecretKey:      secretKey,
@@ -107,6 +128,7 @@ func sendHeartBeat(heartBeatAddr string, clusterName string, secretKey string) e
 		Token:          base64.StdEncoding.EncodeToString([]byte(config.BearerToken)),
 		Version:        version.String(),
 		NodeCount:      len(nodes.Items),
+		Checkers:       checkerStatus,
 	}
 	json_data, _ := json.Marshal(hbData)
 	if rsp, err = http.Post(heartBeatAddr, "application/json", bytes.NewBuffer(json_data)); err != nil {
@@ -120,6 +142,37 @@ func sendHeartBeat(heartBeatAddr string, clusterName string, secretKey string) e
 	return nil
 }
 
+func getCheckerStatus(k8sRestClient client.Client) (string, error) {
+	var err error
+	var probeNames []string
+	var totalChecker int
+	var ErrorChecker int
+	probeStatus := &kubeproberv1.ProbeStatusList{}
+	probes := &kubeproberv1.ProbeList{}
+	if err = k8sRestClient.List(context.Background(), probeStatus, client.InNamespace("kubeprober")); err != nil {
+		return "", err
+	}
+
+	if err = k8sRestClient.List(context.Background(), probes, client.InNamespace("kubeprober")); err != nil {
+		return "", err
+	}
+
+	for _, i := range probes.Items {
+		probeNames = append(probeNames, i.Name)
+	}
+	for _, i := range probeStatus.Items {
+		if IsContain(probeNames, i.Name) {
+			for _, j := range i.Spec.Checkers {
+				totalChecker++
+				if j.Status == kubeproberv1.CheckerStatusError {
+					ErrorChecker++
+				}
+			}
+		}
+	}
+	checkerStatus := fmt.Sprintf("%s/%s", strconv.Itoa(totalChecker), strconv.Itoa(ErrorChecker))
+	return checkerStatus, nil
+}
 func getClusterName(clientset *kubernetes.Clientset) (string, error) {
 	var cm *v1.ConfigMap
 	var err error
@@ -153,7 +206,7 @@ func Start(ctx context.Context, cfg *Config) {
 	go func() {
 		for {
 			select {
-			case <-time.After(5 * time.Second):
+			case <-time.After(30 * time.Second):
 				if err := sendHeartBeat(clusterHeartBeatEndpoint, cfg.ClusterName, cfg.SecretKey); err != nil {
 					klog.Errorf("[heartbeat] send heartbeat request error: %+v\n", err)
 					break
@@ -187,4 +240,13 @@ func onConnect(ctx context.Context, session *remotedialer.Session) error {
 	connected <- struct{}{}
 	return nil
 
+}
+
+func IsContain(items []string, item string) bool {
+	for _, eachItem := range items {
+		if eachItem == item {
+			return true
+		}
+	}
+	return false
 }
