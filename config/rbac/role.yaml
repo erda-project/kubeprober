@@ -51,6 +51,26 @@ rules:
 - apiGroups:
   - kubeprober.erda.cloud
   resources:
+  - alerts
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - kubeprober.erda.cloud
+  resources:
+  - alerts/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - kubeprober.erda.cloud
+  resources:
   - clusters
   verbs:
   - create
