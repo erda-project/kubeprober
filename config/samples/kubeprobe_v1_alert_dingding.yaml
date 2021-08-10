@@ -1,0 +1,6 @@
+apiVersion: kubeprober.erda.cloud/v1
+kind: Alert
+metadata:
+  name: dingding
+spec:
+  address: "https://oapi.dingtalk.com"

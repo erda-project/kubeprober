@@ -11,6 +11,67 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
+  name: alerts.kubeprober.erda.cloud
+spec:
+  group: kubeprober.erda.cloud
+  names:
+    kind: Alert
+    listKind: AlertList
+    plural: alerts
+    singular: alert
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
+    schema:
+      openAPIV3Schema:
+        description: Alert is the Schema for the alerts API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: AlertSpec defines the desired state of Alert
+            properties:
+              address:
+                description: Foo is an example field of Alert. Edit cluster_types.go to remove/update
+                type: string
+            type: object
+          status:
+            description: AlertStatus defines the observed state of Alert
+            properties:
+              alertCount:
+                additionalProperties:
+                  type: integer
+                description: 'INSERT ADDITIONAL STATUS FIELD - define observed state of alert Important: Run "make" to regenerate code after modifying this file'
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
   name: clusters.kubeprober.erda.cloud
 spec:
   group: kubeprober.erda.cloud
@@ -4442,7 +4503,7 @@ spec:
       containers:
       - command:
         - /probe-master
-        image: kubeprober/probe-master:v0.0.1
+        image: kubeprober/probe-master:v0.0.2
         imagePullPolicy: Always
         livenessProbe:
           httpGet:

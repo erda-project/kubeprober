@@ -17,15 +17,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/erda-project/kubeprober/pkg/probe-master/k8sclient"
 	"net"
 	"net/http"
-	"net/http/httputil"
-	"net/url"
 	"strings"
 	"time"
 
 	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 	"github.com/erda-project/kubeprober/apistructs"
+	"github.com/erda-project/kubeprober/pkg/probe-master/alert/dingding"
+	_ "github.com/erda-project/kubeprober/pkg/probe-master/k8sclient"
 	"github.com/gorilla/mux"
 	"github.com/rancher/remotedialer"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -34,6 +35,8 @@ import (
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+const DINGDING_ALERT_NAME = "dingding"
 
 func clusterRegister(server *remotedialer.Server, rw http.ResponseWriter, req *http.Request) {
 	server.ServeHTTP(rw, req)
@@ -61,7 +64,7 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 			},
 		},
 	}
-	err = k8sRestClient.Get(context.Background(), client.ObjectKey{
+	err = k8sclient.RestClient.Get(context.Background(), client.ObjectKey{
 		Namespace: metav1.NamespaceDefault,
 		Name:      hbData.Name,
 	}, cluster)
@@ -71,7 +74,7 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 			Name:      hbData.Name,
 			Namespace: metav1.NamespaceDefault,
 		}
-		if err = k8sRestClient.Create(context.Background(), &clusterSpec); err != nil {
+		if err = k8sclient.RestClient.Create(context.Background(), &clusterSpec); err != nil {
 			errMsg := fmt.Sprintf("[heartbeat] failed to create cluster [%s]: %+v\n", hbData.Name, err)
 			rw.Write([]byte(errMsg))
 			rw.WriteHeader(http.StatusBadRequest)
@@ -79,7 +82,7 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 		}
 	} else {
 		patch, _ := json.Marshal(clusterSpec)
-		err = k8sRestClient.Patch(context.Background(), &kubeproberv1.Cluster{
+		err = k8sclient.RestClient.Patch(context.Background(), &kubeproberv1.Cluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      hbData.Name,
 				Namespace: metav1.NamespaceDefault,
@@ -101,7 +104,7 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 		},
 	}
 	statusPatch, _ := json.Marshal(statusPatchBody)
-	err = k8sRestClient.Status().Patch(context.Background(), &kubeproberv1.Cluster{
+	err = k8sclient.RestClient.Status().Patch(context.Background(), &kubeproberv1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      hbData.Name,
 			Namespace: metav1.NamespaceDefault,
@@ -119,6 +122,9 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 }
 
 func Start(ctx context.Context, cfg *Config) error {
+	var dingdingAlert *kubeproberv1.Alert
+	var err error
+
 	handler := remotedialer.New(Authorizer, remotedialer.DefaultErrorWriter)
 	handler.ClientConnectAuthorizer = func(proto, address string) bool {
 		if strings.HasSuffix(proto, "::tcp") {
@@ -141,9 +147,13 @@ func Start(ctx context.Context, cfg *Config) error {
 		clusterRegister(handler, rw, req)
 	})
 
+	//proxy dingding alert
+	if dingdingAlert, err = getDingDingAlert(); err != nil {
+		klog.Errorf("failed to get dingding alert crd: %+v\n", err)
+	}
 	router.HandleFunc("/robot/send", func(rw http.ResponseWriter,
 		req *http.Request) {
-		sendAlert(rw, req)
+		dingding.SendAlert(rw, req, dingdingAlert)
 	})
 
 	server := &http.Server{
@@ -156,52 +166,16 @@ func Start(ctx context.Context, cfg *Config) error {
 	return server.ListenAndServe()
 }
 
-func sendAlert(w http.ResponseWriter, r *http.Request) {
-	u, _ := url.Parse("https://oapi.dingtalk.com")
-	fmt.Printf("forwarding to -> %s\n", u)
-	proxy := NewProxy(u)
-	proxy.Transport = &DebugTransport{}
-	proxy.ServeHTTP(w, r)
-}
+func getDingDingAlert() (*kubeproberv1.Alert, error) {
+	alert := &kubeproberv1.Alert{}
+	var err error
 
-type DebugTransport struct{}
-
-func (DebugTransport) RoundTrip(r *http.Request) (*http.Response, error) {
-	b, err := httputil.DumpRequestOut(r, false)
-	if err != nil {
+	if err = k8sclient.RestClient.Get(context.Background(), client.ObjectKey{
+		Namespace: metav1.NamespaceDefault,
+		Name:      DINGDING_ALERT_NAME,
+	}, alert); err != nil {
 		return nil, err
 	}
-	fmt.Println(string(b))
-	return http.DefaultTransport.RoundTrip(r)
-}
 
-func NewProxy(target *url.URL) *httputil.ReverseProxy {
-	targetQuery := target.RawQuery
-	director := func(req *http.Request) {
-		req.Host = target.Host
-		req.URL.Scheme = target.Scheme
-		req.URL.Host = target.Host
-		req.URL.Path = singleJoiningSlash(target.Path, req.URL.Path)
-		if targetQuery == "" || req.URL.RawQuery == "" {
-			req.URL.RawQuery = targetQuery + req.URL.RawQuery
-		} else {
-			req.URL.RawQuery = targetQuery + "&" + req.URL.RawQuery
-		}
-		if _, ok := req.Header["User-Agent"]; !ok {
-			req.Header.Set("User-Agent", "")
-		}
-	}
-	return &httputil.ReverseProxy{Director: director}
-}
-
-func singleJoiningSlash(a, b string) string {
-	aslash := strings.HasSuffix(a, "/")
-	bslash := strings.HasPrefix(b, "/")
-	switch {
-	case aslash && bslash:
-		return a + b[1:]
-	case !aslash && !bslash:
-		return a + "/" + b
-	}
-	return a + b
+	return alert, nil
 }
