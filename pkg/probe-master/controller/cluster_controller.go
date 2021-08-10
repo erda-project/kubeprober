@@ -47,6 +47,8 @@ type ClusterReconciler struct {
 
 //+kubebuilder:rbac:groups=kubeprober.erda.cloud,resources=clusters,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=kubeprober.erda.cloud,resources=clusters/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=kubeprober.erda.cloud,resources=alerts,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=kubeprober.erda.cloud,resources=alerts/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=kubeprober.erda.cloud,resources=clusters/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
