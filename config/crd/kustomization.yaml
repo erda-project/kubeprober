@@ -5,6 +5,7 @@ resources:
 - bases/kubeprober.erda.cloud_clusters.yaml
 - bases/kubeprober.erda.cloud_probes.yaml
 - bases/kubeprober.erda.cloud_probestatuses.yaml
+- bases/kubeprober.erda.cloud_alerts.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:
