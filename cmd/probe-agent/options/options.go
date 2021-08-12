@@ -30,9 +30,6 @@ const (
 	EnablePprofFlag             = "enable-pprof"
 	LeaderElectionNamespaceFlag = "leader-election-namespace"
 	NamespaceFlag               = "namespace"
-	ProbeMasterAddrFalg         = "probe-master-addr"
-	ClusterNameFalg             = "cluster-name"
-	SecretKeyFalg               = "secret-key"
 	ProbeStatusReportUrlFalg    = "probestatus-report-url"
 	ProbeListenAddrFalg         = "probe-listen-addr"
 	DebugLevelFalg              = "debug-level"
@@ -50,9 +47,6 @@ type ProbeAgentOptions struct {
 	LeaderElectionNamespace string `mapstructure:"leader_election_namespace" yaml:"leader_election_namespace"`
 	LeaderElectionID        string `mapstructure:"leader_election_id" yaml:"leader_election_id"`
 	Namespace               string `mapstructure:"namespace" yaml:"namespace"`
-	ProbeMasterAddr         string `mapstructure:"probe_master_addr" yaml:"probe_master_addr"`
-	ClusterName             string `mapstructure:"cluster_name" yaml:"cluster_name"`
-	SecretKey               string `mapstructure:"secret_key" yaml:"secret_key"`
 	ProbeStatusReportUrl    string `mapstructure:"probe_status_report_url" yaml:"probe_status_report_url"`
 	ProbeListenAddr         string `mapstructure:"probe_listen_addr" yaml:"probe_listen_addr"`
 	DebugLevel              int8   `mapstructure:"debug_level" yaml:"debug_level"`
@@ -128,9 +122,6 @@ func (o *ProbeAgentOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.BoolVar(&o.EnablePprof, EnablePprofFlag, o.EnablePprof, "Enable pprof for controller manager.")
 	fs.StringVar(&o.LeaderElectionNamespace, LeaderElectionNamespaceFlag, o.LeaderElectionNamespace, "This determines the namespace in which the leader election configmap will be created, it will use in-cluster namespace if empty.")
 	fs.StringVar(&o.Namespace, NamespaceFlag, o.Namespace, "Namespace if specified restricts the manager's cache to watch objects in the desired namespace. Defaults to default namespace.")
-	fs.StringVar(&o.ProbeMasterAddr, ProbeMasterAddrFalg, o.ProbeMasterAddr, "The address of the probe-master")
-	fs.StringVar(&o.ClusterName, ClusterNameFalg, o.ClusterName, "cluster name.")
-	fs.StringVar(&o.SecretKey, SecretKeyFalg, o.SecretKey, "secret key of this cluster.")
 	fs.StringVar(&o.ProbeStatusReportUrl, ProbeStatusReportUrlFalg, o.ProbeStatusReportUrl, "probe status report url for probe check pod")
 	fs.StringVar(&o.ProbeListenAddr, ProbeListenAddrFalg, o.ProbeListenAddr, "probe agent listen address")
 	fs.Int8Var(&o.DebugLevel, DebugLevelFalg, o.DebugLevel, "a debug level is a logging priority. higher levels meaning more debug log.")

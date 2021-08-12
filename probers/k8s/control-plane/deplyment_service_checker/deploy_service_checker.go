@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes"
 
 	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 	"github.com/erda-project/kubeprober/pkg/kubeclient"
@@ -15,8 +16,16 @@ const (
 	defaultCheckerValue = "deployment-service-checker"
 )
 
+// Checker validates that deployment is functioning correctly
+type DeployServiceChecker struct {
+	client  *kubernetes.Clientset
+	Name    string
+	Status  kubeproberv1.CheckerStatus
+	Timeout time.Duration
+}
+
 // New returns a new DNS Checker
-func NewDeployServiceChecker() (*DeployServiceChecker, error) {
+func NewChecker() (*DeployServiceChecker, error) {
 	// get kubernetes client
 	client, err := kubeclient.Client(cfg.KubeConfigFile)
 	if err != nil {

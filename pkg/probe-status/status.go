@@ -24,9 +24,9 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff"
+	"github.com/sirupsen/logrus"
 
 	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
-	"github.com/sirupsen/logrus"
 )
 
 const (

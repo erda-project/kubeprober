@@ -17,11 +17,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/erda-project/kubeprober/pkg/probe-master/k8sclient"
 	"net"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/erda-project/kubeprober/pkg/probe-master/k8sclient"
 
 	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 	"github.com/erda-project/kubeprober/apistructs"

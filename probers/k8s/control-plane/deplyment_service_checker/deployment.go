@@ -18,14 +18,6 @@ import (
 	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 )
 
-// Checker validates that deployment is functioning correctly
-type DeployServiceChecker struct {
-	client  *kubernetes.Clientset
-	Name    string
-	Status  kubeproberv1.CheckerStatus
-	Timeout time.Duration
-}
-
 const (
 	defaultMinReadySeconds = 5
 

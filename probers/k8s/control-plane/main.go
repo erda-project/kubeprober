@@ -39,14 +39,14 @@ func main() {
 
 	// create checkers
 	// deployment service checker
-	s, err = svc.NewDeployServiceChecker()
+	s, err = svc.NewChecker()
 	if err != nil {
 		err = fmt.Errorf("new deployment service checker failed, error: %v", err)
 		return
 	}
 
 	// dns checker
-	d, err = dns.NewDnsChecker()
+	d, err = dns.NewChecker()
 	if err != nil {
 		err = fmt.Errorf("new dns checker failed, error: %v", err)
 		return

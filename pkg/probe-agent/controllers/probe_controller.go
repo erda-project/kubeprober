@@ -260,7 +260,7 @@ func genCronJob(probe *kubeproberv1.Probe) (cj batchv1beta1.CronJob, err error) 
 
 func genJob(probe *kubeproberv1.Probe) (j batchv1.Job, err error) {
 	envInject(probe)
-	probe.Spec.Template.ServiceAccountName = "kubeprober-readonly"
+	probe.Spec.Template.ServiceAccountName = "kubeprober-worker"
 	trueVar := true
 	// TODO: put this config in specific area
 	activeDeadlineSecond := int64(60 * 30)
