@@ -28,6 +28,8 @@ const (
 	HealthProbeAddrFlag         = "health-probe-addr"
 	EnableLeaderElectionFlag    = "enable-leader-election"
 	EnablePprofFlag             = "enable-pprof"
+	ProbeMasterAddrFalg         = "probe-master-addr"
+	ClusterNameFalg             = "cluster-name"
 	LeaderElectionNamespaceFlag = "leader-election-namespace"
 	NamespaceFlag               = "namespace"
 	ProbeStatusReportUrlFalg    = "probestatus-report-url"
@@ -47,6 +49,8 @@ type ProbeAgentOptions struct {
 	LeaderElectionNamespace string `mapstructure:"leader_election_namespace" yaml:"leader_election_namespace"`
 	LeaderElectionID        string `mapstructure:"leader_election_id" yaml:"leader_election_id"`
 	Namespace               string `mapstructure:"namespace" yaml:"namespace"`
+	ProbeMasterAddr         string `mapstructure:"probe_master_addr" yaml:"probe_master_addr"`
+	ClusterName             string `mapstructure:"cluster_name" yaml:"cluster_name"`
 	ProbeStatusReportUrl    string `mapstructure:"probe_status_report_url" yaml:"probe_status_report_url"`
 	ProbeListenAddr         string `mapstructure:"probe_listen_addr" yaml:"probe_listen_addr"`
 	DebugLevel              int8   `mapstructure:"debug_level" yaml:"debug_level"`
@@ -118,6 +122,8 @@ func (o *ProbeAgentOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.MetricsAddr, MetricsAddrFlag, o.MetricsAddr, "The address the metric endpoint binds to.")
 	fs.StringVar(&o.PprofAddr, PprofAddrFlag, o.PprofAddr, "The address the pprof binds to.")
 	fs.StringVar(&o.HealthProbeAddr, HealthProbeAddrFlag, o.HealthProbeAddr, "The address the healthz/readyz endpoint binds to.")
+	fs.StringVar(&o.ProbeMasterAddr, ProbeMasterAddrFalg, o.ProbeMasterAddr, "The address of the probe-master")
+	fs.StringVar(&o.ClusterName, ClusterNameFalg, o.ClusterName, "cluster name.")
 	fs.BoolVar(&o.EnableLeaderElection, EnableLeaderElectionFlag, o.EnableLeaderElection, "Whether you need to enable leader election.")
 	fs.BoolVar(&o.EnablePprof, EnablePprofFlag, o.EnablePprof, "Enable pprof for controller manager.")
 	fs.StringVar(&o.LeaderElectionNamespace, LeaderElectionNamespaceFlag, o.LeaderElectionNamespace, "This determines the namespace in which the leader election configmap will be created, it will use in-cluster namespace if empty.")

@@ -4,3 +4,5 @@ metadata:
   name: dingding
 spec:
   address: "https://oapi.dingtalk.com"
+  token: "c7d6ab9a50e55f5f1ba4352a38aa8a432a9924bd36765dad1ddf9494787b78b7"
+  sign: "SECabdfcac88d85130e762e2b25ee69a40f4629c5ccb7904f59992140aee665ef48"

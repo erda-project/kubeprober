@@ -44,6 +44,10 @@ spec:
                 description: Foo is an example field of Alert. Edit cluster_types.go
                   to remove/update
                 type: string
+              sign:
+                type: string
+              token:
+                type: string
             type: object
           status:
             description: AlertStatus defines the observed state of Alert

@@ -14,10 +14,16 @@
 package dingding
 
 import (
+	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
-
+	"errors"
 	"fmt"
+	"io/ioutil"
+	"k8s.io/apimachinery/pkg/types"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -25,33 +31,51 @@ import (
 	"time"
 
 	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
+	"github.com/erda-project/kubeprober/apistructs"
 	"github.com/erda-project/kubeprober/pkg/probe-master/k8sclient"
+	_ "github.com/erda-project/kubeprober/pkg/probe-master/k8sclient"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	_ "github.com/erda-project/kubeprober/pkg/probe-master/k8sclient"
 )
 
-func SendAlert(w http.ResponseWriter, r *http.Request, alert *kubeproberv1.Alert) {
-	fmt.Printf("xxxxxxx, %+v\n", alert)
+const DINGDING_ALERT_NAME = "dingding"
+
+var ci = make(chan int, 100)
+
+func init() {
+	var count = 0
+	var err error
+	go func() {
+		for {
+			select {
+			case <-ci:
+				count++
+			case <-time.After(60 * time.Second):
+				if err = alertCount(count); err != nil {
+					klog.Errorf("failed to count alert number: %+v\n", err)
+				}
+				count = 0
+			}
+		}
+	}()
+}
+
+func ProxyAlert(w http.ResponseWriter, r *http.Request, alert *kubeproberv1.Alert) {
 	u, _ := url.Parse(alert.Spec.Address)
 	fmt.Printf("forwarding to -> %s\n", u)
 	proxy := NewProxy(u)
 	proxy.Transport = &DebugTransport{}
-	if err := alertCount(alert); err != nil {
-		klog.Errorf("failed to add alert count: %+v\n", err)
-	}
+	ci <- 1
 	proxy.ServeHTTP(w, r)
 }
 
-func alertCount(al *kubeproberv1.Alert) error {
+func alertCount(count int) error {
 	var err error
 	alert := &kubeproberv1.Alert{}
 	if err = k8sclient.RestClient.Get(context.Background(), client.ObjectKey{
-		Namespace: al.Namespace,
-		Name:      al.Name,
+		Namespace: metav1.NamespaceDefault,
+		Name:      DINGDING_ALERT_NAME,
 	}, alert); err != nil {
 		return err
 	}
@@ -60,7 +84,7 @@ func alertCount(al *kubeproberv1.Alert) error {
 	if alert.Status.AlertCount == nil {
 		alert.Status.AlertCount = make(map[string]int)
 	}
-	alert.Status.AlertCount[nowDay]++
+	alert.Status.AlertCount[nowDay] = alert.Status.AlertCount[nowDay] + count
 
 	if len(alert.Status.AlertCount) > 30 {
 		deleteDay := now.AddDate(0, 0, -30).Format("2006-01-02")
@@ -72,8 +96,8 @@ func alertCount(al *kubeproberv1.Alert) error {
 	statusPatch, _ := json.Marshal(statusPatchBody)
 	err = k8sclient.RestClient.Status().Patch(context.Background(), &kubeproberv1.Alert{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      alert.Name,
-			Namespace: alert.Namespace,
+			Name:      DINGDING_ALERT_NAME,
+			Namespace: metav1.NamespaceDefault,
 		},
 	}, client.RawPatch(types.MergePatchType, statusPatch))
 	if err != nil {
@@ -122,4 +146,70 @@ func singleJoiningSlash(a, b string) string {
 		return a + "/" + b
 	}
 	return a + b
+}
+
+func SendAlert(ps *apistructs.CollectProbeStatusReq, alert *kubeproberv1.Alert) error {
+	var err error
+	var signUrl string
+	var resp *http.Response
+	var result []byte
+	if alert.Spec.Address == "" || alert.Spec.Token == "" || alert.Spec.Sign == "" {
+		return errors.New("address or token or sign is emtpy in this alert spec")
+	}
+	addr := fmt.Sprintf("%s/robot/send?access_token=%s", alert.Spec.Address, alert.Spec.Token)
+	if signUrl, err = getSignURL(addr, alert.Spec.Sign); err != nil {
+		return err
+	}
+
+	istr := "[类别]: " + ps.ProbeName + "\n" +
+		"[检查项]：" + ps.CheckerName + "\n" +
+		"[集群]：" + ps.ClusterName + "\n" +
+		"[状态]: " + ps.Status + "\n" +
+		"[错误信息]: " + ps.Message
+
+	content, data := make(map[string]string), make(map[string]interface{})
+	content["content"] = istr
+	data["msgtype"] = "text"
+	data["text"] = content
+	b, _ := json.Marshal(data)
+
+	body := bytes.NewBuffer(b)
+
+	resp, err = http.Post(signUrl, "application/json;charset=utf-8", body)
+	if err != nil {
+		klog.Errorf("faile to send msg to dingding: %+v\n", err)
+		return err
+	}
+	result, err = ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
+	if err != nil {
+		klog.Errorf("faile to send msg to dingding: %+v\n", err)
+		return err
+	}
+	klog.Infof("dingding return msg: %s\n", result)
+	return nil
+}
+
+func getSignURL(addr string, sign string) (string, error) {
+	if sign == "" {
+		return "", nil
+	}
+
+	tm := time.Now().UnixNano() / 1e6
+	strToHash := fmt.Sprintf("%d\n%s", tm, sign)
+	hmac256 := hmac.New(sha256.New, []byte(sign))
+	hmac256.Write([]byte(strToHash))
+	data := hmac256.Sum(nil)
+	dataStr := base64.StdEncoding.EncodeToString(data)
+
+	u, err := url.Parse(addr)
+	if err != nil {
+		return "", err
+	}
+	values := u.Query()
+	values.Set("timestamp", fmt.Sprintf("%d", tm))
+	values.Set("sign", dataStr)
+	u.RawQuery = values.Encode()
+
+	return u.String(), nil
 }
