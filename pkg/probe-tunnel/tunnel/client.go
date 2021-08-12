@@ -20,27 +20,28 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 	"io/ioutil"
-	"k8s.io/apimachinery/pkg/runtime"
 	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
 	"time"
 
-	"github.com/erda-project/kubeprober/apistructs"
 	"github.com/rancher/remotedialer"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
+	"github.com/erda-project/kubeprober/apistructs"
 )
 
 var connected = make(chan struct{})

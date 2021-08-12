@@ -8,9 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/client-go/kubernetes"
-
 	log "github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes"
 )
 
 // RequestResult represents a HTTP request result.

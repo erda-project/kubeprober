@@ -6,7 +6,7 @@ metadata:
 spec:
   policy:
     # unit: minute
-    runInterval: 2
+    runInterval: 30
   template:
     containers:
       - env:
@@ -15,7 +15,7 @@ spec:
               fieldRef:
                 fieldPath: spec.nodeName
         name: k8s
-        image: kubeprober/probe-k8s:v0.0.5
+        image: kubeprober/probe-k8s:v0.0.7
         resources:
           requests:
             cpu: 10m

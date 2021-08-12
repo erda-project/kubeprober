@@ -14,11 +14,12 @@ import (
 
 type Conf struct {
 	// deployment service check config
-	CheckImage              string        `env:"CHECK_IMAGE" default:"nginxinc/nginx-unprivileged:1.17.8"`
-	CheckDeploymentName     string        `env:"CHECK_DEPLOYMENT_NAME" default:"deploy-service-check"`
-	CheckServiceName        string        `env:"CHECK_SERVICE_NAME" default:"deploy-service-check"`
-	CheckContainerPort      int32         `env:"CHECK_CONTAINER_PORT" default:"8080"`
-	CheckLoadBalancerPort   int32         `env:"CHECK_LOAD_BALANCER_PORT" default:"80"`
+	CheckImage            string `env:"CHECK_IMAGE" default:"nginxinc/nginx-unprivileged:1.17.8"`
+	CheckDeploymentName   string `env:"CHECK_DEPLOYMENT_NAME" default:"deploy-service-check"`
+	CheckServiceName      string `env:"CHECK_SERVICE_NAME" default:"deploy-service-check"`
+	CheckContainerPort    int32  `env:"CHECK_CONTAINER_PORT" default:"8080"`
+	CheckLoadBalancerPort int32  `env:"CHECK_LOAD_BALANCER_PORT" default:"80"`
+	// must contain 'kubeprober'
 	CheckNamespace          string        `env:"CHECK_NAMESPACE" default:"kubeprober-deploy-service-check"`
 	CheckDeploymentReplicas int           `env:"CHECK_DEPLOYMENT_REPLICAS" default:"1"`
 	CheckServiceAccount     string        `env:"CHECK_SERVICE_ACCOUNT" default:"default"`
@@ -56,8 +57,11 @@ func Load() {
 
 // parseInputValues parses all incoming environment variables for the program into globals and fatals on errors.
 func ParseConfig() error {
-
-	Cfg.CheckNamespace = fmt.Sprintf("%s-%v", Cfg.CheckNamespace, time.Now().Unix())
+	if !strings.Contains(Cfg.CheckNamespace, "kubeprober") {
+		err := fmt.Errorf("new namespace must contain [kubeprober], to prevent deleteing namespaces in use")
+		logrus.Errorf(err.Error())
+		return err
+	}
 
 	// Parse incoming deployment toleration
 	if len(Cfg.CheckTolerationEnvs) > 0 {

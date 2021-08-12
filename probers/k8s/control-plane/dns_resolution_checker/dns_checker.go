@@ -6,14 +6,13 @@ import (
 	"net"
 	"time"
 
-	"github.com/erda-project/kubeprober/pkg/kubeclient"
-
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
 	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
+	"github.com/erda-project/kubeprober/pkg/kubeclient"
 )
 
 // Checker validates that DNS is functioning correctly
@@ -25,7 +24,7 @@ type DnsChecker struct {
 }
 
 // New returns a new DNS Checker
-func NewDnsChecker() (*DnsChecker, error) {
+func NewChecker() (*DnsChecker, error) {
 	// get kubernetes client
 	client, err := kubeclient.Client(cfg.KubeConfigFile)
 	if err != nil {

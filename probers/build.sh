@@ -83,11 +83,13 @@ function buildcopy {
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -mod readonly -a -o "$1"/main "$1"/main.go
     mkdir -pv /checkers/"$1"
     cp -rf "$1"/main /checkers/"$1"
+    chmod +x /checkers/$1/main
   elif [ "$ft" == "shell" ]; then
     echo "shell type app $1, ignore build"
     mkdir -pv /checkers/"$1"
     cp -rf "$1" /checkers
     mv /checkers/$1/main.sh /checkers/$1/main
+    chmod +x /checkers/$1/main
   else
     echo "no main file under path $1, or file type not support"
     exit 1

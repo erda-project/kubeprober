@@ -1,0 +1,27 @@
+#!/bin/bash
+
+set -x
+
+if [[ $1 == "" ]]
+then
+    echo "usage: kubectl probe shell <script-file-name>"
+    exit 1
+fi
+
+SCRIPT=$1
+SCRIPT_PARAM=$(echo $@ | sed -e 's/[^ ]* //')
+
+bash $@ > /tmp/.probe_shell_result
+
+cat /tmp/.probe_shell_result|while read item;
+do
+    name=$(echo "$item"| awk '{print $1}')
+    status=$(echo "$item"| awk '{print $2}')
+    if [[ "$status" == "ok" ]]; then
+      status="info"
+    fi
+    status=$(echo "$status"|tr 'a-z' 'A-Z')
+    raw=$(echo "$item"| awk -F " " '{for (i=3;i<=NF;i++)printf("%s ", $i);print ""}')
+    message=${raw:-"-"}
+    report-status --name=$name --status=$status --message="$message"
+done

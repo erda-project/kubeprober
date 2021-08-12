@@ -21,7 +21,7 @@ RUN cd probers && \
 # no bash in image alpine, please use sh
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM kubeprober/probe-base:v0.0.9
+FROM kubeprober/probe-base:v0.1
 
 COPY --from=builder /checkers checkers
 COPY probers/run.sh /checkers/run.sh

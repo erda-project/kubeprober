@@ -11,12 +11,11 @@ import (
 	"testing"
 	"time"
 
-	proberchecker "github.com/erda-project/kubeprober/pkg/probe-checker"
 	"github.com/sirupsen/logrus"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/erda-project/kubeprober/pkg/kubeclient"
+	proberchecker "github.com/erda-project/kubeprober/pkg/probe-checker"
 )
 
 func initEnv() {
@@ -37,9 +36,6 @@ func TestDnsChecker(t *testing.T) {
 		}
 	}()
 
-	// load config
-	ConfigLoad()
-
 	// check log debug level
 	if cfg.Debug {
 		logrus.SetLevel(logrus.DebugLevel)
@@ -48,7 +44,7 @@ func TestDnsChecker(t *testing.T) {
 
 	// create checkers
 	// dns checker
-	dc, err = NewDnsChecker()
+	dc, err = NewChecker()
 	if err != nil {
 		err = fmt.Errorf("new dns checker failed, error: %v", err)
 		return

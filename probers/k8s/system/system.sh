@@ -193,7 +193,7 @@ function check_k8s_version() {
     fi
 
     # check kubelet & server (apiserver, controller, scheduler) version
-    kubelet_v=$(kubelet --version|awk '{print $2}')
+    kubelet_v=$(kubectl get node --no-headers|head -n 1|awk '{print $NF}')
     server_v=$(kubectl version|grep "Server Version"|awk '{print $5}'|awk -F"\"" '{print $2}')
     kubelet_minor=$(echo "$kubelet_v"|awk -F"." '{print $2}')
     server_minor=$(echo "$server_v"|awk -F"." '{print $2}')
