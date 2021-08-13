@@ -13,6 +13,8 @@
 
 package apistructs
 
+import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 // HeartBeatReq heatbeat request struct between probe-master and probe-agent
 type HeartBeatReq struct {
 	Name           string `json:"name"`
@@ -26,4 +28,13 @@ type HeartBeatReq struct {
 	NodeCount      int    `json:"nodeCount"`
 	ProbeNamespace string `json:"probeNamespace"`
 	Checkers       string `json:"checkers"`
+}
+
+type CollectProbeStatusReq struct {
+	ClusterName string       `json:"clusterName"`
+	ProbeName   string       `json:"probeName"`
+	CheckerName string       `json:"checkerName"`
+	Status      string       `json:"status"`
+	Message     string       `json:"message"`
+	LastRun     *metav1.Time `json:"lastRun,omitempty"`
 }

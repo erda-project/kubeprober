@@ -213,7 +213,7 @@ func startOperator(ctx context.Context) error {
 
 	setupLog.Info("starting probe server")
 	s := webserver.NewServer(mgr.GetClient(), opts.ProbeListenAddr)
-	s.Start()
+	s.Start(opts.ProbeMasterAddr, opts.ClusterName)
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctx); err != nil {

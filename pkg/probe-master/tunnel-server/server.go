@@ -154,7 +154,12 @@ func Start(ctx context.Context, cfg *Config) error {
 	}
 	router.HandleFunc("/robot/send", func(rw http.ResponseWriter,
 		req *http.Request) {
-		dingding.SendAlert(rw, req, dingdingAlert)
+		dingding.ProxyAlert(rw, req, dingdingAlert)
+	})
+
+	router.HandleFunc("/collect", func(rw http.ResponseWriter,
+		req *http.Request) {
+		collectProbeStatus(rw, req, dingdingAlert)
 	})
 
 	server := &http.Server{
@@ -179,4 +184,27 @@ func getDingDingAlert() (*kubeproberv1.Alert, error) {
 	}
 
 	return alert, nil
+}
+
+func collectProbeStatus(rw http.ResponseWriter, req *http.Request, alert *kubeproberv1.Alert) {
+	ps := apistructs.CollectProbeStatusReq{}
+	var err error
+
+	if err = json.NewDecoder(req.Body).Decode(&ps); err != nil {
+		errMsg := fmt.Sprintf("receive probe status err: %+v\n", err)
+		klog.Errorf(errMsg)
+		rw.WriteHeader(http.StatusBadRequest)
+		rw.Write([]byte(errMsg))
+		return
+	}
+
+	if ps.Status == "ERROR" {
+		if err = dingding.SendAlert(&ps, alert); err != nil {
+			errMsg := fmt.Sprintf("send dingding alert err: %+v\n", err)
+			klog.Errorf(errMsg)
+		}
+	}
+
+	rw.WriteHeader(http.StatusOK)
+	return
 }

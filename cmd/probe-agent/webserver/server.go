@@ -14,18 +14,29 @@
 package webserver
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/erda-project/kubeprober/apistructs"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logger "sigs.k8s.io/controller-runtime/pkg/log"
 
 	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 	"github.com/erda-project/kubeprober/pkg/probe-agent/controllers"
+)
+
+const (
+	collectProbeStatusSuffix = "/collect"
+	clusterInfoCm            = "dice-cluster-info"
 )
 
 type Server struct {
@@ -38,11 +49,34 @@ func NewServer(c client.Client, addr string) Server {
 	return s
 }
 
-func (s *Server) Start() {
+func (s *Server) getClusterFromCm() (string, error) {
+	var err error
+	cm := &corev1.ConfigMap{}
+	if err = s.client.Get(context.Background(), client.ObjectKey{
+		Namespace: metav1.NamespaceDefault,
+		Name:      clusterInfoCm,
+	}, cm); err != nil {
+		logger.Log.Error(err, "failed to get configmap to get clusterName")
+		return "", err
+	}
+	return cm.Data["DICE_CLUSTER_NAME"], nil
+}
+
+func (s *Server) Start(masterAddr string, clusterName string) {
+	var err error
+	if clusterName == "" {
+		if clusterName, err = s.getClusterFromCm(); err != nil {
+			panic(err)
+		}
+		if clusterName == "" {
+			panic("clusterName is not set or configmaps dice-cluster-info not found")
+		}
+	}
+
 	go func() {
 		// Accept status reports coming from external checker pods
 		http.HandleFunc("/probe-status", func(w http.ResponseWriter, r *http.Request) {
-			err := s.ProbeResultHandler(w, r)
+			err := s.ProbeResultHandler(w, r, masterAddr, clusterName)
 			if err != nil {
 				logger.Log.Error(err, "probe-status endpoint error")
 			}
@@ -64,7 +98,7 @@ func (s Server) Client() client.Client {
 	return s.client
 }
 
-func (s *Server) ProbeResultHandler(w http.ResponseWriter, r *http.Request) error {
+func (s *Server) ProbeResultHandler(w http.ResponseWriter, r *http.Request, masterAddr string, clusterName string) error {
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -93,5 +127,41 @@ func (s *Server) ProbeResultHandler(w http.ResponseWriter, r *http.Request) erro
 
 	w.WriteHeader(http.StatusOK)
 	logger.Log.Info(fmt.Sprintf("process probe item status successfully, key: %s/%s/%s", rp.ProbeNamespace, rp.ProbeName, rp.Name))
+
+	if err = sendProbeStatusToMaster(masterAddr, clusterName, &rp); err != nil {
+		logger.Log.Error(err, "send probe status to probe-master failed")
+	}
+	return nil
+}
+
+func sendProbeStatusToMaster(masterAddr string, clusterName string, ps *kubeproberv1.ReportProbeStatusSpec) error {
+	fmt.Printf("xxxxxxx, %+v\n", masterAddr)
+	fmt.Printf("xxxxxxx, %+v\n", ps)
+	fmt.Printf("xxxxxxx, %+v\n", clusterName)
+	var rsp *http.Response
+	var err error
+
+	collectorEndpoint := masterAddr + collectProbeStatusSuffix
+
+	for i := range ps.Checkers {
+		r := apistructs.CollectProbeStatusReq{
+			ClusterName: clusterName,
+			ProbeName:   ps.ProbeName,
+			CheckerName: ps.Checkers[i].Name,
+			Status:      string(ps.Checkers[i].Status),
+			Message:     ps.Checkers[i].Message,
+			LastRun:     ps.Checkers[i].LastRun,
+		}
+
+		json_data, _ := json.Marshal(r)
+		if rsp, err = http.Post(collectorEndpoint, "application/json", bytes.NewBuffer(json_data)); err != nil {
+			return err
+		}
+		body, _ := ioutil.ReadAll(rsp.Body)
+		if rsp.StatusCode != http.StatusOK {
+			return errors.New(string(body))
+		}
+		rsp.Body.Close()
+	}
 	return nil
 }
