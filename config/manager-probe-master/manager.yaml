@@ -25,7 +25,7 @@ spec:
       containers:
         - command:
             - /probe-master
-          image: kubeprober/probe-master:v0.0.2
+          image: kubeprober/probe-master:v0.0.3
           imagePullPolicy: "Always"
           name: probe-master
           securityContext:
