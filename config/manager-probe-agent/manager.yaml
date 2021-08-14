@@ -197,7 +197,7 @@ spec:
             - bash
             - --noprofile
             - -l
-          image: docker.io/library/alpine
+          image: kubeprober/alpine:v3.9
           imagePullPolicy: IfNotPresent
           resources:
             limits:

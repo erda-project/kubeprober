@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/erda-project/kubeprober/apistructs"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -31,7 +30,9 @@ import (
 	logger "sigs.k8s.io/controller-runtime/pkg/log"
 
 	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
+	"github.com/erda-project/kubeprober/apistructs"
 	"github.com/erda-project/kubeprober/pkg/probe-agent/controllers"
+	"github.com/erda-project/kubeprober/pkg/probe-master/k8sclient"
 )
 
 const (
@@ -50,13 +51,12 @@ func NewServer(c client.Client, addr string) Server {
 }
 
 func (s *Server) getClusterFromCm() (string, error) {
-	var err error
 	cm := &corev1.ConfigMap{}
-	if err = s.client.Get(context.Background(), client.ObjectKey{
-		Namespace: metav1.NamespaceDefault,
+	var err error
+	if err = k8sclient.RestClient.Get(context.Background(), client.ObjectKey{
 		Name:      clusterInfoCm,
+		Namespace: metav1.NamespaceDefault,
 	}, cm); err != nil {
-		logger.Log.Error(err, "failed to get configmap to get clusterName")
 		return "", err
 	}
 	return cm.Data["DICE_CLUSTER_NAME"], nil
@@ -72,7 +72,6 @@ func (s *Server) Start(masterAddr string, clusterName string) {
 			panic("clusterName is not set or configmaps dice-cluster-info not found")
 		}
 	}
-
 	go func() {
 		// Accept status reports coming from external checker pods
 		http.HandleFunc("/probe-status", func(w http.ResponseWriter, r *http.Request) {
@@ -135,9 +134,6 @@ func (s *Server) ProbeResultHandler(w http.ResponseWriter, r *http.Request, mast
 }
 
 func sendProbeStatusToMaster(masterAddr string, clusterName string, ps *kubeproberv1.ReportProbeStatusSpec) error {
-	fmt.Printf("xxxxxxx, %+v\n", masterAddr)
-	fmt.Printf("xxxxxxx, %+v\n", ps)
-	fmt.Printf("xxxxxxx, %+v\n", clusterName)
 	var rsp *http.Response
 	var err error
 

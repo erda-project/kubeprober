@@ -80,7 +80,7 @@ func alertCount(count int) error {
 		return err
 	}
 	now := time.Now()
-	loc, _:= time.LoadLocation("Asia/Shanghai")
+	loc, _ := time.LoadLocation("Asia/Shanghai")
 	nowDay := now.In(loc).Format("2006-01-02")
 	if alert.Status.AlertCount == nil {
 		alert.Status.AlertCount = make(map[string]int)
