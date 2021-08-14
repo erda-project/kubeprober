@@ -19,6 +19,7 @@ import (
 
 	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog"
@@ -46,6 +47,7 @@ func init() {
 
 	scheme := runtime.NewScheme()
 	kubeproberv1.AddToScheme(scheme)
+	clientgoscheme.AddToScheme(scheme)
 	RestClient, err = client.New(config, client.Options{Scheme: scheme})
 	if err != nil {
 		return

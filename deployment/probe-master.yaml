@@ -4527,6 +4527,9 @@ spec:
       containers:
       - command:
         - /probe-master
+        env:
+        - name: SERVER_SECRET_KEY
+          value: your-token-here
         image: kubeprober/probe-master:v0.0.3
         imagePullPolicy: Always
         livenessProbe:
