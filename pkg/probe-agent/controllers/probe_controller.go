@@ -308,6 +308,15 @@ func envInject(probe *kubeproberv1.Probe) {
 		kubeproberv1.ProbeNamespace: "",
 		kubeproberv1.ProbeName:      "",
 	}
+	envFromSources := []corev1.EnvFromSource{}
+	envFromSources = append(envFromSources, corev1.EnvFromSource{
+		ConfigMapRef: &corev1.ConfigMapEnvSource{
+			LocalObjectReference: corev1.LocalObjectReference{
+				Name: kubeproberv1.ExtraCMName,
+			},
+		},
+	})
+
 	ienvs := []corev1.EnvVar{
 		{
 			Name:  kubeproberv1.ProbeNamespace,
@@ -336,6 +345,7 @@ func envInject(probe *kubeproberv1.Probe) {
 		}
 		env = append(env, ienvs...)
 		probe.Spec.Template.Containers[i].Env = env
+		probe.Spec.Template.Containers[i].EnvFrom = envFromSources
 	}
 
 }
