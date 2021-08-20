@@ -16,16 +16,19 @@ package controller
 import (
 	"context"
 	"encoding/base64"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"reflect"
 	"strings"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/json"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -112,6 +115,11 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 	}
 
+	//handle ExtraInfo for remote cluster
+	if err = updateCmForCluster(cluster); err != nil {
+		klog.Errorf("update extravar for cluster [%s] err: %+v\n", cluster.Name, err)
+		return ctrl.Result{}, err
+	}
 	//update status of cluster
 	statusPatch := kubeproberv1.Cluster{
 		Status: kubeproberv1.ClusterStatus{
@@ -147,6 +155,48 @@ func IsContain(items []string, item string) bool {
 		}
 	}
 	return false
+}
+
+func updateCmForCluster(cluster *kubeproberv1.Cluster) error {
+	var err error
+	var c client.Client
+	cmData := make(map[string]string)
+
+	c, err = GenerateProbeClient(cluster)
+	if err != nil {
+		return err
+	}
+
+	for _, v := range cluster.Spec.ExtraInfo {
+		cmData[v.Name] = v.Value
+	}
+	cm := &corev1.ConfigMap{}
+	if err = c.Get(context.Background(), client.ObjectKey{
+		Name:      kubeproberv1.ExtraCMName,
+		Namespace: cluster.Spec.ClusterConfig.ProbeNamespaces,
+	}, cm); err != nil {
+		if apierrors.IsNotFound(err) {
+			if err = c.Create(context.Background(), &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      kubeproberv1.ExtraCMName,
+					Namespace: cluster.Spec.ClusterConfig.ProbeNamespaces,
+				},
+				Data: cmData,
+			}); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+
+	//update extravar configmap
+	cm.Data = cmData
+	if err = c.Update(context.Background(), cm); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // add probe to cluster
@@ -289,6 +339,7 @@ func GenerateProbeClient(cluster *kubeproberv1.Cluster) (client.Client, error) {
 	}
 	scheme := runtime.NewScheme()
 	kubeproberv1.AddToScheme(scheme)
+	clientgoscheme.AddToScheme(scheme)
 	c, err = client.New(config, client.Options{Scheme: scheme})
 	if err != nil {
 		return nil, err

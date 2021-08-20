@@ -97,9 +97,10 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
+	loc, _ := time.LoadLocation("Asia/Shanghai")
 	statusPatchBody := kubeproberv1.Cluster{
 		Status: kubeproberv1.ClusterStatus{
-			HeartBeatTimeStamp: time.Now().Format("2006-01-02 15:04:05"),
+			HeartBeatTimeStamp: time.Now().In(loc).Format("2006-01-02 15:04:05"),
 			NodeCount:          hbData.NodeCount,
 			Checkers:           hbData.Checkers,
 		},
@@ -197,7 +198,9 @@ func collectProbeStatus(rw http.ResponseWriter, req *http.Request, alert *kubepr
 		rw.Write([]byte(errMsg))
 		return
 	}
-
+	if alert.Spec.Token == "" || alert.Spec.Sign == "" {
+		return
+	}
 	if ps.Status == "ERROR" {
 		if err = dingding.SendAlert(&ps, alert); err != nil {
 			errMsg := fmt.Sprintf("send dingding alert err: %+v\n", err)
