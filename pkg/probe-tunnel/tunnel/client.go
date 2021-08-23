@@ -107,12 +107,6 @@ func sendHeartBeat(heartBeatAddr string, clusterName string, secretKey string) e
 	if nodes, err = clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{}); err != nil {
 		return err
 	}
-	if clusterName == "" {
-		if clusterName, err = getClusterName(clientset); err != nil {
-			klog.Error("[heartbeat] clusterName is not set or configmaps dice-cluster-info not found")
-			return err
-		}
-	}
 
 	if checkerStatus, err = getCheckerStatus(k8sRestClient); err != nil {
 		return err
@@ -185,8 +179,25 @@ func getClusterName(clientset *kubernetes.Clientset) (string, error) {
 func Start(ctx context.Context, cfg *Config) {
 	var clusterDialEndpoint string
 	var clusterHeartBeatEndpoint string
+	var clientset *kubernetes.Clientset
+	var clusterName string
+	var err error
+
+	if _, clientset, _, err = initClientSet(); err != nil {
+		return
+	}
+
+	if cfg.ClusterName == "" {
+		if clusterName, err = getClusterName(clientset); err != nil {
+			klog.Error("[probe tunnel] clusterName is not set or configmaps dice-cluster-info not found")
+			return
+		}
+	} else {
+		clusterName = cfg.ClusterName
+	}
+
 	headers := http.Header{
-		"X-Cluster-Name": {cfg.ClusterName},
+		"X-Cluster-Name": {clusterName},
 		"Secret-Key":     {cfg.SecretKey},
 	}
 
@@ -208,7 +219,7 @@ func Start(ctx context.Context, cfg *Config) {
 		for {
 			select {
 			case <-time.After(30 * time.Second):
-				if err := sendHeartBeat(clusterHeartBeatEndpoint, cfg.ClusterName, cfg.SecretKey); err != nil {
+				if err := sendHeartBeat(clusterHeartBeatEndpoint, clusterName, cfg.SecretKey); err != nil {
 					klog.Errorf("[heartbeat] send heartbeat request error: %+v\n", err)
 					break
 				}
