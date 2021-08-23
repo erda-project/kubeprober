@@ -64,7 +64,7 @@ build: generate fmt vet ## Build manager binary.
 	go build -o _bin/${APP} ./cmd/${APP}/${APP}.go
 
 build-cli: generate fmt vet ## Build manager binary.
-	go build -o _bin/${APP} ./cli/${APP}/${APP}.go
+	go build -o dist/${APP} ./cli/${APP}/${APP}.go
 
 run: manifests generate fmt vet ## Run a controller from your host.
 	if [ -z ${CONF} ]; then go run ./cmd/${APP}/${APP}.go; else go run ./cmd/${APP}/${APP}.go --config-file=${CONF}; fi

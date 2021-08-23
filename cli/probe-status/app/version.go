@@ -24,6 +24,6 @@ var VersionCmd = &cobra.Command{
 	Short: "Print the version number of Kubeprober",
 	Long:  "Print the version number of Kubeprober",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Chen Jian Version: v1.0 -- HEAD")
+		fmt.Println("Kubeprober Version: v1.0 -- HEAD")
 	},
 }

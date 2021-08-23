@@ -87,8 +87,8 @@ func alertCount(count int) error {
 	}
 	alert.Status.AlertCount[nowDay] = alert.Status.AlertCount[nowDay] + count
 
-	if len(alert.Status.AlertCount) > 30 {
-		deleteDay := now.AddDate(0, 0, -30).Format("2006-01-02")
+	if len(alert.Status.AlertCount) > 200 {
+		deleteDay := now.AddDate(0, 0, -200).Format("2006-01-02")
 		delete(alert.Status.AlertCount, deleteDay)
 	}
 	statusPatchBody := kubeproberv1.Alert{
