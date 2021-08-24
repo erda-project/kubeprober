@@ -265,6 +265,13 @@ func genJob(probe *kubeproberv1.Probe) (j batchv1.Job, err error) {
 	// TODO: put this config in specific area
 	activeDeadlineSecond := int64(60 * 30)
 	backoffLimit := int32(0)
+
+	// default restart policy for job: "Never"
+	policy := probe.Spec.Template.RestartPolicy
+	if policy == "" || policy == corev1.RestartPolicyAlways {
+		probe.Spec.Template.RestartPolicy = corev1.RestartPolicyNever
+	}
+
 	j = batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      probe.Name,
