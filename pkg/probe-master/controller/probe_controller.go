@@ -59,15 +59,16 @@ func (r *ProbeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	probe := &kubeproberv1.Probe{}
 	clusterList := &kubeproberv1.ClusterList{}
 
-	klog.Errorf("____________________probe_____________________________________, %+v\n", req.NamespacedName)
-	//delete probe
-
 	if err = r.Get(ctx, req.NamespacedName, probe); err != nil {
 		klog.Errorf("get probe spec [%s] error: %+v\n", req.Name, err)
 		return ctrl.Result{}, err
 	}
-
 	//update probe status
+	if err = r.List(ctx, clusterList); err != nil {
+		klog.Errorf("list cluster error: %+v\n", err)
+		return ctrl.Result{}, err
+	}
+
 	probeSpecByte, _ := json.Marshal(probe.Spec)
 	probeSpecHas := fmt.Sprintf("%x", md5.Sum(probeSpecByte))
 	if probe.Status.MD5 != fmt.Sprintf("%x", probeSpecHas) {
@@ -77,29 +78,21 @@ func (r *ProbeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 			klog.Errorf("update md5 of probe status [%s] error: %+v\n", probe.Name, err)
 			return ctrl.Result{}, err
 		}
-	}
-
-	if err = r.List(ctx, clusterList); err != nil {
-		klog.Errorf("list cluster error: %+v\n", err)
-		return ctrl.Result{}, err
-	}
-
-	//update probe of cluster attatched
-	for i := range clusterList.Items {
-		remoteProbe := &kubeproberv1.Probe{}
-		cluster := clusterList.Items[i]
-		if IsContain(cluster.Status.AttachedProbes, probe.Name) {
-			klog.Infof("get probe [%s] of cluster [%s]\n", probe.Name, cluster.Name)
-			if remoteProbe, err = GetProbeOfCluster(&cluster, probe.Name); err != nil {
-				klog.Errorf("get probe [%s] of cluster [%s] error: %+v\n", probe.Name, cluster.Name, err)
-				return ctrl.Result{}, err
-			}
-			if remoteProbe.Status.MD5 != probe.Status.MD5 {
-				klog.Infof("update probe [%s] of cluster [%s]\n", probe.Name, cluster.Name)
-				err = UpdateProbeOfCluster(&cluster, probe)
-				if err != nil {
-					klog.Errorf("update probe [%s] of cluster [%s] error: %+v\n", probe.Name, cluster.Name, err)
-					return ctrl.Result{}, err
+		//update probe of cluster attatched
+		for i := range clusterList.Items {
+			remoteProbe := &kubeproberv1.Probe{}
+			cluster := clusterList.Items[i]
+			if IsContain(cluster.Status.AttachedProbes, probe.Name) {
+				klog.Infof("get probe [%s] of cluster [%s]\n", probe.Name, cluster.Name)
+				if remoteProbe, err = GetProbeOfCluster(&cluster, probe.Name); err != nil {
+					klog.Errorf("get probe [%s] of cluster [%s] error: %+v\n", probe.Name, cluster.Name, err)
+				}
+				if remoteProbe.Status.MD5 != probe.Status.MD5 {
+					klog.Infof("update probe [%s] of cluster [%s]\n", probe.Name, cluster.Name)
+					err = UpdateProbeOfCluster(&cluster, probe)
+					if err != nil {
+						klog.Errorf("update probe [%s] of cluster [%s] error: %+v\n", probe.Name, cluster.Name, err)
+					}
 				}
 			}
 		}
