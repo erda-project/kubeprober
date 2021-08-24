@@ -6,7 +6,7 @@ metadata:
 spec:
   policy:
     # unit: minute
-    runInterval: 5
+    runInterval: 30
   template:
     containers:
       - env:

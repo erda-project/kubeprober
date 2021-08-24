@@ -17,6 +17,8 @@ import (
 	"context"
 	"crypto/md5"
 	"fmt"
+	"k8s.io/apimachinery/pkg/types"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
@@ -71,7 +73,10 @@ func (r *ProbeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	r.log.V(1).Info("reconcile probe task")
 	// check whether probe been deleted
 	var probe kubeproberv1.Probe
-	err := r.Get(ctx, req.NamespacedName, &probe)
+	var patch []byte
+	var err error
+
+	err = r.Get(ctx, req.NamespacedName, &probe)
 	if err != nil {
 		// probe deleted, ignore
 		if apierrors.IsNotFound(err) {
@@ -87,11 +92,27 @@ func (r *ProbeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	probeSpecByte, _ := json.Marshal(probe.Spec)
 	probeSpecHas := fmt.Sprintf("%x", md5.Sum(probeSpecByte))
 	if probe.Status.MD5 != fmt.Sprintf("%x", probeSpecHas) {
-		probe.Status.MD5 = probeSpecHas
-		err := r.Status().Update(ctx, &probe)
-		if err != nil {
+		//update status of cluster
+		statusPatch := kubeproberv1.Probe{
+			Status: kubeproberv1.ProbeStates{
+				MD5: probeSpecHas,
+			},
+		}
+		if patch, err = json.Marshal(statusPatch); err != nil {
 			return ctrl.Result{}, err
 		}
+		if err = r.Status().Patch(ctx, &kubeproberv1.Probe{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      probe.Name,
+				Namespace: probe.Namespace,
+			},
+		}, client.RawPatch(types.MergePatchType, patch)); err != nil {
+			r.log.V(1).Error(err, "update cluster status error")
+			if !strings.Contains(err.Error(), "could not find the requested resource") {
+				return ctrl.Result{}, err
+			}
+		}
+
 	}
 
 	// check whether it's single probe or cron probe
