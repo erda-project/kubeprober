@@ -51,7 +51,7 @@ type ClusterReconciler struct {
 //+kubebuilder:rbac:groups=kubeprober.erda.cloud,resources=clusters/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=kubeprober.erda.cloud,resources=alerts,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=kubeprober.erda.cloud,resources=alerts/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch
+//+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=kubeprober.erda.cloud,resources=clusters/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -116,9 +116,13 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	//handle ExtraInfo for remote cluster
+	klog.Infof("handle extrainfo for remote cluster [%s]\n", cluster.Name)
 	if err = updateCmForCluster(cluster); err != nil {
 		klog.Errorf("update extravar for cluster [%s] err: %+v\n", cluster.Name, err)
 		return ctrl.Result{}, err
+	}
+	if len(labelKeys) == 0 {
+		labelKeys = append(labelKeys, "-")
 	}
 	//update status of cluster
 	statusPatch := kubeproberv1.Cluster{
@@ -129,6 +133,8 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	if patch, err = json.Marshal(statusPatch); err != nil {
 		return ctrl.Result{}, err
 	}
+	klog.Infof("patch cluster status for remote cluster [%s]\n", cluster.Name)
+
 	if err = r.Status().Patch(ctx, &kubeproberv1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cluster.Name,
@@ -175,6 +181,7 @@ func updateCmForCluster(cluster *kubeproberv1.Cluster) error {
 		Name:      kubeproberv1.ExtraCMName,
 		Namespace: cluster.Spec.ClusterConfig.ProbeNamespaces,
 	}, cm); err != nil {
+		klog.Errorf("failed to get extra configmap for remote cluster:  %+v\n", err)
 		if apierrors.IsNotFound(err) {
 			if err = c.Create(context.Background(), &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
@@ -222,7 +229,7 @@ func AddProbeToCluster(cluster *kubeproberv1.Cluster, probe *kubeproberv1.Probe)
 	}
 
 	err = c.Create(context.Background(), pp)
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "already exists") {
 		return err
 	}
 
@@ -249,7 +256,7 @@ func DeleteProbeOfCluster(cluster *kubeproberv1.Cluster, probeName string) error
 	})
 
 	err = c.Delete(context.Background(), pp)
-	if err != nil {
+	if err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 	return nil
