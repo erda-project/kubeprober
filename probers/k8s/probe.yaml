@@ -15,7 +15,7 @@ spec:
               fieldRef:
                 fieldPath: spec.nodeName
         name: k8s
-        image: kubeprober/probe-k8s:v0.0.7
+        image: kubeprober/probe-k8s:v0.0.8
         resources:
           requests:
             cpu: 10m
@@ -32,8 +32,3 @@ spec:
           value: "k8s-app=kube-dns"
         - name: PUBLIC_DOMAIN
           value: "www.baidu.com"
-
-
-
-
-

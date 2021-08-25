@@ -67,8 +67,14 @@ func (dc *DeployServiceChecker) SetTimeout(t time.Duration) {
 func (dc *DeployServiceChecker) DoCheck() (err error) {
 	ctx := context.Background()
 
+	// namespace create
+	err = createDeploymentNamespace(ctx, dc.client)
+	if err != nil {
+		return err
+	}
+
+	// namespace clean
 	defer func() {
-		// clean resource
 		err = deleteNamespace(ctx, dc.client)
 		if err != nil {
 			logrus.Errorf("clean resource, delete namespace failed, namespace: %s, error: %v", cfg.CheckNamespace, err)
@@ -76,21 +82,39 @@ func (dc *DeployServiceChecker) DoCheck() (err error) {
 		}
 	}()
 
-	// create deployment
+	// deployment create
 	err = createDeployment(ctx, dc.client)
 	if err != nil {
 		logrus.Errorf("create deployment failed, error: %v", err)
 		return err
 	}
 
-	// create service
+	// deployment clean
+	defer func() {
+		err = deleteDeploymentAndWait(ctx, dc.client)
+		if err != nil {
+			logrus.Errorf("clean resource, delete deployment failed, deployment: %s, error: %v", cfg.CheckDeploymentName, err)
+			return
+		}
+	}()
+
+	// service create
 	err = createService(ctx, dc.client)
 	if err != nil {
 		logrus.Errorf("create service failed, error: %v", err)
 		return err
 	}
 
-	// check service
+	// service clean
+	defer func() {
+		err = deleteServiceAndWait(ctx, dc.client)
+		if err != nil {
+			logrus.Errorf("clean resource, delete service failed, service: %s, error: %v", cfg.CheckServiceName, err)
+			return
+		}
+	}()
+
+	// service check
 	err = makeRequestToDeploymentCheckService(ctx, dc.client)
 	if err != nil {
 		logrus.Errorf("request to service failed, error: %v", err)
