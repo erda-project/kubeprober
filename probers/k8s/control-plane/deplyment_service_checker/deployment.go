@@ -3,6 +3,7 @@ package deployment_service_checker
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"strconv"
 	"time"
@@ -38,11 +39,6 @@ func createDeployment(ctx context.Context, client *kubernetes.Clientset) error {
 	deploymentConfig, err := createDeploymentConfig()
 	if err != nil {
 		log.Errorf("create deployment config failed, err: %v", err)
-		return err
-	}
-
-	err = createDeploymentNamespace(ctx, client)
-	if err != nil {
 		return err
 	}
 
@@ -290,4 +286,84 @@ func deploymentAvailable(deployment *v1.Deployment) bool {
 		}
 	}
 	return false
+}
+
+// deleteDeploymentAndWait deletes the created test deployment
+func deleteDeploymentAndWait(ctx context.Context, client *kubernetes.Clientset) error {
+
+	deleteChan := make(chan error)
+
+	go func() {
+		defer close(deleteChan)
+
+		log.Debugln("Checking if deployment has been deleted.")
+		for {
+
+			// Check if we have timed out.
+			select {
+			case <-ctx.Done():
+				deleteChan <- fmt.Errorf("timed out while waiting for deployment to delete")
+			default:
+				log.Debugln("Delete deployment and wait has not yet timed out.")
+			}
+
+			// Wait between checks.
+			log.Debugln("Waiting 5 seconds before trying again.")
+			time.Sleep(time.Second * 5)
+
+			// Watch that it is gone by listing repeatedly.
+			deploymentList, err := client.AppsV1().Deployments(cfg.CheckNamespace).List(ctx, metav1.ListOptions{
+				FieldSelector: "metadata.name=" + cfg.CheckDeploymentName,
+				// LabelSelector: defaultLabelKey + "=" + defaultLabelValueBase + strconv.Itoa(int(now.Unix())),
+			})
+			if err != nil {
+				log.Errorln("Error listing deployments:", err.Error())
+				continue
+			}
+
+			// Check for the deployment in the list.
+			var deploymentExists bool
+			for _, deploy := range deploymentList.Items {
+				// If the deployment exists, try to delete it.
+				if deploy.GetName() == cfg.CheckDeploymentName {
+					deploymentExists = true
+					err = deleteDeployment(ctx, client)
+					if err != nil {
+						log.Errorln("Error when running a delete on deployment", cfg.CheckDeploymentName+":", err.Error())
+					}
+					break
+				}
+			}
+
+			// If the deployment was not in the list, then we assume it has been deleted.
+			if !deploymentExists {
+				deleteChan <- nil
+				break
+			}
+		}
+
+	}()
+
+	// Send a delete on the deployment.
+	err := deleteDeployment(ctx, client)
+	if err != nil {
+		log.Infoln("Could not delete deployment:", cfg.CheckDeploymentName)
+	}
+
+	return <-deleteChan
+}
+
+// deleteDeployment issues a foreground delete for the check test deployment name.
+func deleteDeployment(ctx context.Context, client *kubernetes.Clientset) error {
+	log.Infoln("Attempting to delete deployment in", cfg.CheckNamespace, "namespace.")
+	// Make a delete options object to delete the deployment.
+	deletePolicy := metav1.DeletePropagationForeground
+	graceSeconds := int64(1)
+	deleteOpts := metav1.DeleteOptions{
+		GracePeriodSeconds: &graceSeconds,
+		PropagationPolicy:  &deletePolicy,
+	}
+
+	// Delete the deployment and return the result.
+	return client.AppsV1().Deployments(cfg.CheckNamespace).Delete(ctx, cfg.CheckDeploymentName, deleteOpts)
 }
