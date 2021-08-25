@@ -1,3 +1,5 @@
+# syntax = docker/dockerfile:1.2
+
 FROM golang:1.16 as builder
 
 # specify the probe to build
@@ -10,10 +12,12 @@ ENV GOPROXY=https://goproxy.cn,direct
 
 COPY . /go/src/github.com/erda-project/kubeprober
 WORKDIR /go/src/github.com/erda-project/kubeprober
-RUN go mod download
+RUN go mod tidy
 
 # Build
-RUN cd probers && \
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    cd probers && \
     echo "workdir: $(pwd)"     && \
     echo "content: $(ls -lh)"  && \
     ./build.sh --prober=${PROBER} --apps=${APPS}

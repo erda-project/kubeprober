@@ -70,7 +70,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 	if [ -z ${CONF} ]; then go run ./cmd/${APP}/${APP}.go; else go run ./cmd/${APP}/${APP}.go --config-file=${CONF}; fi
 
 docker-build: ## Build docker image with the manager.
-	docker build --build-arg APP=${APP} -t ${project}/${APP}:${V} .
+	DOCKER_BUILDKIT=1 docker build --build-arg APP=${APP} -t ${project}/${APP}:${V} .
 
 docker-push: ## Push docker image with the manager.
 	docker push ${project}/${APP}:${V}
