@@ -23,20 +23,21 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"k8s.io/apimachinery/pkg/types"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"strings"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 	"github.com/erda-project/kubeprober/apistructs"
 	"github.com/erda-project/kubeprober/pkg/probe-master/k8sclient"
 	_ "github.com/erda-project/kubeprober/pkg/probe-master/k8sclient"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/klog"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const DINGDING_ALERT_NAME = "dingding"

@@ -15,13 +15,14 @@ package clusterdialer
 
 import (
 	"context"
-	"github.com/gorilla/websocket"
-	"github.com/rancher/remotedialer"
-	"github.com/sirupsen/logrus"
 	"math/rand"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/gorilla/websocket"
+	"github.com/rancher/remotedialer"
+	"github.com/sirupsen/logrus"
 )
 
 const HandshakeTimeOut = 10 * time.Second
