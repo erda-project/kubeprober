@@ -39,7 +39,9 @@ func RunCheckers(cs CheckerList) error {
 			}
 			err := RunChecker(cr)
 			if err != nil {
-				s.Status = kubeproberv1.CheckerStatusError
+				if c.GetStatus() != kubeproberv1.CheckerStatusPass || c.GetStatus() != kubeproberv1.CheckerStatusWARN {
+					s.Status = kubeproberv1.CheckerStatusError
+				}
 				s.Message = err.Error()
 			}
 			now := metav1.Now()
