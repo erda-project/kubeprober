@@ -204,21 +204,6 @@ function check_k8s_version() {
     fi
 }
 
-# check nginx lua
-function check_nginx_lua() {
-
-    set_true=`echo -ne 'if ($server_name = "_") {\n   return 404 "backend server not found";\n}\nset_by_lua_block $trace_sample {\n   return ""\n}\n'`
-
-    set_now=`kubectl get cm -n kube-system nginx-configuration  -o=jsonpath={.data.location-snippet}`
-
-    if [ "$set_now"x != "$set_true"x ] ; then
-        echo check_nginx_lua error "set_by_lua_block not true"
-    else
-        echo check_nginx_lua ok
-    fi
-}
-
-
 # check k8s core component status (calico-node, calico, kube-proxy, nginx-ingress-controller)
 check_k8s_status
 # check whether k8s core components' resource set
@@ -235,8 +220,6 @@ check_node_cordon
 pipeline_namespace_leak
 # check where dice volume's path is correct
 check_dicevolume_path
-# check nginx lua
-check_nginx_lua
 
 
 

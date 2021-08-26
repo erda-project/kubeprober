@@ -329,8 +329,10 @@ func GenerateProbeClient(cluster *kubeproberv1.Cluster) (client.Client, error) {
 			Type:    dialclient.ManageProxy,
 			Address: cluster.Spec.ClusterConfig.Address,
 			Token:   strings.Trim(string(clusterToken), "\n"),
+			CaData: cluster.Spec.ClusterConfig.CACert,
 		})
 		if err != nil {
+			klog.Errorf("failed to generate dialer rest config for cluster %s, %+v\n", err, cluster.Name)
 			return nil, err
 		}
 	} else {
@@ -339,8 +341,10 @@ func GenerateProbeClient(cluster *kubeproberv1.Cluster) (client.Client, error) {
 			Address:  cluster.Spec.ClusterConfig.Address,
 			CertData: cluster.Spec.ClusterConfig.CertData,
 			KeyData:  cluster.Spec.ClusterConfig.KeyData,
+			CaData: cluster.Spec.ClusterConfig.CACert,
 		})
 		if err != nil {
+			klog.Errorf("failed to generate dialer rest config for cluster %s, %+v\n", err, cluster.Name)
 			return nil, err
 		}
 	}
@@ -349,6 +353,7 @@ func GenerateProbeClient(cluster *kubeproberv1.Cluster) (client.Client, error) {
 	clientgoscheme.AddToScheme(scheme)
 	c, err = client.New(config, client.Options{Scheme: scheme})
 	if err != nil {
+		klog.Errorf("failed to generate dialer k8s client for cluster %s, %+v\n", err, cluster.Name)
 		return nil, err
 	}
 	return c, nil
