@@ -97,6 +97,7 @@ func sendHeartBeat(heartBeatAddr string, clusterName string, secretKey string) e
 	var nodes *v1.NodeList
 	var checkerStatus string
 	var k8sRestClient client.Client
+	var caData []byte
 
 	if k8sRestClient, clientset, config, err = initClientSet(); err != nil {
 		return err
@@ -112,12 +113,17 @@ func sendHeartBeat(heartBeatAddr string, clusterName string, secretKey string) e
 		return err
 	}
 
+	caData, err = ioutil.ReadFile(config.CAFile)
+	if err != nil {
+		return err
+	}
+
 	hbData := apistructs.HeartBeatReq{
 		Name:           clusterName,
 		SecretKey:      secretKey,
 		Address:        config.Host,
 		ProbeNamespace: os.Getenv("POD_NAMESPACE"),
-		CaData:         base64.StdEncoding.EncodeToString(config.CAData),
+		CaData:         base64.StdEncoding.EncodeToString(caData),
 		CertData:       base64.StdEncoding.EncodeToString(config.CertData),
 		KeyData:        base64.StdEncoding.EncodeToString(config.KeyData),
 		Token:          base64.StdEncoding.EncodeToString([]byte(config.BearerToken)),
