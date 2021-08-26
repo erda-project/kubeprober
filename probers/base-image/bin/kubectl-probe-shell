@@ -18,7 +18,7 @@ do
     name=$(echo "$item"| awk '{print $1}')
     status=$(echo "$item"| awk '{print $2}')
     if [[ "$status" == "ok" ]]; then
-      status="info"
+      status="pass"
     fi
     status=$(echo "$status"|tr 'a-z' 'A-Z')
     raw=$(echo "$item"| awk -F " " '{for (i=3;i<=NF;i++)printf("%s ", $i);print ""}')

@@ -1,5 +1,11 @@
 #!/bin/bash
 
+cluster_vendor=$(cat /netdata/dice-ops/dice-config/config.yaml  | grep vendor | awk '{print $2}' 2>/dev/null)
+is_cs=false
+if [[ "$cluster_vendor" == cs || "$cluster_vendor" == cs_managed || "$cluster_vendor" == edas ]]; then
+    is_cs=true
+fi
+
 function is_deployment_ready() {
     if [[ $# == 1 ]]; then
         namespace=default
@@ -124,14 +130,16 @@ function check_k8s_components_resources() {
 # check where dice volume's path is /data
 function check_dicevolume_path() {
     if [[ "$is_cs" == true ]]; then
-        return 0
+      targetPath="/var/lib/docker/data"
+    else
+      targetPath="/data"
     fi
 
     hostpath=$(kubectl get sc dice-local-volume -o jsonpath='{.parameters.hostpath}')
-    if [[ $hostpath == "/data" ]]; then
+    if [[ $hostpath == $targetPath ]]; then
         echo dice-volume ok
     else
-        echo dice-volume error "dice volume hostpath should be /data"
+        echo dice-volume error "dice volume hostpath should be $targetPath"
     fi
 }
 

@@ -63,7 +63,7 @@ type ClusterStatus struct {
 //+kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Version",type=string,JSONPath=`.spec.k8sVersion`
 // +kubebuilder:printcolumn:name="NodeCount",type=string,JSONPath=`.status.nodeCount`
-// +kubebuilder:printcolumn:name="PROBENAMESPACES",type=string,JSONPath=`.spec.clusterConfig.probeNamespaces`
+// +kubebuilder:printcolumn:name="PROBENAMESPACE",type=string,JSONPath=`.spec.clusterConfig.probeNamespaces`
 // +kubebuilder:printcolumn:name="PROBE",type=string,JSONPath=`.status.attachedProbes`
 // +kubebuilder:printcolumn:name="TOTAL/ERROR",type=string,JSONPath=`.status.checkers`
 // +kubebuilder:printcolumn:name="HEARTBEATTIME",type=string,JSONPath=`.status.heartBeatTimeStamp`
