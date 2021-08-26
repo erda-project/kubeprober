@@ -81,7 +81,7 @@ func Run(opts *options.ProbeMasterOptions) {
 	ctx := context.Background()
 
 	optts := zap.Options{
-		Development: true,
+		Development: false,
 	}
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&optts)))
 

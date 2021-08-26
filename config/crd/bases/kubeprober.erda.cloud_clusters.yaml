@@ -24,7 +24,7 @@ spec:
       name: NodeCount
       type: string
     - jsonPath: .spec.clusterConfig.probeNamespaces
-      name: PROBENAMESPACES
+      name: PROBENAMESPACE
       type: string
     - jsonPath: .status.attachedProbes
       name: PROBE

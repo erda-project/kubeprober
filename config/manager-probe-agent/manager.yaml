@@ -181,6 +181,9 @@ spec:
       labels:
         name: nsenter
     spec:
+      tolerations:
+        - key: ""
+          operator: "Exists"
       containers:
         - command:
             - nsenter

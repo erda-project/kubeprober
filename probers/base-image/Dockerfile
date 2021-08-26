@@ -1,4 +1,4 @@
-# lastet version: kubeprober/probe-base:v0.0.9
+# lastet version: kubeprober/probe-base:v0.1.1
 FROM alpine:3.9
 WORKDIR /
 
