@@ -63,6 +63,7 @@ type ProbeStates struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="RUNINTERVAL",type="integer",JSONPath=".spec.policy.runInterval"
+//+kubebuilder:printcolumn:name="IMAGE",type="string",JSONPath=".spec.template.containers[0].image"
 //+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 
 // Probe is the Schema for the probes API
