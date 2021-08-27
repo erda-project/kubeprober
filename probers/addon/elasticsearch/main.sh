@@ -4,7 +4,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 function check_elasticsearch() {
   IFS_old=$IFS
   IFS=$'\n'
-  for i in $(kubectl  get svc | grep elastic | grep 9200)
+  for i in $(kubectl  get svc -n default | grep elastic | grep 9200)
   do
     name=$(echo $i | awk '{print $1}')
     ip=$(echo $i | awk '{print $3}')
@@ -36,9 +36,9 @@ function check_elasticsearch() {
 
   done
   IFS=$IFS_old
-  report-status --name=check_elasticsearch --status=ok --message="-"
+  report-status --name=check_elasticsearch --status=pass --message="-"
 }
 
-if kubectl get cm dice-cluster-info -o yaml | grep DICE_IS_EDGE: | grep false>/dev/null 2>/dev/null; then
+if kubectl get cm dice-cluster-info -n default -o yaml | grep DICE_IS_EDGE: | grep false>/dev/null 2>/dev/null; then
   check_elasticsearch
 fi

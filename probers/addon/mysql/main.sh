@@ -1,11 +1,11 @@
 #!/bin/bash
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-MYSQL_HOST=$(kubectl  get cm dice-addons-info -o jsonpath='{.data.MYSQL_HOST}')
-MYSQL_USERNAME=$(kubectl  get cm dice-addons-info -o jsonpath='{.data.MYSQL_USERNAME}')
-MYSQL_PORT=$(kubectl  get cm dice-addons-info -o jsonpath='{.data.MYSQL_PORT}')
-MYSQL_DATABASE=$(kubectl  get cm dice-addons-info -o jsonpath='{.data.MYSQL_DATABASE}')
-MYSQL_PASSWORD=$(kubectl  get cm dice-addons-info -o jsonpath='{.data.MYSQL_PASSWORD}')
+MYSQL_HOST=$(kubectl  get cm dice-addons-info -n default -o jsonpath='{.data.MYSQL_HOST}')
+MYSQL_USERNAME=$(kubectl  get cm dice-addons-info -n default -o jsonpath='{.data.MYSQL_USERNAME}')
+MYSQL_PORT=$(kubectl  get cm dice-addons-info -n default -o jsonpath='{.data.MYSQL_PORT}')
+MYSQL_DATABASE=$(kubectl  get cm dice-addons-info -n default -o jsonpath='{.data.MYSQL_DATABASE}')
+MYSQL_PASSWORD=$(kubectl  get cm dice-addons-info -n default -o jsonpath='{.data.MYSQL_PASSWORD}')
 
 function check_mysql() {
   #check mysql connected
@@ -43,9 +43,9 @@ function check_mysql() {
     return 1
   fi
 
-  report-status --name=check_mysql --status=ok --message="-"
+  report-status --name=check_mysql --status=pass --message="-"
 }
 
-if kubectl get cm dice-cluster-info -o yaml | grep DICE_IS_EDGE: | grep false>/dev/null 2>/dev/null; then
+if kubectl get cm dice-cluster-info -n default -o yaml | grep DICE_IS_EDGE: | grep false>/dev/null 2>/dev/null; then
   check_mysql
 fi

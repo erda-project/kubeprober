@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -o errexit
+#set -o errexit
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 

@@ -15,14 +15,9 @@ spec:
               fieldRef:
                 fieldPath: spec.nodeName
         name: k8s
-        image: kubeprober/probe-addon:v0.0.3
+        image: kubeprober/probe-addon:v0.0.7
         resources:
           requests:
             cpu: 10m
             memory: 50Mi
     restartPolicy: Never
-
-
-
-
-

@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/bin/bash -x
 
-cluster_vendor=$(cat /netdata/dice-ops/dice-config/config.yaml  | grep vendor | awk '{print $2}' 2>/dev/null)
+cluster_vendor=$(kubectl get cm dice-cluster-info -n default -o 'jsonpath={.data.KUBERNETES_VENDOR}' 2>/dev/null)
 is_cs=false
 if [[ "$cluster_vendor" == cs || "$cluster_vendor" == cs_managed || "$cluster_vendor" == edas ]]; then
     is_cs=true
@@ -130,13 +130,14 @@ function check_k8s_components_resources() {
 # check where dice volume's path is /data
 function check_dicevolume_path() {
     if [[ "$is_cs" == true ]]; then
-      targetPath="/var/lib/docker/data"
+      targetPath="/var/lib"
     else
       targetPath="/data"
     fi
 
-    hostpath=$(kubectl get sc dice-local-volume -o jsonpath='{.parameters.hostpath}')
-    if [[ $hostpath == $targetPath ]]; then
+    hostpath=$(kubectl get sc dice-local-volume -n default -o jsonpath='{.parameters.hostpath}')
+    result=$(echo $hostpath | grep $targetPath)
+    if [[ "$result" != "" ]]; then
         echo dice-volume ok
     else
         echo dice-volume error "dice volume hostpath should be $targetPath"
@@ -147,7 +148,7 @@ function check_dicevolume_path() {
 function check_node_label() {
     any_lable_n=$(kubectl get node --show-labels | grep  "any=")
     # cannot catain label 'any'
-    if [[ $any_lable_n != "" ]]
+    if [[ "$any_lable_n" != "" ]]
     then
         echo k8s_node_label error "there are some node with any label"
         return
@@ -228,12 +229,3 @@ check_node_cordon
 pipeline_namespace_leak
 # check where dice volume's path is correct
 check_dicevolume_path
-
-
-
-
-
-
-
-
-
