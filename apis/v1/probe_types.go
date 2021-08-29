@@ -30,6 +30,7 @@ const (
 
 	DefaultSourceKey   = "source"
 	DefaultSourceValue = "kubeprober"
+	OnceProbeDonePhase = "DONE"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -57,7 +58,8 @@ type Config struct {
 type ProbeStates struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	MD5 string `json:"md5,omitempty"`
+	MD5   string `json:"md5,omitempty"`
+	Phase string `json:"phase,omitempty"`
 }
 
 //+kubebuilder:object:root=true

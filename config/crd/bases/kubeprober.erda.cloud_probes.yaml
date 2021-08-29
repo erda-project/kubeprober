@@ -20,6 +20,9 @@ spec:
     - jsonPath: .spec.policy.runInterval
       name: RUNINTERVAL
       type: integer
+    - jsonPath: .spec.template.containers[0].image
+      name: IMAGE
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: AGE
       type: date
@@ -6569,6 +6572,8 @@ spec:
                 description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
                   of cluster Important: Run "make" to regenerate code after modifying
                   this file'
+                type: string
+              phase:
                 type: string
             type: object
         type: object

@@ -112,6 +112,21 @@ spec:
                 type: string
               nodeCount:
                 type: integer
+              onceProbeList:
+                items:
+                  properties:
+                    createTime:
+                      type: string
+                    finishTime:
+                      type: string
+                    id:
+                      type: string
+                    probes:
+                      items:
+                        type: string
+                      type: array
+                  type: object
+                type: array
             type: object
         type: object
     served: true
