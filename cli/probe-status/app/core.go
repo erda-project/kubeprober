@@ -18,9 +18,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
-	"github.com/rodaine/table"
+	"github.com/gosuri/uitable"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -72,20 +73,24 @@ func GetProbeStatusLocal(status string) error {
 	for _, i := range probes.Items {
 		probeNames = append(probeNames, i.Name)
 	}
-	tbl := table.New("PROBER", "CHECKER", "STATUS", "MESSAGE", "LASTRUN")
+	table := uitable.New()
+	table.MaxColWidth = 45
+	table.Wrap = true
+	table.AddRow("PROBER", "CHECKER", "STATUS", "MESSAGE", "LASTRUN")
+	//tbl := table.New("PROBER", "CHECKER", "STATUS", "MESSAGE", "LASTRUN")
 	for _, i := range probeStatus.Items {
 		if IsContain(probeNames, i.Name) {
 			for _, j := range i.Spec.Checkers {
 				if string(j.Status) == status && status != "" {
-					tbl.AddRow(i.Name, j.Name, j.Status, j.Message, j.LastRun)
+					table.AddRow(i.Name, j.Name, j.Status, strings.TrimSpace(j.Message), j.LastRun.Format("2006-01-02 15:04:05"))
 				}
 				if status == "" {
-					tbl.AddRow(i.Name, j.Name, j.Status, j.Message, j.LastRun)
+					table.AddRow(i.Name, j.Name, j.Status, strings.TrimSpace(j.Message), j.LastRun.Format("2006-01-02 15:04:05"))
 				}
 			}
 		}
 	}
-	tbl.Print()
+	fmt.Println(table)
 	return nil
 }
 
@@ -120,20 +125,24 @@ func GetProbeStatusSpecifyCluster(clusterName string, status string) error {
 	for _, i := range probes.Items {
 		probeNames = append(probeNames, i.Name)
 	}
-	tbl := table.New("PROBER", "CHECKER", "STATUS", "MESSAGE", "LASTRUN")
+	//tbl := table.New("PROBER", "CHECKER", "STATUS", "MESSAGE", "LASTRUN")
+	table := uitable.New()
+	table.MaxColWidth = 45
+	table.Wrap = true
+	table.AddRow("PROBER", "CHECKER", "STATUS", "MESSAGE", "LASTRUN")
 	for _, i := range probeStatus.Items {
 		if IsContain(probeNames, i.Name) {
 			for _, j := range i.Spec.Checkers {
 				if string(j.Status) == status && status != "" {
-					tbl.AddRow(i.Name, j.Name, j.Status, j.Message, j.LastRun)
+					table.AddRow(i.Name, j.Name, j.Status, strings.TrimSpace(j.Message), j.LastRun.Format("2006-01-02 15:04:05"))
 				}
 				if status == "" {
-					tbl.AddRow(i.Name, j.Name, j.Status, j.Message, j.LastRun)
+					table.AddRow(i.Name, j.Name, j.Status, strings.TrimSpace(j.Message), j.LastRun.Format("2006-01-02 15:04:05"))
 				}
 			}
 		}
 	}
-	tbl.Print()
+	fmt.Println(table)
 	return nil
 }
 func init() {
