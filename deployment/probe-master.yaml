@@ -175,6 +175,21 @@ spec:
                 type: string
               nodeCount:
                 type: integer
+              onceProbeList:
+                items:
+                  properties:
+                    createTime:
+                      type: string
+                    finishTime:
+                      type: string
+                    id:
+                      type: string
+                    probes:
+                      items:
+                        type: string
+                      type: array
+                  type: object
+                type: array
             type: object
         type: object
     served: true
@@ -208,6 +223,9 @@ spec:
     - jsonPath: .spec.policy.runInterval
       name: RUNINTERVAL
       type: integer
+    - jsonPath: .spec.template.containers[0].image
+      name: IMAGE
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: AGE
       type: date
@@ -4212,6 +4230,8 @@ spec:
             properties:
               md5:
                 description: 'INSERT ADDITIONAL STATUS FIELD - define observed state of cluster Important: Run "make" to regenerate code after modifying this file'
+                type: string
+              phase:
                 type: string
             type: object
         type: object

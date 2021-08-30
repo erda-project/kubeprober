@@ -88,14 +88,25 @@ func (r *ProbeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		}
 	}
 
+	if probe.Status.Phase == kubeproberv1.OnceProbeDonePhase {
+		return ctrl.Result{}, nil
+	}
 	//update probe status
+	// check whether it's single probe or cron probe
+	var phase string
+	if probe.Spec.Policy.RunInterval <= 0 {
+		phase = kubeproberv1.OnceProbeDonePhase
+	} else {
+		phase = ""
+	}
 	probeSpecByte, _ := json.Marshal(probe.Spec)
 	probeSpecHas := fmt.Sprintf("%x", md5.Sum(probeSpecByte))
 	if probe.Status.MD5 != fmt.Sprintf("%x", probeSpecHas) {
 		//update status of cluster
 		statusPatch := kubeproberv1.Probe{
 			Status: kubeproberv1.ProbeStates{
-				MD5: probeSpecHas,
+				MD5:   probeSpecHas,
+				Phase: phase,
 			},
 		}
 		if patch, err = json.Marshal(statusPatch); err != nil {
@@ -286,6 +297,7 @@ func genJob(probe *kubeproberv1.Probe) (j batchv1.Job, err error) {
 	// TODO: put this config in specific area
 	activeDeadlineSecond := int64(60 * 30)
 	backoffLimit := int32(0)
+	jobTTL := int32(100)
 
 	// default restart policy for job: "Never"
 	policy := probe.Spec.Template.RestartPolicy
@@ -313,6 +325,7 @@ func genJob(probe *kubeproberv1.Probe) (j batchv1.Job, err error) {
 			},
 		},
 		Spec: batchv1.JobSpec{
+			TTLSecondsAfterFinished: &jobTTL,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{

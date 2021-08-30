@@ -115,7 +115,7 @@ func sendHeartBeat(heartBeatAddr string, clusterName string, secretKey string) e
 
 	caData, err = ioutil.ReadFile(config.CAFile)
 	if err != nil {
-		return err
+		klog.Errorf("could not find ca file %+v\n", err)
 	}
 
 	hbData := apistructs.HeartBeatReq{
@@ -159,7 +159,9 @@ func getCheckerStatus(k8sRestClient client.Client) (string, error) {
 	}
 
 	for _, i := range probes.Items {
-		probeNames = append(probeNames, i.Name)
+		if i.Spec.Policy.RunInterval > 0 {
+			probeNames = append(probeNames, i.Name)
+		}
 	}
 	for _, i := range probeStatus.Items {
 		if IsContain(probeNames, i.Name) {

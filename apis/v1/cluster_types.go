@@ -53,10 +53,18 @@ type ClusterConfig struct {
 type ClusterStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	HeartBeatTimeStamp string   `json:"heartBeatTimeStamp,omitempty"`
-	NodeCount          int      `json:"nodeCount,omitempty"`
-	AttachedProbes     []string `json:"attachedProbes,omitempty"`
-	Checkers           string   `json:"checkers,omitempty"`
+	HeartBeatTimeStamp string          `json:"heartBeatTimeStamp,omitempty"`
+	NodeCount          int             `json:"nodeCount,omitempty"`
+	AttachedProbes     []string        `json:"attachedProbes,omitempty"`
+	Checkers           string          `json:"checkers,omitempty"`
+	OnceProbeList      []OnceProbeItem `json:"onceProbeList,omitempty"`
+}
+
+type OnceProbeItem struct {
+	ID         string   `json:"id,omitempty"`
+	CreateTime string   `json:"createTime,omitempty"`
+	FinishTime string   `json:"finishTime,omitempty"`
+	Probes     []string `json:"probes,omitempty"`
 }
 
 //+kubebuilder:object:root=true
