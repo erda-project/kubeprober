@@ -89,6 +89,9 @@ func GetProbeStatus(clusterName string, status string) error {
 		}
 
 		c, err = GenerateProbeClient(cluster)
+		if err != nil {
+			return err
+		}
 	}
 	if err = c.List(context.Background(), probeStatusList, client.InNamespace("kubeprober")); err != nil {
 		return err
