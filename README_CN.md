@@ -45,6 +45,24 @@ WebHook 的运行需要校验证书，需要先部署一下 cert-manager 的服�
 kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml
 ```
 部署probe-master
+配置probe-master的secret-key
+```
+vim deployment/probe-master.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: probe-master
+spec:
+  template:
+    spec:
+      containers:
+        - command:
+            - /probe-master
+          env:
+            - name: SERVER_SECRET_KEY
+              value: your-token-here
+```
 ```
 APP=probe-master make deploy
 ```
@@ -58,7 +76,7 @@ kubectl get cluster
 
 创建好cluster后修改configmap的配置：
 ```
-vim config/manager-probe-agent/manager.yaml
+vim deployment/probe-agent.yaml
 
 ---
 apiVersion: v1
@@ -70,7 +88,7 @@ data:
   probe-conf.yaml: |
     probe_master_addr: http://kubeprober-probe-master.kubeprober.svc.cluster.local:8088
     cluster_name: moon
-    secret_key: 2f5079a5-425c-4fb7-8518-562e1685c9b4
+    secret_key: your-token-here
 ```
 
 如果只需要部署probe-agent，比如只是针对probe-agent开发调试，或者是仅仅需要在单集群执行探测用例，则可以开启如下配置，
