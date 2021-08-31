@@ -172,7 +172,7 @@ APP=probe-agent make docker-push
 APP=probe-agent make docker-build-push
 ```
 ### 自定义prober
-![custom probes](./probers/README.md)
+[custom probes](./probers/README.md)
 
 ## 贡献
 如果您对本项目想做出贡献，请参考 [Contributing to KubeProber](CONTRIBUTING.md) 。
