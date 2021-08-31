@@ -1,0 +1,15 @@
+apiVersion: kubeprober.erda.cloud/v1
+kind: Probe
+metadata:
+  name: prober-demo-example
+  namespace: kubeprober
+spec:
+  template:
+    containers:
+      - name: prober-demo-example
+        image: kubeprober/demo-example:v0.0.1
+        resources:
+          requests:
+            cpu: 10m
+            memory: 50Mi
+    restartPolicy: Never
