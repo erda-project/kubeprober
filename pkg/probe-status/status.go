@@ -25,6 +25,7 @@ import (
 
 	"github.com/cenkalti/backoff"
 	"github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 )
@@ -124,6 +125,14 @@ func renderProbeStatus(status []kubeproberv1.ProbeCheckerStatus, info ProbeStatu
 		err := fmt.Errorf("empty report status")
 		logrus.Errorf(err.Error())
 		return nil, err
+	}
+
+	// set lastRun to now if not set
+	now := metav1.Now()
+	for _, s := range status {
+		if s.LastRun == nil {
+			s.LastRun = &now
+		}
 	}
 
 	rp := kubeproberv1.ReportProbeStatusSpec{
