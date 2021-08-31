@@ -66,11 +66,6 @@ APP=probe-master make deploy
 ```
 #### Deploy probe-agent：
 
-Before deploying the agent, make sure that you have created a cluster in the master side:
-```
-kubectl apply -f config/samples/kubeprobe_v1_cluster.yaml
-kubectl get cluster
-```
 Modify the configmap configuration after creating the cluster:
 ```
 vim deployment/probe-agent.yaml
