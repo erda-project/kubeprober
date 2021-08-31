@@ -68,12 +68,6 @@ APP=probe-master make deploy
 ```
 #### agent端安装方法：
 
-部署agent前确保您在master侧已经创建好了一个cluster:
-```
-kubectl apply -f config/samples/kubeprobe_v1_cluster.yaml
-kubectl get cluster
-```
-
 创建好cluster后修改configmap的配置：
 ```
 vim deployment/probe-agent.yaml
