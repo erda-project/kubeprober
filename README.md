@@ -45,6 +45,23 @@ kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3
 ```
 install probe-master:
 ```
+vim deployment/probe-master.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: probe-master
+spec:
+  template:
+    spec:
+      containers:
+        - command:
+            - /probe-master
+          env:
+            - name: SERVER_SECRET_KEY
+              value: your-token-here
+```
+```
 APP=probe-master make deploy
 ```
 #### Deploy probe-agent：
@@ -56,7 +73,7 @@ kubectl get cluster
 ```
 Modify the configmap configuration after creating the cluster:
 ```
-vim config/manager-probe-agent/manager.yaml
+vim deployment/probe-agent.yaml
 
 ---
 apiVersion: v1
