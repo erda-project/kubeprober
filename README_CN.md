@@ -68,7 +68,7 @@ APP=probe-master make deploy
 ```
 #### agent端安装方法：
 
-创建好cluster后修改configmap的配置：
+修改configmap的配置：
 ```
 vim deployment/probe-agent.yaml
 
@@ -80,7 +80,7 @@ metadata:
   namespace: system
 data:
   probe-conf.yaml: |
-    probe_master_addr: http://kubeprober-probe-master.kubeprober.svc.cluster.local:8088
+    probe_master_addr: http://probe-master.kubeprober.svc.cluster.local:8088
     cluster_name: moon
     secret_key: your-token-here
 ```
@@ -121,7 +121,6 @@ make dev
 APP=probe-master make run
 ```
 #### 运行probe-tunnel
-运行probe-agent前，需要先创建一个 cluster CRD 资源，具体参考[agent端安装方法]章节
 ```
 # export env get from the create cluster crd
 export PROBE_MASTER_ADDR="http://127.0.0.1:8088"

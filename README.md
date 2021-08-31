@@ -66,7 +66,7 @@ APP=probe-master make deploy
 ```
 #### Deploy probe-agent：
 
-Modify the configmap configuration after creating the cluster:
+Modify the configmap configuration:
 ```
 vim deployment/probe-agent.yaml
 
@@ -78,7 +78,7 @@ metadata:
   namespace: system
 data:
   probe-conf.yaml: |
-    probe_master_addr: http://kubeprober-probe-master.kubeprober.svc.cluster.local:8088
+    probe_master_addr: http://probe-master.kubeprober.svc.cluster.local:8088
     cluster_name: moon
     secret_key: 2f5079a5-425c-4fb7-8518-562e1685c9b4
 ```
@@ -119,7 +119,6 @@ make dev
 APP=probe-master make run
 ```
 #### run probe-tunnel
-Before run probe-agent, a cluster crd resource should be created, same as section [Deploy probe-agent]
 ```
 # export env get from the create cluster crd
 export PROBE_MASTER_ADDR="http://127.0.0.1:8088"
