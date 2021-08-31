@@ -3,7 +3,7 @@ English | [简体中文](./README_CN.md)
 # KubeProber
 
 ##Demo
-![Screenshot](https://static.erda.cloud/images/kubeprober-en.gif)
+![Screenshot](https://static.erda.cloud/images/kc-en.gif)
 
 ## What is KubeProber?
 KubeProber is a diagnostic tool designed for large-scale Kubernetes clusters. It is used to perform diagnostic items in the kubernetes cluster to prove that the functions of the cluster are normal,  KubeProber has the following characteristics:
