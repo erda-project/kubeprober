@@ -3,6 +3,7 @@
 # KubeProber
 ## Demo
 ![Screenshot](https://static.erda.cloud/images/kc-cn.gif)
+
 ## 什么是 KubeProber?
 KubeProber 是一个针对大规模 Kubernetes 集群设计的诊断工具，用于在 kubernetes 集群中执行诊断项以证明集群的各项功能是否正常，KubeProber 有如下特点:
 

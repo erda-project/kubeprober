@@ -1,8 +1,7 @@
 English | [简体中文](./README_CN.md)
 
 # KubeProber
-
-##Demo
+## Demo
 ![Screenshot](https://static.erda.cloud/images/kc-en.gif)
 
 ## What is KubeProber?
