@@ -64,7 +64,7 @@ build: generate fmt vet ## Build manager binary.
 	go build -o _bin/${APP} ./cmd/${APP}/${APP}.go
 
 build-cli: generate fmt vet ## Build manager binary.
-	go build -o dist/${APP} ./cli/${APP}/${APP}.go
+	go build -o dist/${GOOS}_${APP} ./cli/${APP}/${APP}.go
 
 run: manifests generate fmt vet ## Run a controller from your host.
 	if [ -z ${CONF} ]; then go run ./cmd/${APP}/${APP}.go; else go run ./cmd/${APP}/${APP}.go --config-file=${CONF}; fi
@@ -83,7 +83,7 @@ deploy-build: manifests kustomize ## Deploy controller to the K8s cluster specif
 ##@ Deployment
 
 deploy:  ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	cp dist/probe /usr/local/bin/kubectl-probe
+	if [[ "${uname -s}" == "Linux" ]]; then cp dist/linux_probe /usr/local/bin/kubectl-probe; else cp dist/darwin_probe /usr/local/bin/kubectl-probe;fi
 	kubectl apply -f deployment/${APP}.yaml
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	kubectl delete -f deployment/${APP}.yaml

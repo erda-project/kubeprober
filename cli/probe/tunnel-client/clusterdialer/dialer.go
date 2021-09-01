@@ -23,8 +23,8 @@ import (
 
 var session TunnelSession
 
-func init() {
-	clusterDialerEndpoint := "ws://probe-master.kubeprober.svc.cluster.local:8088/clusterdialer"
+func InitSession(masterAddr string) {
+	clusterDialerEndpoint := masterAddr
 	go session.initialize(clusterDialerEndpoint)
 }
 

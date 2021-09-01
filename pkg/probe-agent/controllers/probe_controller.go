@@ -297,7 +297,7 @@ func genJob(probe *kubeproberv1.Probe) (j batchv1.Job, err error) {
 	// TODO: put this config in specific area
 	activeDeadlineSecond := int64(60 * 30)
 	backoffLimit := int32(0)
-	jobTTL := int32(100)
+	//jobTTL := int32(100)
 
 	// default restart policy for job: "Never"
 	policy := probe.Spec.Template.RestartPolicy
@@ -325,7 +325,7 @@ func genJob(probe *kubeproberv1.Probe) (j batchv1.Job, err error) {
 			},
 		},
 		Spec: batchv1.JobSpec{
-			TTLSecondsAfterFinished: &jobTTL,
+			//TTLSecondsAfterFinished: &jobTTL,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{

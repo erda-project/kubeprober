@@ -15,8 +15,11 @@ package client
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"os"
 
 	"github.com/erda-project/kubeprober/cli/probe/tunnel-client/clusterdialer"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -33,9 +36,36 @@ type ManageConfig struct {
 	Token    string `json:"token"`
 }
 
+type KpConfig struct {
+	MasterAddr string `json:"masterAddr"`
+}
+
 const (
-	ManageProxy = "proxy"
+	ManageProxy  = "proxy"
+	KpConfigFlie = ".kubeprober/config"
 )
+
+var masterAddr string
+
+// get master-addr by config file
+func init() {
+	filePath := fmt.Sprintf("%s/%s", os.Getenv("HOME"), KpConfigFlie)
+	masterAddr, _ = LoadConfig(filePath)
+}
+
+func LoadConfig(path string) (string, error) {
+	buf, err := ioutil.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	mainConfig := &KpConfig{}
+	err = json.Unmarshal(buf, mainConfig)
+	if err != nil {
+		return "", err
+	}
+
+	return mainConfig.MasterAddr, nil
+}
 
 // GetRestConfig get rest.Config with manage config
 func GetRestConfig(c *ManageConfig) (*rest.Config, error) {
@@ -95,6 +125,10 @@ func GetRestConfig(c *ManageConfig) (*rest.Config, error) {
 }
 
 func GetDialerRestConfig(clusterName string, c *ManageConfig) (*rest.Config, error) {
+	if masterAddr == "" {
+		masterAddr = "ws://probe-master.kubeprober.svc.cluster.local:8088/clusterdialer"
+	}
+	clusterdialer.InitSession(masterAddr)
 	rc, err := GetRestConfig(c)
 	if err != nil {
 		return nil, err
