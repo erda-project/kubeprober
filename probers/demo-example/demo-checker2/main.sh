@@ -11,3 +11,6 @@ function checker2_item2_check() {
 	# do real check ..., and report check status
 	report-status --name=checker2_item2 --status=error --message="checker2 item2 failed, reason: ..."
 }
+
+checker2_item1_check
+checker2_item2_check
