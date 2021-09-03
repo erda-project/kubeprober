@@ -9,6 +9,7 @@ import (
 	"github.com/erda-project/kubeprober/probers/k8s/control-plane/config"
 	svc "github.com/erda-project/kubeprober/probers/k8s/control-plane/deplyment_service_checker"
 	dns "github.com/erda-project/kubeprober/probers/k8s/control-plane/dns_resolution_checker"
+	ns "github.com/erda-project/kubeprober/probers/k8s/control-plane/namespace-checker"
 )
 
 func main() {
@@ -16,6 +17,7 @@ func main() {
 		err error
 		s   *svc.DeployServiceChecker
 		d   *dns.DnsChecker
+		n   *ns.NamespaceChecker
 	)
 
 	defer func() {
@@ -52,8 +54,14 @@ func main() {
 		return
 	}
 
+	n, err = ns.NewChecker()
+	if err != nil {
+		err = fmt.Errorf("new namespace checker failed, error: %v", err)
+		return
+	}
+
 	// run checkers
-	err = proberchecker.RunCheckers(proberchecker.CheckerList{s, d})
+	err = proberchecker.RunCheckers(proberchecker.CheckerList{s, d, n})
 	if err != nil {
 		err = fmt.Errorf("run deployment service checker failed, error: %v", err)
 		return

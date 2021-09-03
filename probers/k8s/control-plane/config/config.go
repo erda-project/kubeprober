@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -19,8 +18,8 @@ type Conf struct {
 	CheckServiceName      string `env:"CHECK_SERVICE_NAME" default:"deploy-service-check"`
 	CheckContainerPort    int32  `env:"CHECK_CONTAINER_PORT" default:"8080"`
 	CheckLoadBalancerPort int32  `env:"CHECK_LOAD_BALANCER_PORT" default:"80"`
-	// must contain 'kubeprober'
-	CheckNamespace          string        `env:"CHECK_NAMESPACE" default:"kubeprober-deploy-service-check"`
+	// should be in namespace where probe-agent running
+	CheckNamespace          string        `env:"KUBEPROBER_PROBE_NAMESPACE" default:"kubeprober"`
 	CheckDeploymentReplicas int           `env:"CHECK_DEPLOYMENT_REPLICAS" default:"1"`
 	CheckServiceAccount     string        `env:"CHECK_SERVICE_ACCOUNT" default:"default"`
 	CheckTolerationEnvs     string        `env:"CHECK_TOLERATION_ENVS"`
@@ -37,6 +36,7 @@ type Conf struct {
 	PrivateDomain     string `env:"PRIVATE_DOMAIN" default:"kubernetes.default" doc:"inner k8s service domain resolution check"`
 	DnsLabelSelector  string `env:"DNS_LABEL_SELECTOR" default:"k8s-app=kube-dns" doc:"dns label selector"`
 	DnsCheckNamespace string `env:"DNS_CHECK_NAMESPACE" default:"kube-system" doc:"dns namespace"`
+	ResourceAutoReap  bool   `env:"RESOURCE_AUTO_REAP" default:"true"`
 
 	// common config
 	CheckTimeout   time.Duration `env:"CHECK_TIMEOUT" default:"15m"`
@@ -57,11 +57,6 @@ func Load() {
 
 // parseInputValues parses all incoming environment variables for the program into globals and fatals on errors.
 func ParseConfig() error {
-	if !strings.Contains(Cfg.CheckNamespace, "kubeprober") {
-		err := fmt.Errorf("new namespace must contain [kubeprober], to prevent deleteing namespaces in use")
-		logrus.Errorf(err.Error())
-		return err
-	}
 
 	// Parse incoming deployment toleration
 	if len(Cfg.CheckTolerationEnvs) > 0 {
