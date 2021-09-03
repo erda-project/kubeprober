@@ -36,91 +36,19 @@ KubeProber 是一个针对大规模 Kubernetes 集群设计的诊断工具，用
 运行在被纳管集群上的 operator，这个 operator 维护两个 CRD，一个是跟 probe-master 完全一致的 Probe，probe-agent 按照 probe 的定义去执行该集群的诊断项，另一个是 ProbeStatus，用于记录每个 Probe 的诊断结果，用户可以在被纳管的集群中通过kubectl get probestatus 来查看本集群的诊断结果。
 
 ## 开始使用
-### 安装
-kubeprober的master跟agent均作为controller运行在kubernetes中，安装前确保您已经部署好了kubernetes集群，并且可以使用kubectl访问它。
-
-#### master端的安装方法：
-WebHook 的运行需要校验证书，需要先部署一下 cert-manager 的服务:
-```
-kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml
-```
-部署probe-master
-配置probe-master的secret-key
-```
-vim deployment/probe-master.yaml
-
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: probe-master
-spec:
-  template:
-    spec:
-      containers:
-        - command:
-            - /probe-master
-          env:
-            - name: SERVER_SECRET_KEY
-              value: your-token-here
-```
-```
-APP=probe-master make deploy
-```
-#### agent端安装方法：
-
-修改configmap的配置：
-```
-vim deployment/probe-agent.yaml
-
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: probeagent
-  namespace: system
-data:
-  probe-conf.yaml: |
-    probe_master_addr: http://probe-master.kubeprober.svc.cluster.local:8088
-    cluster_name: moon
-    secret_key: your-token-here
-```
-
-如果只需要部署probe-agent，比如只是针对probe-agent开发调试，或者是仅仅需要在单集群执行探测用例，则可以开启如下配置，
-使得probe-agent独立运行而无需通probe-master通信
-
-```
-vim config/manager-probe-agent/manager.yaml
-
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: probeagent
-  namespace: system
-data:
-  probe-conf.yaml: |
-    # default disabled, if enabled, probe-agent will stop communication with master
-    agent_debug: true
-    # default 1, if more verbose info needed, increase it
-    debug_level: 1
-```
-
-安装probe-agent
-```
-APP=probe-agent make deploy
-```
-### 开发
+[文档](https://docs.erda.cloud/1.2/manual/eco-tools/kubeprober/guides/install.html)
+## 开发
 
 你可以在本地运行以及构建probe-master以及probe-agent，运行之前请确保本地存在~/.kube/config可以访问到kubernetes集群。
-#### 安装 crd && webhook
+### 安装 crd && webhook
 ```
 make dev
 ```
-#### 运行probe-master
+### 运行probe-master
 ```
 APP=probe-master make run
 ```
-#### 运行probe-tunnel
+### 运行probe-tunnel
 ```
 # export env get from the create cluster crd
 export PROBE_MASTER_ADDR="http://127.0.0.1:8088"
@@ -131,7 +59,7 @@ export SECRET_KEY="a944499f-97f3-4986-89fa-bc7dfc7e009a"
 APP=probe-tunnel make run
 ```
 
-#### 运行probe-agent
+### 运行probe-agent
 ```
 APP=probe-agent make run
 ```

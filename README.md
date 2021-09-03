@@ -36,89 +36,18 @@ The operator running on the management cluster. This operator maintains two CRDs
 
 The operator running on the managed cluster. This operator maintains two CRDs. One is a Probe that is exactly the same as the probe-master. The probe-agent executes the cluster’s diagnostic items according to the definition of the probe. The other is ProbeStatus for Record the diagnosis results of each Probe. Users can view the diagnosis results of the cluster through kubectl get probestatus in the managed cluster.
 ## Getting started
-### Installation
-Both the master and agent of kubeprober run as controllers in kubernetes. Before installation, make sure that you have deployed the kubernetes cluster and can access it using kubectl.
-#### Deploy probe-master：
-The operation of WebHook needs to verify the certificate, and you need to deploy the cert-manager service first:
-```
-kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml
-```
-install probe-master:
-```
-vim deployment/probe-master.yaml
-
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: probe-master
-spec:
-  template:
-    spec:
-      containers:
-        - command:
-            - /probe-master
-          env:
-            - name: SERVER_SECRET_KEY
-              value: your-token-here
-```
-```
-APP=probe-master make deploy
-```
-#### Deploy probe-agent：
-
-Modify the configmap configuration:
-```
-vim deployment/probe-agent.yaml
-
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: probeagent
-  namespace: system
-data:
-  probe-conf.yaml: |
-    probe_master_addr: http://probe-master.kubeprober.svc.cluster.local:8088
-    cluster_name: moon
-    secret_key: 2f5079a5-425c-4fb7-8518-562e1685c9b4
-```
-
-If only probe-agent need (e.g debug/developing or just running probe cases in one k8s cluster), following configurations needed, 
-and probe-agent will stop communication with master.
-
-```
-vim config/manager-probe-agent/manager.yaml
-
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: probeagent
-  namespace: system
-data:
-  probe-conf.yaml: |
-    # default disabled, if enabled, probe-agent will stop communication with master
-    agent_debug: true
-    # default 1, if more verbose info needed, increase it
-    debug_level: 1
-```
-
-install probe-agent
-```
-APP=probe-agent make deploy
-```
-
-### To start developing kubeprober
+Get start with this [doc](https://docs.erda.cloud/1.2/manual/eco-tools/kubeprober/guides/install.html).
+## To start developing kubeprober
 You can run and build probe-master and probe-agent locally. please make sure that ~/.kube/config can access the kubernetes cluster.
-#### install crd && webhook resources
+### install crd && webhook resources
 ```
 make dev
 ```
-#### run probe-master
+### run probe-master
 ```
 APP=probe-master make run
 ```
-#### run probe-tunnel
+### run probe-tunnel
 ```
 # export env get from the create cluster crd
 export PROBE_MASTER_ADDR="http://127.0.0.1:8088"
@@ -128,7 +57,7 @@ export SECRET_KEY="a944499f-97f3-4986-89fa-bc7dfc7e009a"
 # run probe-agent
 APP=probe-tunnel make run
 ```
-#### run probe-agent
+### run probe-agent
 ```
 APP=probe-agent make run
 ```
@@ -141,12 +70,12 @@ config       cluster_name
 default
 ```
 
-#### build binary file
+### build binary file
 ```
 APP=probe-master make build
 APP=probe-agent make build
 ```
-#### build image
+### build image
 ```
 # build with default version: latest
 # output image format: kubeprober/probe-master:latest
