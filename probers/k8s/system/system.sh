@@ -17,13 +17,13 @@ function is_deployment_ready() {
         return
     fi
     if [[ $replicas == 0 ]]; then
-        echo $1 info "spec.replicas is $replicas"
+        echo $1 pass "spec.replicas is $replicas"
     fi
     ready_replicas=$(kubectl get deploy $1 -n $namespace -o jsonpath={.status.readyReplicas})
     if [[ "$replicas" != "$ready_replicas" ]]; then
         echo $1 error "ready_replicas != spec.replicas"
     else
-        echo $1 ok
+        echo $1 pass
     fi
 }
 
@@ -46,7 +46,7 @@ function is_daemonset_ready() {
     if [ $desiredNumberScheduled != $numberReady ]; then
         echo $1 error "desiredNumberScheduled != numberReady"
     else
-        echo $1 ok
+        echo $1 pass
     fi
 }
 
@@ -55,7 +55,7 @@ function is_components_healthy () {
     if kubectl get componentstatuses -o jsonpath="{range .items[*]}{range .conditions[*]}{.status}{'\n'}{end}{end}" | grep False > /dev/null 2>&1 ; then
         echo k8s-componentsstatus error "k8s components not healthy"
     else
-        echo k8s-componentsstatus ok
+        echo k8s-componentsstatus pass
     fi
 }
 
@@ -76,7 +76,7 @@ function check_node_ready() {
     if kubectl get node -o jsonpath='{range .items[*].status}{range .conditions[?(@.type=="Ready")]}{.status}{"\n"}{end}{end}' | grep False > /dev/null 2>&1; then
         echo k8s-nodeready error "NotReady node found"
     else
-        echo k8s-nodeready ok
+        echo k8s-nodeready pass
     fi
 }
 
@@ -96,7 +96,7 @@ function check_resource() {
     if [[ "$res" == "" ]]; then
         echo k8s-$2_$3_$4 error "$3_$4 not set"
     else
-        echo k8s-$2_$3_$4 ok
+        echo k8s-$2_$3_$4 pass
     fi
 }
 
@@ -138,7 +138,7 @@ function check_dicevolume_path() {
     hostpath=$(kubectl get sc dice-local-volume -n default -o jsonpath='{.parameters.hostpath}')
     result=$(echo $hostpath | grep $targetPath)
     if [[ "$result" != "" ]]; then
-        echo dice-volume ok
+        echo dice-volume pass
     else
         echo dice-volume error "dice volume hostpath should be $targetPath"
     fi
@@ -169,7 +169,7 @@ function check_node_label() {
     then
         echo k8s_node_label error "location-cluster-service / stateful-service tag less than 3"
     fi
-    echo k8s_node_label ok
+    echo k8s_node_label pass
 }
 
 # check whether node is cordon
@@ -178,7 +178,7 @@ function check_node_cordon() {
     if [ "$cordon_node" != "" ] >/dev/null 2>&1; then
         echo check_node_cordon error "there exists node: $cordon_node SchedulingDisabled"
     else
-        echo check_node_cordon ok
+        echo check_node_cordon pass
     fi
 }
 
@@ -188,7 +188,7 @@ function pipeline_namespace_leak() {
     if [[ $count -gt 5000 ]]; then
         echo "pipeline_namespace_leak" error "too many pipeline namespaces:" $count
     else
-        echo "pipeline_namespace_leak" ok ""
+        echo "pipeline_namespace_leak" pass ""
     fi
 }
 
@@ -196,7 +196,7 @@ function pipeline_namespace_leak() {
 function check_k8s_version() {
     # check kubelet version on all node
     if [[ `kubectl get node|awk '{print $NF}'|grep -v VER|uniq|wc -l` == 1 ]] ; then
-        echo "kubelet_version" ok ""
+        echo "kubelet_version" pass ""
     else
         echo "kubelet_version" error "kubelet version is not same"
     fi
@@ -209,7 +209,16 @@ function check_k8s_version() {
     if [[ "$kubelet_minor" != "$server_minor" ]]; then
       echo "kubelet_server_version" error "kubelet and server(apiserver, controller, scheduler) minor version is different"
     elif [[ "$kubelet_v" != "$server_v" ]]; then
-      echo "kubelet_server_version" info "kubelet and server(apiserver, controller, scheduler) version is different"
+      echo "kubelet_server_version" pass "kubelet and server(apiserver, controller, scheduler) version is different"
+    fi
+}
+
+# check coredns forward config
+function check_coredns_forward() {
+    if kubectl -n kube-system get cm coredns -o yaml|grep forward|head -n 1|grep -i "/etc/resolv.conf" > /dev/null 2>&1 ; then
+      echo "check_coredns_forward" error "forward to /etc/resolv.conf"
+    else
+      echo "check_coredns_forward" pass
     fi
 }
 
@@ -229,3 +238,5 @@ check_node_cordon
 pipeline_namespace_leak
 # check where dice volume's path is correct
 check_dicevolume_path
+# check coredns forward config
+check_coredns_forward
