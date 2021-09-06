@@ -202,7 +202,7 @@ func collectProbeStatus(rw http.ResponseWriter, req *http.Request, alert *kubepr
 		return
 	}
 	if ps.Status == "ERROR" {
-		if err = dingding.SendAlert(&ps, alert); err != nil {
+		if err = dingding.SendAlert(&ps); err != nil {
 			errMsg := fmt.Sprintf("send dingding alert err: %+v\n", err)
 			klog.Errorf(errMsg)
 		}
