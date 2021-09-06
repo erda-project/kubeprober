@@ -18,7 +18,6 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // HeartBeatReq heatbeat request struct between probe-master and probe-agent
 type HeartBeatReq struct {
 	Name           string `json:"name"`
-	SecretKey      string `json:"secretKey"`
 	Address        string `json:"address"`
 	CaData         string `json:"caData"`
 	CertData       string `json:"certData"`
