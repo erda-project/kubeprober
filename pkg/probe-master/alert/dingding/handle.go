@@ -43,20 +43,38 @@ import (
 const DINGDING_ALERT_NAME = "dingding"
 
 var ci = make(chan int, 100)
+var sendMsgCh = make(chan string, 100)
 
 func init() {
-	var count = 0
+	var proxyCount = 0
+	var sendMsg = ""
 	var err error
 	go func() {
 		for {
 			select {
 			case <-ci:
-				count++
+				proxyCount++
 			case <-time.After(60 * time.Second):
-				if err = alertCount(count); err != nil {
+				if err = alertCount(proxyCount); err != nil {
 					klog.Errorf("failed to count alert number: %+v\n", err)
 				}
-				count = 0
+				proxyCount = 0
+			}
+		}
+	}()
+
+	go func() {
+		for {
+			select {
+			case <-sendMsgCh:
+				sendMsg = sendMsg + fmt.Sprintf("%s", <-sendMsgCh)
+			case <-time.After(60 * time.Second):
+				if sendMsg != "" {
+					if err = sendAlertAfterAggregation(sendMsg); err != nil {
+						klog.Errorf("failed to send dingding proxy: %+v\n", err)
+					}
+				}
+				sendMsg = ""
 			}
 		}
 	}()
@@ -150,11 +168,20 @@ func singleJoiningSlash(a, b string) string {
 	return a + b
 }
 
-func SendAlert(ps *apistructs.CollectProbeStatusReq, alert *kubeproberv1.Alert) error {
+func sendAlertAfterAggregation(msg string) error {
 	var err error
 	var signUrl string
 	var resp *http.Response
 	var result []byte
+
+	alert := &kubeproberv1.Alert{}
+	if err = k8sclient.RestClient.Get(context.Background(), client.ObjectKey{
+		Namespace: metav1.NamespaceDefault,
+		Name:      DINGDING_ALERT_NAME,
+	}, alert); err != nil {
+		return err
+	}
+
 	if alert.Spec.Address == "" || alert.Spec.Token == "" || alert.Spec.Sign == "" {
 		return errors.New("address or token or sign is emtpy in this alert spec")
 	}
@@ -163,14 +190,8 @@ func SendAlert(ps *apistructs.CollectProbeStatusReq, alert *kubeproberv1.Alert) 
 		return err
 	}
 
-	istr := "[类别]: " + ps.ProbeName + "\n" +
-		"[检查项]：" + ps.CheckerName + "\n" +
-		"[集群]：" + ps.ClusterName + "\n" +
-		"[状态]: " + ps.Status + "\n" +
-		"[错误信息]: " + ps.Message
-
 	content, data := make(map[string]string), make(map[string]interface{})
-	content["content"] = istr
+	content["content"] = msg
 	data["msgtype"] = "text"
 	data["text"] = content
 	b, _ := json.Marshal(data)
@@ -189,6 +210,16 @@ func SendAlert(ps *apistructs.CollectProbeStatusReq, alert *kubeproberv1.Alert) 
 		return err
 	}
 	klog.Infof("dingding return msg: %s\n", result)
+	return nil
+}
+
+func SendAlert(ps *apistructs.CollectProbeStatusReq) error {
+	istr := "[类别]: " + ps.ProbeName + "\n" +
+		"[检查项]：" + ps.CheckerName + "\n" +
+		"[集群]：" + ps.ClusterName + "\n" +
+		"[状态]: " + ps.Status + "\n" +
+		"[错误信息]: " + ps.Message + "\n\n"
+	sendMsgCh <- istr
 	return nil
 }
 
