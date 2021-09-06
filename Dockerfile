@@ -12,13 +12,14 @@ COPY . /workspace
 # Build
 RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg/mod \
-    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -mod readonly -a -o ${APP} ./cmd/${APP}/${APP}.go
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -mod readonly -a  -o ${APP} ./cmd/${APP}/${APP}.go
 
-FROM centos:7
+#FROM centos:7
+FROM kubeprober/alpine:v3.9
 ARG APP
 ENV APP=${APP}
 WORKDIR /
-
+RUN apk add --no-cache tzdata
 COPY --from=builder /workspace/${APP} .
 
 CMD [ "sh", "-c", "/${APP}"]

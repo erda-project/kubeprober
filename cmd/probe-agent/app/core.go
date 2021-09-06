@@ -44,6 +44,7 @@ import (
 	"github.com/erda-project/kubeprober/cmd/probe-agent/options"
 	"github.com/erda-project/kubeprober/cmd/probe-agent/webserver"
 	"github.com/erda-project/kubeprober/pkg/probe-agent/controllers"
+	"github.com/erda-project/kubeprober/pkg/probe-agent/heartbeat"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -214,7 +215,7 @@ func startOperator(ctx context.Context) error {
 	setupLog.Info("starting probe server")
 	s := webserver.NewServer(mgr.GetClient(), opts.ProbeListenAddr)
 	s.Start(opts.ProbeMasterAddr, opts.ClusterName)
-
+	heartbeat.Start(opts.ClusterName, opts.ProbeMasterAddr)
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
