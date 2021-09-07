@@ -25,6 +25,7 @@ import (
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -53,6 +54,7 @@ func init() {
 
 	scheme := runtime.NewScheme()
 	kubeproberv1.AddToScheme(scheme)
+	clientgoscheme.AddToScheme(scheme)
 	k8sRestClient, err = client.New(config, client.Options{Scheme: scheme})
 	if err != nil {
 		return
