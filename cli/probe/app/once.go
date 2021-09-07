@@ -31,13 +31,90 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const KBNAMESPACE = "kubeprober"
+
 var OnceCmd = &cobra.Command{
 	Use:   "once",
 	Short: "Perform one-time diagnostics of remote cluster or local cluster",
 	Long:  "Perform one-time diagnostics of remote cluster or local cluster",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return DoOnceProbe(clusterName, probes)
+		if clusterName == "" {
+			return DoOnceProbeLocal(probes)
+		} else {
+			return DoOnceProbe(clusterName, probes)
+		}
 	},
+}
+
+func DoOnceProbeLocal(probes string) error {
+	var err error
+	var onceProbeList []kubeproberv1.Probe
+	var onceProbeNameList []string
+	probeList := &kubeproberv1.ProbeList{}
+	inputNameList := strings.Split(probes, ",")
+	onceId := fmt.Sprintf("%d", int32(time.Now().Unix()))
+	if err = k8sRestClient.List(context.Background(), probeList); err != nil {
+		fmt.Printf("Get probe list error: %+v\n", err)
+		return err
+	}
+	for _, i := range probeList.Items {
+		if i.Namespace != KBNAMESPACE {
+			continue
+		}
+		if probes == "" {
+			onceProbeList = append(onceProbeList, i)
+		} else {
+			if IsContain(inputNameList, i.Name) {
+				onceProbeList = append(onceProbeList, i)
+			}
+		}
+	}
+
+	for _, i := range onceProbeList {
+		onceProbeNameList = append(onceProbeNameList, i.Name)
+		name := fmt.Sprintf("%s-oncelocal-%s", i.Name, onceId)
+
+		i.Spec.Policy.RunInterval = 0
+		pp := &kubeproberv1.Probe{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Probe",
+				APIVersion: "kubeprober.erda.cloud/v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: i.Namespace,
+			},
+			Spec: i.Spec,
+		}
+
+		err = k8sRestClient.Create(context.Background(), pp)
+		if err != nil {
+			return err
+		}
+	}
+	//wait for once probe finish
+	now := time.Now()
+	for i := 0; i < 30; i++ {
+		time.Sleep(10 * time.Second)
+		status, err = getOncePorbeStatus(k8sRestClient, KBNAMESPACE, onceId)
+		if err != nil {
+			return err
+		}
+		sub := time.Now().Sub(now)
+		fmt.Printf("\rTime: %ds,   Status: %s,   One-Time Probe: %s", int(sub/time.Second), status, onceProbeNameList)
+		if status == "Succeeded" {
+			break
+		}
+	}
+	fmt.Println()
+	if status == "Succeeded" {
+		if err = PrintOnceProbeStatus(k8sRestClient, KBNAMESPACE, onceId); err != nil {
+			return err
+		}
+	} else {
+		return errors.New("get once probe status timeout!")
+	}
+	return nil
 }
 
 func DoOnceProbe(clusterName string, probes string) error {
@@ -45,6 +122,7 @@ func DoOnceProbe(clusterName string, probes string) error {
 	var c client.Client
 	var onceProbeNameList []string
 	var onceProbeList []kubeproberv1.Probe
+	var status string
 
 	onceId := fmt.Sprintf("%d", int32(time.Now().Unix()))
 	cluster := &kubeproberv1.Cluster{}
@@ -99,7 +177,7 @@ func DoOnceProbe(clusterName string, probes string) error {
 	}
 
 	//update once probe status of cluster
-	if err = updateClusterOnceProbeStatus(c, cluster, onceId, onceProbeNameList); err != nil {
+	if err = updateClusterOnceProbeStatus(cluster, onceId, onceProbeNameList); err != nil {
 		return err
 	}
 
@@ -117,7 +195,7 @@ func DoOnceProbe(clusterName string, probes string) error {
 			break
 		}
 	}
-	if err = updateOnceProbeStatusFinishTime(c, cluster, onceId); err != nil {
+	if err = updateOnceProbeStatusFinishTime(cluster, onceId); err != nil {
 		return err
 	}
 	fmt.Println()
@@ -152,7 +230,7 @@ func getOncePorbeStatus(c client.Client, ns string, onceID string) (string, erro
 	return status, nil
 }
 
-func updateClusterOnceProbeStatus(c client.Client, cluster *kubeproberv1.Cluster, onceID string, onceProbeNameList []string) error {
+func updateClusterOnceProbeStatus(cluster *kubeproberv1.Cluster, onceID string, onceProbeNameList []string) error {
 	var err error
 	//update once probe status of cluster
 	cluster.Status.OnceProbeList = append(cluster.Status.OnceProbeList, kubeproberv1.OnceProbeItem{
@@ -174,7 +252,7 @@ func updateClusterOnceProbeStatus(c client.Client, cluster *kubeproberv1.Cluster
 		return err
 	}
 
-	if err = c.Status().Patch(context.Background(), &kubeproberv1.Cluster{
+	if err = k8sRestClient.Status().Patch(context.Background(), &kubeproberv1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cluster.Name,
 			Namespace: metav1.NamespaceDefault,
@@ -186,7 +264,7 @@ func updateClusterOnceProbeStatus(c client.Client, cluster *kubeproberv1.Cluster
 	return nil
 }
 
-func updateOnceProbeStatusFinishTime(c client.Client, cluster *kubeproberv1.Cluster, onceID string) error {
+func updateOnceProbeStatusFinishTime(cluster *kubeproberv1.Cluster, onceID string) error {
 	var err error
 	//update once probe status of cluster
 	for i := range cluster.Status.OnceProbeList {
@@ -204,7 +282,7 @@ func updateOnceProbeStatusFinishTime(c client.Client, cluster *kubeproberv1.Clus
 		return err
 	}
 
-	if err = c.Status().Patch(context.Background(), &kubeproberv1.Cluster{
+	if err = k8sRestClient.Status().Patch(context.Background(), &kubeproberv1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cluster.Name,
 			Namespace: metav1.NamespaceDefault,
