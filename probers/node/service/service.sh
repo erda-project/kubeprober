@@ -1,5 +1,11 @@
 #!/bin/bash
 
+cluster_vendor=$(cat /netdata/dice-ops/dice-config/config.yaml | grep vendor | awk '{print $2}' 2>/dev/null)
+is_cs=false
+if [[ "$cluster_vendor" == cs || "$cluster_vendor" == cs_managed || "$cluster_vendor" == edas ]]; then
+    is_cs=true
+fi
+
 ## docker层面检查
 function check_docker_status() {
     if systemctl is-active docker | grep active > /dev/null 2>&1; then
@@ -30,7 +36,11 @@ function check_image_number() {
 
 function check_docker_dir() {
     docker_data_dir=$(cat /netdata/dice-ops/dice-config/config.yaml  | grep data_root: | grep -v "#" | awk -F":" '{print $2}' | sed 's/^\s*\|\s*$//g')
-    docker_data_dir=${docker_data_dir:="/data/docker/data"}
+    if [[ "$is_cs" == true ]]; then
+      docker_data_dir=${docker_data_dir:="/var/lib/docker"}
+    else
+      docker_data_dir=${docker_data_dir:="/data/docker/data"}
+    fi
 
     dataroot=$(docker info -f '{{.DockerRootDir}}')
     if [[ $dataroot != $docker_data_dir ]]; then
@@ -121,7 +131,7 @@ function check_kubelet_eviction_config() {
 	    echo "" "ok"
     else
 	    echo -n "" "error"
-    	[[ ! $config_string =~ $images_string  ]] && echo -n "" "imagefs.available is not 18%"
+    	[[ ! $config_string =~ $images_string  ]] && echo -n "" "imagefs.available is not 10%"
 	    [[ ! $config_string =~ $memory_string  ]] && echo -n "" "memory.available is not 512M"
     	[[ ! $config_string =~ $nodefs_string  ]] && echo -n "" "nodefs.available is not 5%"
 	    [[ ! $config_string =~ $nodefs_string2 ]] && echo -n "" "nodefs.inodesFree is not 5%"
