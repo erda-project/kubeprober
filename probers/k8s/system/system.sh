@@ -127,10 +127,16 @@ function check_k8s_components_resources() {
     check_resource ds coredns limits memory "170Mi"
 }
 
-# check where dice volume's path is /data
+# check where dice volume's path is correct
 function check_dicevolume_path() {
     if [[ "$is_cs" == true ]]; then
-      targetPath="/var/lib"
+      nspod=$(kubectl get pod -n kubeprober | grep nsenter | grep -i running | head -n 1 | awk '{print $1}')
+      res=$(kubectl exec -it $nspod  -n kubeprober lsblk | grep "/var/lib/container")
+      if [[ "$res" != "" ]]; then
+        targetPath="/var/lib"
+      else
+        targetPath="/"
+      fi
     else
       targetPath="/data"
     fi
