@@ -19,6 +19,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 	"github.com/gosuri/uitable"
@@ -111,9 +112,14 @@ func GetProbeStatus(clusterName string, status string) error {
 	table.MaxColWidth = 45
 	table.Wrap = true
 	table.AddRow("PROBER", "CHECKER", "STATUS", "MESSAGE", "LASTRUN")
+	d, _ := time.ParseDuration("-24h")
+	oneDayAgo := time.Now().Add(d)
 	for _, i := range probeStatusList.Items {
 		if IsContain(probeNames, i.Name) {
 			for _, j := range i.Spec.Checkers {
+				if j.LastRun.Before(&metav1.Time{Time: oneDayAgo}) {
+					continue
+				}
 				if string(j.Status) == status && status != "" {
 					table.AddRow(i.Name, j.Name, j.Status, strings.TrimSpace(j.Message), j.LastRun.Format("2006-01-02 15:04:05"))
 				}
