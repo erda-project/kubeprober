@@ -7,7 +7,7 @@ MYSQL_PORT=$(kubectl  get cm dice-addons-info -n default -o jsonpath='{.data.MYS
 MYSQL_DATABASE=$(kubectl  get cm dice-addons-info -n default -o jsonpath='{.data.MYSQL_DATABASE}')
 MYSQL_PASSWORD=$(kubectl  get cm dice-addons-info -n default -o jsonpath='{.data.MYSQL_PASSWORD}')
 
-MYSQL_USERNAME=$MYSQL_USERNAME"dbmigration"
+#MYSQL_USERNAME=$MYSQL_USERNAME"dbmigration"
 
 function check_mysql() {
   #check mysql connected

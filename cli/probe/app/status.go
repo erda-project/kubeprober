@@ -112,7 +112,7 @@ func GetProbeStatus(clusterName string, status string) error {
 	table.MaxColWidth = 45
 	table.Wrap = true
 	table.AddRow("PROBER", "CHECKER", "STATUS", "MESSAGE", "LASTRUN")
-	d, _ := time.ParseDuration("-24h")
+	d, _ := time.ParseDuration("-4h")
 	oneDayAgo := time.Now().Add(d)
 	for _, i := range probeStatusList.Items {
 		if IsContain(probeNames, i.Name) {

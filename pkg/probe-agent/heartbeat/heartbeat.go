@@ -183,6 +183,9 @@ func getCheckerStatus(k8sRestClient client.Client) (string, error) {
 		return "", err
 	}
 
+	d, _ := time.ParseDuration("-4h")
+	oneDayAgo := time.Now().Add(d)
+
 	for _, i := range probes.Items {
 		if i.Spec.Policy.RunInterval > 0 {
 			probeNames = append(probeNames, i.Name)
@@ -191,6 +194,9 @@ func getCheckerStatus(k8sRestClient client.Client) (string, error) {
 	for _, i := range probeStatus.Items {
 		if IsContain(probeNames, i.Name) {
 			for _, j := range i.Spec.Checkers {
+				if j.LastRun.Before(&metav1.Time{Time: oneDayAgo}) {
+					continue
+				}
 				totalChecker++
 				if j.Status == kubeproberv1.CheckerStatusError {
 					ErrorChecker++

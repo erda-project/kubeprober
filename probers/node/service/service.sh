@@ -93,50 +93,21 @@ function check_docker_notify() {
     fi
 }
 
-# 检查自建dice vendor集群机器kubelet驱逐pod配置是否合理
 function check_kubelet_eviction_config() {
-    #判断是否为dice vendor集群
-    export DICE_CONFIG=/netdata/dice-ops/dice-config/config.yaml
-    export DICE=false
-
-    if [ -f /netdata/dice-ops/dice-config/config.yaml ]; then
-        ## 老集群
-        if ! cat "$DICE_CONFIG" | grep vendor > /dev/null 2>/dev/null; then
-            if ! cat "$DICE_CONFIG" | grep "is_aliyun_k8s" >/dev/null 2>/dev/null; then
-                export DICE=true
-            else
-                if ! cat "$DICE_CONFIG" | grep "is_aliyun_k8s:" | grep true >/dev/null 2>/dev/null; then
-                export DICE=true
-                fi
-            fi
-        else
-            if cat "$DICE_CONFIG" | grep vendor| grep dice >/dev/null 2>/dev/null; then
-                export DICE=true
-            fi
-        fi
+  value=$(ps aux | grep /usr/bin/kubelet | egrep -o  "imagefs.available<([0-9]+)" | awk -F"<" '{print $2}')
+  if [ "$value" == "" ]; then
+    configFile=$(ps aux | grep "/usr/bin/kubelet" | egrep -o  "\--config=.+" | awk '{print $1}' | awk -F"=" '{print $2}')
+    if [ "$configFile" != "" ]; then
+      value=$(cat $configFile | grep "evictionHard:" -a4 | grep imagefs.available | egrep -o "[0-9]+")
     fi
+  fi
 
-    if [ "$DICE" == false ]; then
-        return
-    fi
+  if [ "$value" -gt 10 ]; then
+    echo host_kubelet_eviction_config error "imagefs.available is more than 10%"
+    return 0
+  fi
 
-    config_string=`cat /var/lib/kubelet/config.yaml`
-    images_string='imagefs.available: 10%'
-    memory_string='memory.available: 512Mi'
-    nodefs_string='nodefs.available: 5%'
-    nodefs_string2='nodefs.inodesFree: 5%'
-
-    echo -n "host_kubelet_eviction_config"
-    if [[ $config_string =~ $images_string && $config_string =~ $memory_string && $config_string =~ $nodefs_string  && $config_string =~ $nodefs_string2 ]] ; then
-	    echo "" "ok"
-    else
-	    echo -n "" "error"
-    	[[ ! $config_string =~ $images_string  ]] && echo -n "" "imagefs.available is not 10%"
-	    [[ ! $config_string =~ $memory_string  ]] && echo -n "" "memory.available is not 512M"
-    	[[ ! $config_string =~ $nodefs_string  ]] && echo -n "" "nodefs.available is not 5%"
-	    [[ ! $config_string =~ $nodefs_string2 ]] && echo -n "" "nodefs.inodesFree is not 5%"
-    	echo ""
-    fi
+  echo host_kubelet_eviction_config ok "-"
 }
 
 check_docker_status
