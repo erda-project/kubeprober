@@ -2,7 +2,7 @@ English | [简体中文](./README_CN.md)
 
 # KubeProber
 
-###  [Home](https://k.erda.clouud) | [Document](https://docs.erda.cloud/1.2/manual/eco-tools/kubeprober/guides/introduction.html) | [RoadMap](./docs/roadmap_CN.md)
+###  [Home](https://k.erda.cloud) | [Document](https://docs.erda.cloud/1.2/manual/eco-tools/kubeprober/guides/introduction.html) | [RoadMap](./docs/roadmap.md)
 
 ## Demo
 ![Screenshot](https://static.erda.cloud/images/kc-en.gif)
