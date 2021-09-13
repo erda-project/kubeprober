@@ -29,8 +29,12 @@ function check_mysql() {
   #check mysql create table && insert data
   msg=$(mysql -h $MYSQL_HOST -u $MYSQL_USERNAME  -P $MYSQL_PORT -p$MYSQL_PASSWORD $MYSQL_DATABASE -e "CREATE TABLE IF NOT EXISTS probe_test_table (id INT(11), name VARCHAR(25))" 2>&1)
   if [[ $msg != "" ]]; then
-    report-status --name=check_mysql --status=error --message="could not create table: $msg"
-    return 1
+    MYSQL_USERNAME=$MYSQL_USERNAME"dbmigration"
+    msg=$(mysql -h $MYSQL_HOST -u $MYSQL_USERNAME  -P $MYSQL_PORT -p$MYSQL_PASSWORD $MYSQL_DATABASE -e "CREATE TABLE IF NOT EXISTS probe_test_table (id INT(11), name VARCHAR(25))" 2>&1)
+    if [[ $msg != "" ]]; then
+      report-status --name=check_mysql --status=error --message="could not create table: $msg"
+      return 1
+    fi
   fi
 
   msg=$(mysql -h $MYSQL_HOST -u $MYSQL_USERNAME  -P $MYSQL_PORT -p$MYSQL_PASSWORD $MYSQL_DATABASE -e "INSERT INTO probe_test_table (id, name) VALUES (1, 'prober')" 2>&1)
