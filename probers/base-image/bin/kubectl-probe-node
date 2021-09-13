@@ -14,7 +14,7 @@ SCRIPT_FILE_NAME=$(basename $1)
 function format_output() {
     cat $1 | awk -v ignore_info_flag="$ignore_info_flag" '
         {
-            if($3 == "error" || $3 == "info")
+            if($3 == "error" || $3 == "warn"  || $3 == "info" )
             {
                 num[$2]++
                 type[$2]=$3

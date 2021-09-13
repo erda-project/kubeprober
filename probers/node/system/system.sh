@@ -134,7 +134,7 @@ function check_kernel_param() {
     then
         echo "host_kernel_param" "ok"
     else
-        echo "host_kernel_param" "error" ${check_result:1:65535}" is not correct"
+        echo "host_kernel_param" "warn" ${check_result:1:65535}" is not correct"
     fi
 
 }
@@ -162,7 +162,7 @@ function check_ipvs_module() {
 function check_zombie_process_num() {
     num=$(ps -ef | grep defunct | grep -v grep | wc -l)
     if [[ $num -gt 1000 ]]; then
-        echo host_zombie_process error "zombie process number more than 500"
+        echo host_zombie_process warn "zombie process number more than 500"
     else
         echo host_zombie_process ok
     fi
@@ -177,7 +177,7 @@ function check_iptables_forward() {
 }
 # 节点mem异常是否异常
 function check_system_mem() {
-    tail -n 5000 /var/log/messages| grep -iE "unable to allocate memory|cannot allocate memory" >>/dev/null 2>&1 && echo "host_system_mem" "error" "unable to allocate memory|cannot allocate memory" && return
+    tail -n 5000 /var/log/messages| grep -iE "unable to allocate memory|cannot allocate memory" >>/dev/null 2>&1 && echo "host_system_mem" "warn" "unable to allocate memory|cannot allocate memory" && return
     echo "host_system_mem" "ok"
 }
 
