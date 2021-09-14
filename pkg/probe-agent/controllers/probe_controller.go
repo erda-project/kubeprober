@@ -17,7 +17,9 @@ import (
 	"context"
 	"crypto/md5"
 	"fmt"
+	"math/rand"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
@@ -212,7 +214,7 @@ func (r *ProbeReconciler) ReconcileCronJob(ctx context.Context, probe *kubeprobe
 }
 
 func (r *ProbeReconciler) CreateCronJob(ctx context.Context, probe *kubeproberv1.Probe) error {
-	cj, err := genCronJob(probe)
+	cj, err := r.genCronJob(probe)
 	if err != nil {
 		return err
 	}
@@ -224,7 +226,7 @@ func (r *ProbeReconciler) CreateCronJob(ctx context.Context, probe *kubeproberv1
 }
 
 func (r *ProbeReconciler) UpdateCronJob(ctx context.Context, probe *kubeproberv1.Probe) error {
-	cj, err := genCronJob(probe)
+	cj, err := r.genCronJob(probe)
 	if err != nil {
 		return err
 	}
@@ -247,13 +249,16 @@ func (r *ProbeReconciler) createJob(ctx context.Context, probe *kubeproberv1.Pro
 	return nil
 }
 
-func genCronJob(probe *kubeproberv1.Probe) (cj batchv1beta1.CronJob, err error) {
+func (r *ProbeReconciler) genCronJob(probe *kubeproberv1.Probe) (cj batchv1beta1.CronJob, err error) {
 	j, err := genJob(probe)
 	if err != nil {
 		return
 	}
+	// generate random run interval if set
+	randomRunInterval := r.getRunIntervalRandom(probe)
+
 	trueVar := true
-	schedule := fmt.Sprintf("*/%d * * * *", probe.Spec.Policy.RunInterval)
+	schedule := fmt.Sprintf("*/%d * * * *", randomRunInterval)
 	cj = batchv1beta1.CronJob{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: probe.Namespace,
@@ -290,66 +295,94 @@ func genCronJob(probe *kubeproberv1.Probe) (cj batchv1beta1.CronJob, err error) 
 	return
 }
 
+func (r *ProbeReconciler) getRunIntervalRandom(probe *kubeproberv1.Probe) int {
+	policy := probe.Spec.Policy
+	name := probe.Name
+	// random not set, just return
+	if policy.RunIntervalRandom <= 0 {
+		return policy.RunInterval
+	}
+
+	random := policy.RunIntervalRandom
+	if random > policy.RunInterval {
+		random = policy.RunInterval / 3
+		e := fmt.Errorf("runIntervalRandom [%v] bigger then runInterval [%v]", policy.RunIntervalRandom, policy.RunInterval)
+		r.log.V(0).Error(e, "invalid runIntervalRandom")
+	}
+
+	now := time.Now().Unix()
+	rand.Seed(now)
+	ran := rand.Intn(random)
+	if now%2 == 0 {
+		ran = 0 - ran
+	}
+
+	r.log.V(0).Info("generate run interval", "probe name", name,
+		"origin policy", policy, "run interval random", ran, "new run interval", ran+policy.RunInterval)
+
+	return ran + policy.RunInterval
+}
+
 func genJob(probe *kubeproberv1.Probe) (j batchv1.Job, err error) {
-	envInject(probe)
-	probe.Spec.Template.ServiceAccountName = "kubeprober-worker"
-	trueVar := true
+	env, from := envInject(*probe)
 	// TODO: put this config in specific area
+	serviceAccountName := "kubeprober-worker"
+	trueVar := true
 	activeDeadlineSecond := int64(60 * 30)
 	backoffLimit := int32(0)
 	//jobTTL := int32(100)
 
 	// default restart policy for job: "Never"
-	policy := probe.Spec.Template.RestartPolicy
-	if policy == "" || policy == corev1.RestartPolicyAlways {
+	restartPolicy := probe.Spec.Template.RestartPolicy
+	if restartPolicy == "" || restartPolicy == corev1.RestartPolicyAlways {
 		probe.Spec.Template.RestartPolicy = corev1.RestartPolicyNever
 	}
+	// default image pull policy: "Always"
+	imagePullPolicy := corev1.PullAlways
 
-	j = batchv1.Job{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      probe.Name,
-			Namespace: probe.Namespace,
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion: probe.APIVersion,
-					Kind:       probe.Kind,
-					Name:       probe.Name,
-					UID:        probe.UID,
-					Controller: &trueVar,
-				},
+	j = *Job(probe.Name,
+		// job render
+		JobNamespace(probe.Namespace),
+		JobOwnerReference([]metav1.OwnerReference{
+			{
+				APIVersion: probe.APIVersion,
+				Kind:       probe.Kind,
+				Name:       probe.Name,
+				UID:        probe.UID,
+				Controller: &trueVar,
 			},
-			Labels: map[string]string{
+		}),
+		JobLabels(map[string]string{
+			kubeproberv1.LabelKeyApp:            kubeproberv1.LabelValueApp,
+			kubeproberv1.LabelKeyProbeNameSpace: probe.Namespace,
+			kubeproberv1.LabelKeyProbeName:      probe.Name,
+		}),
+		// job spec render
+		JobSpec(
+			JobSpecTmpLabels(map[string]string{
 				kubeproberv1.LabelKeyApp:            kubeproberv1.LabelValueApp,
 				kubeproberv1.LabelKeyProbeNameSpace: probe.Namespace,
 				kubeproberv1.LabelKeyProbeName:      probe.Name,
-			},
-		},
-		Spec: batchv1.JobSpec{
-			//TTLSecondsAfterFinished: &jobTTL,
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						kubeproberv1.LabelKeyApp:            kubeproberv1.LabelValueApp,
-						kubeproberv1.LabelKeyProbeNameSpace: probe.Namespace,
-						kubeproberv1.LabelKeyProbeName:      probe.Name,
-					},
-				},
-				Spec: probe.Spec.Template,
-			},
-			ActiveDeadlineSeconds: &activeDeadlineSecond,
-			BackoffLimit:          &backoffLimit,
-		},
-	}
+			}),
+			JobSpecActiveDeadlineSeconds(activeDeadlineSecond),
+			JobSpecBackoffLimit(backoffLimit),
+			JobSpecTmpPod(probe.Spec.Template),
+			JobSpecTmpServiceAccount(serviceAccountName),
+			JobSpecTmpRestartPolicy(restartPolicy),
+			JobSpecTmpImagePullPolicy(imagePullPolicy),
+			JobSpecTmpPodEnvs(env),
+			JobSpecTmpPodEnvSources(from),
+		),
+	)
 
 	return
 }
 
-func envInject(probe *kubeproberv1.Probe) {
-	set := map[string]string{
-		kubeproberv1.ProbeNamespace: "",
-		kubeproberv1.ProbeName:      "",
-	}
-	envFromSources := []corev1.EnvFromSource{}
+func envInject(probe kubeproberv1.Probe) (envs []corev1.EnvVar, envFromSources []corev1.EnvFromSource) {
+	envs = make([]corev1.EnvVar, 0)
+	envFromSources = make([]corev1.EnvFromSource, 0)
+
+	// env from
 	envFromSources = append(envFromSources,
 		corev1.EnvFromSource{
 			ConfigMapRef: &corev1.ConfigMapEnvSource{
@@ -358,7 +391,8 @@ func envInject(probe *kubeproberv1.Probe) {
 				}}},
 	)
 
-	ienvs := []corev1.EnvVar{
+	// envs
+	envs = []corev1.EnvVar{
 		{
 			Name:  kubeproberv1.ProbeNamespace,
 			Value: probe.Namespace,
@@ -372,27 +406,15 @@ func envInject(probe *kubeproberv1.Probe) {
 			Value: options.ProbeAgentConf.GetProbeStatusReportUrl(),
 		},
 	}
+
+	// env from probe configs
 	for i := range probe.Spec.Configs {
 		for j := range probe.Spec.Configs[i].Env {
-			ienvs = append(ienvs, probe.Spec.Configs[i].Env[j])
+			envs = append(envs, probe.Spec.Configs[i].Env[j])
 		}
 	}
-	for i := range probe.Spec.Template.Containers {
-		env := probe.Spec.Template.Containers[i].Env
-		for j, e := range env {
-			if _, ok := set[e.Name]; ok {
-				env = remove(env, j)
-			}
-		}
-		env = append(env, ienvs...)
-		probe.Spec.Template.Containers[i].Env = env
-		probe.Spec.Template.Containers[i].EnvFrom = envFromSources
-	}
 
-}
-
-func remove(slice []corev1.EnvVar, s int) []corev1.EnvVar {
-	return append(slice[:s], slice[s+1:]...)
+	return
 }
 
 type ProbePredicates struct {

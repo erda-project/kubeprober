@@ -39,6 +39,8 @@ const (
 type Policy struct {
 	// unit: minute
 	RunInterval int `json:"runInterval,omitempty"`
+	// add a random on run interval
+	RunIntervalRandom int `json:"runIntervalRandom,omitempty"`
 }
 
 // ProbeSpec defines the desired state of Probe

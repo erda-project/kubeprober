@@ -17,16 +17,17 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/erda-project/kubeprober/pkg/probe-master/controller"
-
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/klog"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -34,10 +35,8 @@ import (
 	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 	"github.com/erda-project/kubeprober/apistructs"
 	"github.com/erda-project/kubeprober/cmd/probe-master/options"
+	"github.com/erda-project/kubeprober/pkg/probe-master/controller"
 	server "github.com/erda-project/kubeprober/pkg/probe-master/tunnel-server"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
-	"k8s.io/klog"
 	// +kubebuilder:scaffold:imports
 )
 
