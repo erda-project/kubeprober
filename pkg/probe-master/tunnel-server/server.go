@@ -28,6 +28,7 @@ import (
 	"github.com/erda-project/kubeprober/apistructs"
 	"github.com/erda-project/kubeprober/pkg/probe-master/alert/dingding"
 	_ "github.com/erda-project/kubeprober/pkg/probe-master/k8sclient"
+	httphandler "github.com/erda-project/kubeprober/pkg/probe-master/tunnel-server/handler"
 	"github.com/gorilla/mux"
 	"github.com/rancher/remotedialer"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -163,6 +164,20 @@ func Start(ctx context.Context, cfg *Config) error {
 		collectProbeStatus(rw, req, dingdingAlert)
 	})
 
+	router.HandleFunc("/cluster", func(rw http.ResponseWriter,
+		req *http.Request) {
+		rw.WriteHeader(http.StatusOK)
+	})
+
+	router.HandleFunc("/cluster/query", func(rw http.ResponseWriter,
+		req *http.Request) {
+		httphandler.GetClusterList(rw, req)
+	})
+
+	router.HandleFunc("/cluster/search", func(rw http.ResponseWriter,
+		req *http.Request) {
+		json.NewEncoder(rw).Encode([]string{"NODECOUNT"})
+	})
 	server := &http.Server{
 		BaseContext: func(net.Listener) context.Context {
 			return ctx

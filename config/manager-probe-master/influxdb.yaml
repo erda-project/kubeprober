@@ -1,0 +1,100 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: influxdb
+  name: influxdb
+  namespace: kubeprober
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: influxdb
+  serviceName: influxdb
+  template:
+    metadata:
+      labels:
+        app: influxdb
+    spec:
+      containers:
+        - image: influxdb:2.0.6
+          name: influxdb
+          ports:
+            - containerPort: 8086
+              name: influxdb
+          resources:
+            limits:
+              cpu: "2"
+              memory: 4Gi
+            requests:
+              cpu: "1"
+              memory: 2Gi
+          volumeMounts:
+            - mountPath: /var/lib/influxdb2
+              name: data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        namespace: kubeprober
+      spec:
+        storageClassName: dice-local-volume
+        volumeMode: Filesystem
+        volumeName: pvc-kubeprober-influxdb
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10G
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pvc-kubeprober-influxdb
+spec:
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 1000Gi
+  local:
+    path: /data/localvolume/pvc-kubeprober-influxdb
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - { $HOSTNAME }
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: dice-local-volume
+  volumeMode: Filesystem
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: influxdb
+  namespace: kubeprober
+spec:
+  ports:
+    - name: influxdb
+      port: 8086
+      targetPort: 8086
+  selector:
+    app: influxdb
+  type: ClusterIP
+
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: influxdb
+  namespace: kubeprober
+spec:
+  rules:
+    - host: influxdb.erda-op.terminus.io
+      http:
+        paths:
+          - backend:
+              serviceName: influxdb
+              servicePort: 8086
