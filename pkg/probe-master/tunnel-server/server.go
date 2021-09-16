@@ -30,6 +30,8 @@ import (
 	_ "github.com/erda-project/kubeprober/pkg/probe-master/k8sclient"
 	httphandler "github.com/erda-project/kubeprober/pkg/probe-master/tunnel-server/handler"
 	"github.com/gorilla/mux"
+	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
+	influxdb2api "github.com/influxdata/influxdb-client-go/v2/api"
 	"github.com/rancher/remotedialer"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -124,9 +126,17 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 	return
 }
 
-func Start(ctx context.Context, cfg *Config) error {
+func Start(ctx context.Context, cfg *Config, influxdbConfig *apistructs.InfluxdbConf) error {
 	var dingdingAlert *kubeproberv1.Alert
 	var err error
+	var client influxdb2.Client
+	var writeAPI influxdb2api.WriteAPI
+
+	if influxdbConfig.InfluxdbEnable {
+		client = influxdb2.NewClient(influxdbConfig.InfluxdbHost, influxdbConfig.InfluxdbToken)
+		writeAPI = client.WriteAPI(influxdbConfig.InfluxdbOrg, influxdbConfig.InfluxdbBucket)
+		defer client.Close()
+	}
 
 	handler := remotedialer.New(Authorizer, remotedialer.DefaultErrorWriter)
 	handler.ClientConnectAuthorizer = func(proto, address string) bool {
@@ -161,7 +171,7 @@ func Start(ctx context.Context, cfg *Config) error {
 
 	router.HandleFunc("/collect", func(rw http.ResponseWriter,
 		req *http.Request) {
-		collectProbeStatus(rw, req, dingdingAlert)
+		collectProbeStatus(rw, req, dingdingAlert, writeAPI)
 	})
 
 	router.HandleFunc("/cluster", func(rw http.ResponseWriter,
@@ -202,7 +212,7 @@ func getDingDingAlert() (*kubeproberv1.Alert, error) {
 	return alert, nil
 }
 
-func collectProbeStatus(rw http.ResponseWriter, req *http.Request, alert *kubeproberv1.Alert) {
+func collectProbeStatus(rw http.ResponseWriter, req *http.Request, alert *kubeproberv1.Alert, influxdb2api influxdb2api.WriteAPI) {
 	ps := apistructs.CollectProbeStatusReq{}
 	var err error
 
@@ -212,6 +222,10 @@ func collectProbeStatus(rw http.ResponseWriter, req *http.Request, alert *kubepr
 		rw.WriteHeader(http.StatusBadRequest)
 		rw.Write([]byte(errMsg))
 		return
+	}
+	if influxdb2api != nil {
+		influxdb2api.WriteRecord(fmt.Sprintf("checker,cluster=%s,checker=%s result=\"%s###%s\"", ps.ClusterName, ps.CheckerName, ps.Status, ps.Message))
+		influxdb2api.Flush()
 	}
 	if alert.Spec.Token == "" || alert.Spec.Sign == "" {
 		return

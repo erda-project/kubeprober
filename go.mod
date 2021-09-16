@@ -10,6 +10,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/gosuri/uitable v0.0.4
+	github.com/influxdata/influxdb-client-go/v2 v2.5.0
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.13.0

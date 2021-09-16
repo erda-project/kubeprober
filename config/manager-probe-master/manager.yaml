@@ -23,13 +23,13 @@ spec:
         app: probe-master
     spec:
       containers:
-        - command:
-            - /probe-master
+        - image: kubeprober/probe-master:v0.1.0-beta4
+          imagePullPolicy: "Always"
+          command: ["/bin/sh"]
+          args: ["-c", "/probe-master --config-file=/opt/probe-master-conf.yaml"]
           env:
             - name: SERVER_SECRET_KEY
               value: your-token-here
-          image: kubeprober/probe-master:v0.1.0-beta2
-          imagePullPolicy: "Always"
           name: probe-master
           securityContext:
             allowPrivilegeEscalation: false
@@ -52,8 +52,28 @@ spec:
             requests:
               cpu: 100m
               memory: 20Mi
+          volumeMounts:
+            - name: probe-master-config-volume
+              mountPath: /opt
+      volumes:
+        - name: probe-master-config-volume
+          configMap:
+            name: probemaster
       serviceAccountName: kubeprober
       terminationGracePeriodSeconds: 10
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: probemaster
+  namespace: system
+data:
+  probe-master-conf.yaml: |
+      influxdb_enable: false
+      influxdb_host:
+      influxdb_token:
+      influxdb_org:
+      influxdb_bucket:
 ---
 apiVersion: v1
 kind: Service

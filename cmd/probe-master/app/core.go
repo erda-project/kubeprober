@@ -16,7 +16,11 @@ package app
 import (
 	"context"
 	"flag"
+	"fmt"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/erda-project/kubeprober/pkg/probe-master/controller"
@@ -28,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
+	"github.com/erda-project/kubeprober/apistructs"
 	"github.com/erda-project/kubeprober/cmd/probe-master/options"
 	server "github.com/erda-project/kubeprober/pkg/probe-master/tunnel-server"
 	"github.com/spf13/cobra"
@@ -59,15 +64,29 @@ func NewCmdProbeMasterManager(stopCh <-chan struct{}) *cobra.Command {
 		Short: "Launch probe-master",
 		Long:  "Launch probe-master",
 		Run: func(cmd *cobra.Command, args []string) {
+			viper.AutomaticEnv()
 			if ProbeMasterOptions.Version {
 				//fmt.Printf("%s: %#v\n", "probe-master", projectinfo.Get())
 				return
 			}
+			// Read from config file
+			configFile := ProbeMasterOptions.ConfigFile
+			if configFile != "" {
+				logrus.Infof("read config file: %s", configFile)
+				viper.SetConfigFile(configFile)
+				if err := viper.ReadInConfig(); err != nil {
+					klog.Errorf("failed to read config file %s: %+v", configFile, err)
+					return
+				}
+				viper.WatchConfig()
+			}
+
+			bindFlags(cmd, viper.GetViper())
 
 			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
 				klog.V(1).Infof("FLAG: --%s=%q", flag.Name, flag.Value)
 			})
-
+			klog.Errorf("config %+v\n", ProbeMasterOptions)
 			Run(ProbeMasterOptions)
 		},
 	}
@@ -77,7 +96,6 @@ func NewCmdProbeMasterManager(stopCh <-chan struct{}) *cobra.Command {
 }
 
 func Run(opts *options.ProbeMasterOptions) {
-
 	ctx := context.Background()
 
 	optts := zap.Options{
@@ -133,14 +151,20 @@ func Run(opts *options.ProbeMasterOptions) {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
-
+	influxdbConfig := &apistructs.InfluxdbConf{
+		InfluxdbEnable: opts.InfluxdbEnable,
+		InfluxdbHost:   opts.InfluxdbHost,
+		InfluxdbToken:  opts.InfluxdbToken,
+		InfluxdbOrg:    opts.InfluxdbOrg,
+		InfluxdbBucket: opts.InfluxdbBucket,
+	}
 	//start remote cluster dialer
 	klog.Infof("starting probe-master remote dialer server on :8088")
 	go server.Start(ctx, &server.Config{
 		Debug:   false,
 		Timeout: 0,
 		Listen:  opts.ProbeMasterListenAddr,
-	})
+	}, influxdbConfig)
 
 	setupLog.Info("starting manager")
 	time.Sleep(10 * time.Second)
@@ -149,4 +173,25 @@ func Run(opts *options.ProbeMasterOptions) {
 		os.Exit(1)
 	}
 
+}
+
+// Bind each cobra flag to its associated viper configuration (config file and environment variable)
+func bindFlags(cmd *cobra.Command, v *viper.Viper) {
+	cmd.Flags().VisitAll(func(f *pflag.Flag) {
+		if strings.Contains(f.Name, "-") {
+			// Environment variables can't have dashes in them, so bind them to their equivalent
+			// keys with underscores, e.g. --cluster-name to CLUSTER_NAME
+			envVar := strings.ToUpper(strings.ReplaceAll(f.Name, "-", "_"))
+			_ = v.BindEnv(f.Name, envVar)
+			// Config file keys must be same as flag keys by default, but usually keys with underscores is more widely used.
+			// So alias can be bind to the flag, e.g. --cluster-name to cluster_name
+			v.RegisterAlias(strings.ReplaceAll(f.Name, "-", "_"), f.Name)
+		}
+
+		// Apply the viper config value to the flag when the flag is not set and viper has a value
+		if !f.Changed && v.IsSet(f.Name) {
+			val := v.Get(f.Name)
+			_ = cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
+		}
+	})
 }
