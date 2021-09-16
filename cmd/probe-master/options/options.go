@@ -28,6 +28,12 @@ type ProbeMasterOptions struct {
 	CreateDefaultPool       bool
 	Version                 bool
 	ProbeMasterListenAddr   string
+	ConfigFile              string
+	InfluxdbEnable          bool
+	InfluxdbHost            string
+	InfluxdbToken           string
+	InfluxdbOrg             string
+	InfluxdbBucket          string
 }
 
 // NewProbeMasterOptions creates a new NewProbeMasterOptions with a default config.
@@ -42,6 +48,8 @@ func NewProbeMasterOptions() *ProbeMasterOptions {
 		Namespace:               "",
 		CreateDefaultPool:       false,
 		ProbeMasterListenAddr:   ":8088",
+		ConfigFile:              "",
+		InfluxdbEnable:          false,
 	}
 
 	return o
@@ -64,4 +72,10 @@ func (o *ProbeMasterOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.Namespace, "namespace", o.Namespace, "Namespace if specified restricts the manager's cache to watch objects in the desired namespace. Defaults to all namespaces.")
 	fs.BoolVar(&o.CreateDefaultPool, "create-default-pool", o.CreateDefaultPool, "Create default cloud/edge pools if indicated.")
 	fs.BoolVar(&o.Version, "version", o.Version, "print the version information.")
+	fs.StringVar(&o.ConfigFile, "config-file", o.ConfigFile, "read configurations from config file if set.")
+	fs.BoolVar(&o.InfluxdbEnable, "influxdb_enable", o.InfluxdbEnable, "if send probe event to influxdb or not.")
+	fs.StringVar(&o.InfluxdbHost, "influxdb_host", o.InfluxdbHost, "influxdb host value")
+	fs.StringVar(&o.InfluxdbToken, "influxdb_token", o.InfluxdbToken, "influxdb token value.")
+	fs.StringVar(&o.InfluxdbOrg, "influxdb_org", o.InfluxdbOrg, "influxdb org value.")
+	fs.StringVar(&o.InfluxdbBucket, "influxdb_bucket", o.InfluxdbBucket, "influxdb kucket value.")
 }

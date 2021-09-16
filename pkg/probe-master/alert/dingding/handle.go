@@ -68,7 +68,7 @@ func init() {
 			select {
 			case <-sendMsgCh:
 				sendMsg = sendMsg + fmt.Sprintf("%s", <-sendMsgCh)
-			case <-time.After(60 * time.Second):
+			case <-time.After(10 * time.Second):
 				if sendMsg != "" {
 					if err = sendAlertAfterAggregation(sendMsg); err != nil {
 						klog.Errorf("failed to send dingding proxy: %+v\n", err)

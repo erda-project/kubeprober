@@ -291,27 +291,36 @@ func GetProbeOfCluster(cluster *kubeproberv1.Cluster, probeName string) (*kubepr
 func UpdateProbeOfCluster(cluster *kubeproberv1.Cluster, probe *kubeproberv1.Probe) error {
 	var err error
 	var c client.Client
-	var patch []byte
+	remoteProbe := &kubeproberv1.Probe{}
+	//var patch []byte
 
 	c, err = GenerateProbeClient(cluster)
 	if err != nil {
 		return err
 	}
-	patchBody := kubeproberv1.Probe{
-		Spec: probe.Spec,
-	}
-	if patch, err = json.Marshal(patchBody); err != nil {
+	//patchBody := kubeproberv1.Probe{
+	//	Spec: probe.Spec,
+	//}
+	//if patch, err = json.Marshal(patchBody); err != nil {
+	//	return err
+	//}
+	//if err = c.Patch(context.Background(), &kubeproberv1.Probe{
+	//	ObjectMeta: metav1.ObjectMeta{
+	//		Name:      probe.Name,
+	//		Namespace: cluster.Spec.ClusterConfig.ProbeNamespaces,
+	//	},
+	//}, client.RawPatch(types.ApplyPatchType, patch)); err != nil {
+	//	return err
+	//}
+	if remoteProbe, err = GetProbeOfCluster(cluster, probe.Name); err != nil {
 		return err
 	}
-	if err = c.Patch(context.Background(), &kubeproberv1.Probe{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      probe.Name,
-			Namespace: cluster.Spec.ClusterConfig.ProbeNamespaces,
-		},
-	}, client.RawPatch(types.MergePatchType, patch)); err != nil {
+	remoteProbe.TypeMeta.Kind = "Probe"
+	remoteProbe.TypeMeta.APIVersion = "kubeprober.erda.cloud/v1"
+	remoteProbe.Spec = probe.Spec
+	if err = c.Update(context.Background(), remoteProbe); err != nil {
 		return err
 	}
-
 	return nil
 }
 
