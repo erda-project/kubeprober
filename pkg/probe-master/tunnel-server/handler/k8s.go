@@ -18,6 +18,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
+	"time"
 
 	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 	"github.com/erda-project/kubeprober/pkg/probe-master/k8sclient"
@@ -25,6 +27,8 @@ import (
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+const DINGDING_ALERT_NAME = "dingding"
 
 type Column struct {
 	Text string `json:"text"`
@@ -35,6 +39,11 @@ type TableResponse struct {
 	Columns []Column        `json:"columns"`
 	Rows    [][]interface{} `json:"rows"`
 	Type    string          `json:"type"`
+}
+
+type TimeSerieResponse struct {
+	Tatget     string    `json:"target"`
+	Datapoints [][]int64 `json:"datapoints"`
 }
 
 func GetClusterList(rw http.ResponseWriter, req *http.Request) {
@@ -75,6 +84,42 @@ func GetClusterList(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	if err := json.NewEncoder(rw).Encode([]TableResponse{resp}); err != nil {
+		klog.Errorf("json encode for cluster list error: %+v\n", err)
+	}
+}
+
+func GetAlertStatistic(rw http.ResponseWriter, req *http.Request) {
+	var err error
+	var listRow [][]int64
+	alert := &kubeproberv1.Alert{}
+
+	if err = k8sclient.RestClient.Get(context.Background(), client.ObjectKey{
+		Namespace: metav1.NamespaceDefault,
+		Name:      DINGDING_ALERT_NAME,
+	}, alert); err != nil {
+		errMsg := fmt.Sprintf("[alert statistic query] failed to get dingding alert statistic: %+v\n", err)
+		rw.Write([]byte(errMsg))
+		rw.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	l, _ := time.LoadLocation("Asia/Shanghai")
+	for k, v := range alert.Status.AlertCount {
+		var list []int64
+
+		ts, _ := time.ParseInLocation("2006-01-02 15:04:05", fmt.Sprintf("%s 23:59:59", k), l)
+		list = append(list, int64(v))
+		list = append(list, ts.Unix()*1000)
+		listRow = append(listRow, list)
+	}
+	sort.Slice(listRow, func(i, j int) bool {
+		return listRow[i][1] > listRow[j][1]
+	})
+	resp := TimeSerieResponse{
+		Tatget:     "count",
+		Datapoints: listRow,
+	}
+
+	if err := json.NewEncoder(rw).Encode([]TimeSerieResponse{resp}); err != nil {
 		klog.Errorf("json encode for cluster list error: %+v\n", err)
 	}
 }
