@@ -188,6 +188,21 @@ func Start(ctx context.Context, cfg *Config, influxdbConfig *apistructs.Influxdb
 		req *http.Request) {
 		json.NewEncoder(rw).Encode([]string{"NODECOUNT"})
 	})
+
+	router.HandleFunc("/alertstatistic", func(rw http.ResponseWriter,
+		req *http.Request) {
+		rw.WriteHeader(http.StatusOK)
+	})
+
+	router.HandleFunc("/alertstatistic/query", func(rw http.ResponseWriter,
+		req *http.Request) {
+		httphandler.GetAlertStatistic(rw, req)
+	})
+
+	router.HandleFunc("/alertstatistic/search", func(rw http.ResponseWriter,
+		req *http.Request) {
+		json.NewEncoder(rw).Encode([]string{})
+	})
 	server := &http.Server{
 		BaseContext: func(net.Listener) context.Context {
 			return ctx
