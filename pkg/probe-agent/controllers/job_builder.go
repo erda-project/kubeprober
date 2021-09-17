@@ -123,8 +123,8 @@ func JobSpecTmpPodEnvs(envs []corev1.EnvVar) JobSpecOp {
 			c := &spec.Template.Spec.Containers[i]
 			if c.Env == nil {
 				c.Env = make([]corev1.EnvVar, 0)
-				c.Env = append(c.Env, envs...)
 			}
+			c.Env = append(c.Env, envs...)
 		}
 	}
 }
@@ -135,8 +135,8 @@ func JobSpecTmpPodEnvSources(s []corev1.EnvFromSource) JobSpecOp {
 			c := &spec.Template.Spec.Containers[i]
 			if c.EnvFrom == nil {
 				c.EnvFrom = make([]corev1.EnvFromSource, 0)
-				c.EnvFrom = append(c.EnvFrom, s...)
 			}
+			c.EnvFrom = append(c.EnvFrom, s...)
 		}
 	}
 }
