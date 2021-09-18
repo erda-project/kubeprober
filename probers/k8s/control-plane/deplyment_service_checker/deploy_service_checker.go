@@ -34,7 +34,7 @@ func NewChecker() (*DeployServiceChecker, error) {
 	}
 	return &DeployServiceChecker{
 		client:  client,
-		Name:    "deployment-service-check",
+		Name:    defaultCheckerValue,
 		Timeout: cfg.CheckTimeout,
 	}, nil
 }
@@ -67,21 +67,6 @@ func (dc *DeployServiceChecker) SetTimeout(t time.Duration) {
 func (dc *DeployServiceChecker) DoCheck() (err error) {
 	ctx := context.Background()
 
-	// namespace create
-	err = createDeploymentNamespace(ctx, dc.client)
-	if err != nil {
-		return err
-	}
-
-	// namespace clean
-	defer func() {
-		err = deleteNamespace(ctx, dc.client)
-		if err != nil {
-			logrus.Errorf("clean resource, delete namespace failed, namespace: %s, error: %v", cfg.CheckNamespace, err)
-			return
-		}
-	}()
-
 	// deployment create
 	err = createDeployment(ctx, dc.client)
 	if err != nil {
@@ -91,6 +76,9 @@ func (dc *DeployServiceChecker) DoCheck() (err error) {
 
 	// deployment clean
 	defer func() {
+		if !cfg.ResourceAutoReap {
+			return
+		}
 		err = deleteDeploymentAndWait(ctx, dc.client)
 		if err != nil {
 			logrus.Errorf("clean resource, delete deployment failed, deployment: %s, error: %v", cfg.CheckDeploymentName, err)
@@ -107,6 +95,9 @@ func (dc *DeployServiceChecker) DoCheck() (err error) {
 
 	// service clean
 	defer func() {
+		if !cfg.ResourceAutoReap {
+			return
+		}
 		err = deleteServiceAndWait(ctx, dc.client)
 		if err != nil {
 			logrus.Errorf("clean resource, delete service failed, service: %s, error: %v", cfg.CheckServiceName, err)

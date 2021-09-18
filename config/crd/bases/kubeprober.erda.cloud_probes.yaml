@@ -170,6 +170,9 @@ spec:
                   runInterval:
                     description: 'unit: minute'
                     type: integer
+                  runIntervalRandom:
+                    description: add a random on run interval
+                    type: integer
                 type: object
               template:
                 description: PodSpec is a description of a pod.

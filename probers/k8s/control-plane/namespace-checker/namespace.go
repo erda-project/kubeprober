@@ -14,18 +14,18 @@ import (
 
 func createDeploymentNamespace(ctx context.Context, client *kubernetes.Clientset) error {
 	// check namespace, delete it if exist
-	_, err := client.CoreV1().Namespaces().Get(ctx, cfg.CheckNamespace, metav1.GetOptions{})
+	_, err := client.CoreV1().Namespaces().Get(ctx, CheckNewNamespace, metav1.GetOptions{})
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
-			logrus.Infof("namespace [%s] not found, create it", cfg.CheckNamespace)
+			logrus.Infof("namespace [%s] not found, create it", CheckNewNamespace)
 		} else {
-			logrus.Errorf("get namespace failed, namespace: %s, error: %v", cfg.CheckNamespace, err)
+			logrus.Errorf("get namespace failed, namespace: %s, error: %v", CheckNewNamespace, err)
 			return err
 		}
 	} else {
 		err := deleteNamespace(ctx, client)
 		if err != nil {
-			log.Errorf("delete previous namespaces failed, namespace: %s, error: %v", cfg.CheckNamespace, err)
+			log.Errorf("delete previous namespaces failed, namespace: %s, error: %v", CheckNewNamespace, err)
 			return err
 		}
 	}
@@ -33,10 +33,10 @@ func createDeploymentNamespace(ctx context.Context, client *kubernetes.Clientset
 	// create namespace
 	err = createNamespace(ctx, client)
 	if err != nil {
-		log.Errorf("create namespace failed, namespace: %s, error: %v", cfg.CheckNamespace, err)
+		log.Errorf("create namespace failed, namespace: %s, error: %v", CheckNewNamespace, err)
 		return err
 	}
-	log.Infof("create namespace successfully, namespace: %s", cfg.CheckNamespace)
+	log.Infof("create namespace successfully, namespace: %s", CheckNewNamespace)
 	return nil
 }
 
@@ -44,12 +44,12 @@ func createNamespace(ctx context.Context, client *kubernetes.Clientset) error {
 	// create namespace
 	namespace := corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: cfg.CheckNamespace,
+			Name: CheckNewNamespace,
 		},
 	}
 	_, err := client.CoreV1().Namespaces().Create(ctx, &namespace, metav1.CreateOptions{})
 	if err != nil {
-		logrus.Errorf("create namespace failed, namespace: %s, error: %v", cfg.CheckNamespace, err)
+		logrus.Errorf("create namespace failed, namespace: %s, error: %v", CheckNewNamespace, err)
 		return err
 	}
 
@@ -59,7 +59,7 @@ func createNamespace(ctx context.Context, client *kubernetes.Clientset) error {
 		// Watch that it is up.
 		watch, err := client.CoreV1().Namespaces().Watch(ctx, metav1.ListOptions{
 			Watch:         true,
-			FieldSelector: "metadata.name=" + cfg.CheckNamespace,
+			FieldSelector: "metadata.name=" + CheckNewNamespace,
 		})
 		if err != nil {
 			return err
@@ -95,21 +95,21 @@ func createNamespace(ctx context.Context, client *kubernetes.Clientset) error {
 func deleteNamespace(ctx context.Context, client *kubernetes.Clientset) error {
 	period := int64(0)
 
-	_, err := client.CoreV1().Namespaces().Get(ctx, cfg.CheckNamespace, metav1.GetOptions{})
+	_, err := client.CoreV1().Namespaces().Get(ctx, CheckNewNamespace, metav1.GetOptions{})
 	if err != nil && k8sErrors.IsNotFound(err) {
 		logrus.Infof("namespace deleted")
 		return nil
 	}
 
-	err = client.CoreV1().Namespaces().Delete(ctx, cfg.CheckNamespace, metav1.DeleteOptions{GracePeriodSeconds: &period})
+	err = client.CoreV1().Namespaces().Delete(ctx, CheckNewNamespace, metav1.DeleteOptions{GracePeriodSeconds: &period})
 	if err != nil {
-		logrus.Errorf("delete namespace failed, namespace: %s, error: %v", cfg.CheckNamespace, err)
+		logrus.Errorf("delete namespace failed, namespace: %s, error: %v", CheckNewNamespace, err)
 		return err
 	}
 	for {
 		logrus.Infoln("Watching for namespace deleted.")
 		time.Sleep(3 * time.Second)
-		_, err := client.CoreV1().Namespaces().Get(ctx, cfg.CheckNamespace, metav1.GetOptions{})
+		_, err := client.CoreV1().Namespaces().Get(ctx, CheckNewNamespace, metav1.GetOptions{})
 		if err != nil && k8sErrors.IsNotFound(err) {
 			logrus.Infof("namespace deleted")
 			return nil

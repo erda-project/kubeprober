@@ -101,6 +101,6 @@ var probe = kubeproberv1.Probe{
 
 func TestEnvInject(t *testing.T) {
 	pItem := probe.Spec
-	envInject(&probe)
+	envInject(probe)
 	logrus.Infof("probe item:%++v", pItem)
 }
