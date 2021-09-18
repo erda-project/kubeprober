@@ -89,7 +89,11 @@ function check_docker_notify() {
     if cat /etc/systemd/system/docker.service |grep 'Type=notify' >/dev/null 2>&1; then
         echo docker_service_notify ok
     else
+        if cat /etc/systemd/system/multi-user.target.wants/docker.service |grep 'Type=notify' >/dev/null 2>&1; then
+          echo docker_service_notify ok
+        else
         echo docker_service_notify error "docker service is not Type=notify"
+        fi
     fi
 }
 

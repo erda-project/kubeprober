@@ -239,7 +239,15 @@ func collectProbeStatus(rw http.ResponseWriter, req *http.Request, alert *kubepr
 		return
 	}
 	if influxdb2api != nil {
-		influxdb2api.WriteRecord(fmt.Sprintf("checker,cluster=%s,checker=%s result=\"%s###%s\"", ps.ClusterName, ps.CheckerName, ps.Status, ps.Message))
+		//influxdb2api.WriteRecord(fmt.Sprintf("checker,cluster=%s,checker=%s,probe=%s result=\"%s###%s\"", ps.ClusterName, ps.CheckerName, ps.ProbeName, ps.Status, ps.Message))
+		p := influxdb2.NewPointWithMeasurement("checker").
+			AddTag("cluster", ps.ClusterName).
+			AddTag("checker", ps.CheckerName).
+			AddTag("probe", ps.ProbeName).
+			AddField("result", fmt.Sprintf("%s###%s", ps.Status, ps.Message)).
+			SetTime(time.Now())
+		// Flush writes
+		influxdb2api.WritePoint(p)
 		influxdb2api.Flush()
 	}
 	if alert.Spec.Token == "" || alert.Spec.Sign == "" {
