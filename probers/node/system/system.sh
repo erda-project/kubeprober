@@ -66,7 +66,7 @@ function check_buddy_info() {
     }')
     if [[ $compact_flag == "ok" ]]
     then
-        echo "host_buddy_info" "error" "buddy_info need to be compact"
+        echo "host_buddy_info" "warn" "buddy_info need to be compact"
     else
         echo "host_buddy_info" "ok"
     fi
@@ -144,7 +144,7 @@ function check_not_k8s_container() {
     # check by container label and create time
     old=$(date +"%Y-%m-%d" -d "-1day")
     if docker ps --format "table {{.Names}}\t{{.CreatedAt}}\t{{.Labels}}"|tail -n +2|grep -iv "io.kubernetes.pod.name"| awk '{if ($2<"'$old'") {print $1 " not_k8s_container"}}'|grep "not_k8s_container" >/dev/null 2>&1; then
-        echo host_not_k8s_container error "host have container is not k8s container"
+        echo host_not_k8s_container warn "host have container is not k8s container"
     else
         echo host_not_k8s_container ok
     fi

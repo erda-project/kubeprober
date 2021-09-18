@@ -17,12 +17,15 @@ function check_elasticsearch() {
     fi
 
     # create index
-    code=$(curl --connect-timeout 3 -sL -w "%{http_code}"  -X PUT "$ip:9200/probe_test_index" -o /tmp/create_es_index_result)
-    if [[ $code != 200 ]]
-    then
-      reason=$(cat /tmp/create_es_index_result | jq '.error.reason')
-      report-status --name=check_elasticsearch --status=error --message="create index error: $reason"
-      return 1
+    status=$(curl -s --connect-timeout 3 "$ip:9200/_cat/indices" | grep "probe_test_index")
+    if [[ $status ==  "" ]]; then
+      code=$(curl --connect-timeout 3 -sL -w "%{http_code}"  -X PUT "$ip:9200/probe_test_index" -o /tmp/create_es_index_result)
+      if [[ $code != 200 ]]
+      then
+        reason=$(cat /tmp/create_es_index_result | jq '.error.reason')
+        report-status --name=check_elasticsearch --status=error --message="create index error: $reason"
+        return 1
+      fi
     fi
 
     # delete index
