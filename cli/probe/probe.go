@@ -32,6 +32,7 @@ func main() {
 	cmd.AddCommand(app.StatusCmd)
 	cmd.AddCommand(app.OnceCmd)
 	cmd.AddCommand(app.OnceStatusCmd)
+	cmd.AddCommand(app.OpsCmd)
 	if err := cmd.Execute(); err != nil {
 		panic(err)
 	}

@@ -25,6 +25,8 @@ var (
 	probes      string
 	onceID      string
 	isList      bool
+	listAgent   bool
+	agentImage  string
 )
 
 func init() {
@@ -37,6 +39,10 @@ func init() {
 	OnceStatusCmd.PersistentFlags().StringVarP(&clusterName, "cluster", "c", "", "Name of specify cluster")
 	OnceStatusCmd.PersistentFlags().StringVarP(&onceID, "id", "i", "", "Id of one-time probe, print laste one-time default")
 	OnceStatusCmd.PersistentFlags().BoolVarP(&isList, "list", "l", false, "List history once-time probe status")
+
+	OpsCmd.PersistentFlags().BoolVarP(&listAgent, "list-agent", "", false, "List all agent")
+	OpsCmd.PersistentFlags().StringVarP(&agentImage, "set-agent-image", "", "", "Set image of agent")
+
 }
 
 // NewCmdProbeStatusManager creates a *cobra.Command object with default parameters
