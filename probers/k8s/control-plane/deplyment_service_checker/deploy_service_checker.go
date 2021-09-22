@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 
 	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
@@ -70,8 +71,24 @@ func (dc *DeployServiceChecker) DoCheck() (err error) {
 	// deployment create
 	err = createDeployment(ctx, dc.client)
 	if err != nil {
-		logrus.Errorf("create deployment failed, error: %v", err)
-		return err
+		if k8sErrors.IsAlreadyExists(err) {
+			// delete if exist
+			logrus.Infof("deployement already exist, delete it first")
+			err = deleteDeploymentAndWait(ctx, dc.client)
+			if err != nil {
+				logrus.Errorf("delete deployment failed, deployment: %s, error: %v", cfg.CheckDeploymentName, err)
+				return
+			}
+			// create after delete
+			err = createDeployment(ctx, dc.client)
+			if err != nil {
+				logrus.Errorf("create deployment failed againt, error: %v", err)
+				return
+			}
+		} else {
+			logrus.Errorf("create deployment failed, error: %v", err)
+			return err
+		}
 	}
 
 	// deployment clean
@@ -89,8 +106,24 @@ func (dc *DeployServiceChecker) DoCheck() (err error) {
 	// service create
 	err = createService(ctx, dc.client)
 	if err != nil {
-		logrus.Errorf("create service failed, error: %v", err)
-		return err
+		if k8sErrors.IsAlreadyExists(err) {
+			// delete if exist
+			logrus.Infof("service already exist, delete it first")
+			err = deleteServiceAndWait(ctx, dc.client)
+			if err != nil {
+				logrus.Errorf("service deployment failed, service: %s, error: %v", cfg.CheckServiceName, err)
+				return
+			}
+			// create again after delete
+			err = createService(ctx, dc.client)
+			if err != nil {
+				logrus.Errorf("create service failed again, error: %v", err)
+				return err
+			}
+		} else {
+			logrus.Errorf("create service failed, error: %v", err)
+			return err
+		}
 	}
 
 	// service clean
