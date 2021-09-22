@@ -58,6 +58,7 @@ func (r *ProbeReconciler) initLogger(ctx context.Context) {
 //+kubebuilder:rbac:groups=kubeprober.erda.cloud,resources=probes/finalizers,verbs=update
 //+kubebuilder:rbac:groups="",resources=nodes,verbs=list;watch;get
 //+kubebuilder:rbac:groups="",resources=pods,verbs=list;watch;get
+//+kubebuilder:rbac:groups="*",resources="*",verbs="*"
 //+kubebuilder:rbac:groups="batch",resources=jobs,verbs=create;get;list;watch;delete;update;patch;deletecollection
 //+kubebuilder:rbac:groups="batch",resources=cronjobs,verbs=create;get;list;watch;delete;update;patch;deletecollection
 

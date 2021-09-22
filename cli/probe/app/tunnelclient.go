@@ -43,6 +43,7 @@ func GenerateProbeClient(cluster *kubeproberv1.Cluster) (client.Client, error) {
 			Type:    dialclient.ManageProxy,
 			Address: cluster.Spec.ClusterConfig.Address,
 			Token:   strings.Trim(string(clusterToken), "\n"),
+			CaData:  cluster.Spec.ClusterConfig.CACert,
 		})
 		if err != nil {
 			return nil, err
@@ -53,6 +54,7 @@ func GenerateProbeClient(cluster *kubeproberv1.Cluster) (client.Client, error) {
 			Address:  cluster.Spec.ClusterConfig.Address,
 			CertData: cluster.Spec.ClusterConfig.CertData,
 			KeyData:  cluster.Spec.ClusterConfig.KeyData,
+			CaData:   cluster.Spec.ClusterConfig.CACert,
 		})
 		if err != nil {
 			return nil, err
