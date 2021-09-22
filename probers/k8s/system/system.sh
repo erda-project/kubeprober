@@ -39,12 +39,16 @@ function is_daemonset_ready() {
     fi
     numberReady=$(kubectl get ds $1 -n $namespace -o jsonpath={.status.numberReady})
     observedGeneration=$(kubectl get ds $1 -n $namespace -o jsonpath={.status.observedGeneration})
+    currentNumberScheduled=$(kubectl get ds $1 -n $namespace -o jsonpath={.status.currentNumberScheduled})
     if [[ -z $observedGeneration ]]; then
         echo $1 error "empty observedGeneration"
         return
     fi
-    if [ $desiredNumberScheduled != $numberReady ]; then
-        echo $1 error "desiredNumberScheduled != numberReady"
+
+    if [ $desiredNumberScheduled != $currentNumberScheduled ]; then
+        echo $1 error "desiredNumberScheduled != currentNumberScheduled"
+    elif [ $desiredNumberScheduled != $numberReady ]; then
+        echo $1 warn "desiredNumberScheduled != numberReady"
     else
         echo $1 pass
     fi
@@ -61,7 +65,7 @@ function is_components_healthy () {
 
 # check whether k8s core components status
 function check_k8s_status() {
-    is_components_healthy
+#    is_components_healthy
 
     is_daemonset_ready calico-node kube-system
     is_daemonset_ready coredns kube-system
