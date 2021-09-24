@@ -106,8 +106,10 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 			HeartBeatTimeStamp: time.Now().In(loc).Format("2006-01-02 15:04:05"),
 			NodeCount:          hbData.NodeCount,
 			Checkers:           hbData.Checkers,
+			ExtraStatus:        hbData.ExtraStatus,
 		},
 	}
+	fmt.Printf("%v\n", statusPatchBody)
 	statusPatch, _ := json.Marshal(statusPatchBody)
 	err = k8sclient.RestClient.Status().Patch(context.Background(), &kubeproberv1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{

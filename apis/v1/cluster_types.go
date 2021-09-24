@@ -53,11 +53,12 @@ type ClusterConfig struct {
 type ClusterStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	HeartBeatTimeStamp string          `json:"heartBeatTimeStamp,omitempty"`
-	NodeCount          int             `json:"nodeCount,omitempty"`
-	AttachedProbes     []string        `json:"attachedProbes,omitempty"`
-	Checkers           string          `json:"checkers,omitempty"`
-	OnceProbeList      []OnceProbeItem `json:"onceProbeList,omitempty"`
+	HeartBeatTimeStamp string            `json:"heartBeatTimeStamp,omitempty"`
+	NodeCount          int               `json:"nodeCount,omitempty"`
+	AttachedProbes     []string          `json:"attachedProbes,omitempty"`
+	Checkers           string            `json:"checkers,omitempty"`
+	OnceProbeList      []OnceProbeItem   `json:"onceProbeList,omitempty"`
+	ExtraStatus        map[string]string `json:"extraStatus,omitempty"`
 }
 
 type OnceProbeItem struct {

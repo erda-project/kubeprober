@@ -105,6 +105,10 @@ spec:
                 type: array
               checkers:
                 type: string
+              extraStatus:
+                additionalProperties:
+                  type: string
+                type: object
               heartBeatTimeStamp:
                 description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
                   of cluster Important: Run "make" to regenerate code after modifying
