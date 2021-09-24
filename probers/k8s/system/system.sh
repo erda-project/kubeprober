@@ -178,6 +178,7 @@ function check_node_label() {
     if [[ $location_label_count -gt 0  ]] && [[ $location_stateful_label_count -lt 3  ]]
     then
         echo k8s_node_label error "location-cluster-service / stateful-service tag less than 3"
+        return
     fi
     echo k8s_node_label pass
 }
