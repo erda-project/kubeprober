@@ -66,6 +66,18 @@ func GetClusterList(rw http.ResponseWriter, req *http.Request) {
 		list = append(list, i.Spec.ClusterConfig.ProbeNamespaces)
 		list = append(list, i.Status.AttachedProbes)
 		list = append(list, i.Status.Checkers)
+		list = append(list, i.Status.ExtraStatus["diceDomain"])
+		list = append(list, i.Status.ExtraStatus["diceVersion"])
+		list = append(list, i.Status.ExtraStatus["diceProto"])
+		list = append(list, i.Status.ExtraStatus["idEdge"])
+		list = append(list, i.Status.ExtraStatus["idFdpCluster"])
+		list = append(list, i.Status.ExtraStatus["storageType"])
+		list = append(list, i.Status.ExtraStatus["netdataUsed"])
+		list = append(list, i.Status.ExtraStatus["k8sVendor"])
+		list = append(list, i.Status.ExtraStatus["masterNode"])
+		list = append(list, i.Status.ExtraStatus["lbNode"])
+		list = append(list, i.Status.ExtraStatus["mysqlHost"])
+		list = append(list, i.Status.ExtraStatus["nacosAddr"])
 		list = append(list, i.Status.HeartBeatTimeStamp)
 		listRow = append(listRow, list)
 	}
@@ -77,6 +89,18 @@ func GetClusterList(rw http.ResponseWriter, req *http.Request) {
 			{Text: "PROBENAMESPACE", Type: "string"},
 			{Text: "PROBE", Type: "string"},
 			{Text: "TOTAL/ERROR", Type: "string"},
+			{Text: "ERDADOMAIN", Type: "string"},
+			{Text: "ERDAVERSION", Type: "string"},
+			{Text: "ERDAPROTO", Type: "string"},
+			{Text: "ISEDGE", Type: "string"},
+			{Text: "ISFDPCLUSTER", Type: "string"},
+			{Text: "STORAGETYPE", Type: "string"},
+			{Text: "NETDATAUESD", Type: "string"},
+			{Text: "K8SVENDER", Type: "string"},
+			{Text: "MASTERNODE", Type: "string"},
+			{Text: "LBNODE", Type: "string"},
+			{Text: "MYSQLHOST", Type: "string"},
+			{Text: "NACOSADDR", Type: "string"},
 			{Text: "HEARTBEATTIME", Type: "string"},
 		},
 		Rows: listRow,

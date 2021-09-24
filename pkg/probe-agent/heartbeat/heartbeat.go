@@ -1,3 +1,16 @@
+// Copyright (c) 2021 Terminus, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package heartbeat
 
 import (
@@ -22,6 +35,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/kubernetes"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog"
@@ -105,6 +119,7 @@ func initClientSet() (client.Client, *kubernetes.Clientset, *rest.Config, error)
 
 	scheme := runtime.NewScheme()
 	kubeproberv1.AddToScheme(scheme)
+	clientgoscheme.AddToScheme(scheme)
 	k8sRestClient, err = client.New(config, client.Options{Scheme: scheme})
 	if err != nil {
 		return nil, nil, nil, err
@@ -124,6 +139,7 @@ func sendHeartBeat(heartBeatAddr string, clusterName string) error {
 	var checkerStatus string
 	var k8sRestClient client.Client
 	var caData []byte
+	var extraStatus map[string]string
 
 	if k8sRestClient, clientset, config, err = initClientSet(); err != nil {
 		return err
@@ -143,7 +159,7 @@ func sendHeartBeat(heartBeatAddr string, clusterName string) error {
 	if err != nil {
 		klog.Errorf("could not find ca file %+v\n", err)
 	}
-
+	extraStatus = getExtraStatus(k8sRestClient, config)
 	hbData := apistructs.HeartBeatReq{
 		Name:           clusterName,
 		Address:        config.Host,
@@ -155,6 +171,7 @@ func sendHeartBeat(heartBeatAddr string, clusterName string) error {
 		Version:        version.String(),
 		NodeCount:      len(nodes.Items),
 		Checkers:       checkerStatus,
+		ExtraStatus:    extraStatus,
 	}
 	json_data, _ := json.Marshal(hbData)
 	if rsp, err = http.Post(heartBeatAddr, "application/json", bytes.NewBuffer(json_data)); err != nil {

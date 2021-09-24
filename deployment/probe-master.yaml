@@ -170,6 +170,10 @@ spec:
                 type: array
               checkers:
                 type: string
+              extraStatus:
+                additionalProperties:
+                  type: string
+                type: object
               heartBeatTimeStamp:
                 description: 'INSERT ADDITIONAL STATUS FIELD - define observed state of cluster Important: Run "make" to regenerate code after modifying this file'
                 type: string
@@ -4587,7 +4591,7 @@ spec:
         env:
         - name: SERVER_SECRET_KEY
           value: your-token-here
-        image: kubeprober/probe-master:v0.1.0-beta5
+        image: kubeprober/probe-master:v0.1.0-beta8
         imagePullPolicy: Always
         livenessProbe:
           httpGet:

@@ -17,16 +17,17 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // HeartBeatReq heatbeat request struct between probe-master and probe-agent
 type HeartBeatReq struct {
-	Name           string `json:"name"`
-	Address        string `json:"address"`
-	CaData         string `json:"caData"`
-	CertData       string `json:"certData"`
-	KeyData        string `json:"keyData"`
-	Token          string `json:"token"`
-	Version        string `json:"version"`
-	NodeCount      int    `json:"nodeCount"`
-	ProbeNamespace string `json:"probeNamespace"`
-	Checkers       string `json:"checkers"`
+	Name           string            `json:"name"`
+	Address        string            `json:"address"`
+	CaData         string            `json:"caData"`
+	CertData       string            `json:"certData"`
+	KeyData        string            `json:"keyData"`
+	Token          string            `json:"token"`
+	Version        string            `json:"version"`
+	NodeCount      int               `json:"nodeCount"`
+	ProbeNamespace string            `json:"probeNamespace"`
+	Checkers       string            `json:"checkers"`
+	ExtraStatus    map[string]string `json:"extraStatus"`
 }
 
 type CollectProbeStatusReq struct {
