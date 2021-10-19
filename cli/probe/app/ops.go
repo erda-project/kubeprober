@@ -16,10 +16,13 @@ package app
 import (
 	"context"
 	"fmt"
+
 	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 	"github.com/gosuri/uitable"
 	"github.com/spf13/cobra"
 	appv1 "k8s.io/api/apps/v1"
+	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -33,8 +36,8 @@ var OpsCmd = &cobra.Command{
 			return ListAgent()
 		}
 
-		if agentImage != "" {
-			return UpdateAgentImage(agentImage)
+		if agentImage != "" || agentCpuLimit != "" || agentMemoryLimit != "" {
+			return UpdateAgentSetting(agentImage, agentCpuLimit, agentMemoryLimit)
 		}
 		return func() error {
 			fmt.Printf("I am ops tool cli of kubeprober!\n")
@@ -54,7 +57,7 @@ func ListAgent() error {
 	table := uitable.New()
 	table.MaxColWidth = 70
 	table.Wrap = true
-	table.AddRow("CLUSTER", "IMAGE")
+	table.AddRow("CLUSTER", "IMAGE", "CPUSET", "MEMORYSET")
 	for _, v := range clusterList.Items {
 		GetAgentInfo(&v, table)
 	}
@@ -81,10 +84,10 @@ func GetAgentInfo(cluster *kubeproberv1.Cluster, table *uitable.Table) {
 		table.AddRow(cluster.Name, result)
 		return
 	}
-	table.AddRow(cluster.Name, agentDeploy.Spec.Template.Spec.Containers[0].Image)
+	table.AddRow(cluster.Name, agentDeploy.Spec.Template.Spec.Containers[0].Image, agentDeploy.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu(), agentDeploy.Spec.Template.Spec.Containers[0].Resources.Limits.Memory())
 }
 
-func UpdateAgentImage(imageName string) error {
+func UpdateAgentSetting(imageName string, agentCpuLimit string, agentMemoryLimit string) error {
 	var err error
 	clusterList := &kubeproberv1.ClusterList{}
 	if err = k8sRestClient.List(context.Background(), clusterList); err != nil {
@@ -97,13 +100,13 @@ func UpdateAgentImage(imageName string) error {
 	table.Wrap = true
 	table.AddRow("CLUSTER", "RESULT")
 	for _, v := range clusterList.Items {
-		SetAgentImage(&v, imageName, table)
+		SetAgentSeting(&v, imageName, agentCpuLimit, agentMemoryLimit, table)
 	}
 	fmt.Println(table)
 	return nil
 }
 
-func SetAgentImage(cluster *kubeproberv1.Cluster, imageName string, table *uitable.Table) {
+func SetAgentSeting(cluster *kubeproberv1.Cluster, imageName string, agentCpuLimit string, agentMemoryLimit string, table *uitable.Table) {
 	var err error
 	var c client.Client
 	var result string
@@ -123,8 +126,15 @@ func SetAgentImage(cluster *kubeproberv1.Cluster, imageName string, table *uitab
 		table.AddRow(cluster.Name, result)
 		return
 	}
-	agentDeploy.Spec.Template.Spec.Containers[0].Image = imageName
-
+	if imageName != "" {
+		agentDeploy.Spec.Template.Spec.Containers[0].Image = imageName
+	}
+	if agentMemoryLimit != "" {
+		agentDeploy.Spec.Template.Spec.Containers[0].Resources.Limits[apiv1.ResourceMemory] = resource.MustParse(fmt.Sprintf("%v", agentMemoryLimit))
+	}
+	if agentCpuLimit != "" {
+		agentDeploy.Spec.Template.Spec.Containers[0].Resources.Limits[apiv1.ResourceCPU] = resource.MustParse(fmt.Sprintf("%v", agentCpuLimit))
+	}
 	if c.Update(context.Background(), agentDeploy); err != nil {
 		result = fmt.Sprintf("%+s\n", err)
 		table.AddRow(cluster.Name, result)

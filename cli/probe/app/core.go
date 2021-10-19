@@ -20,13 +20,15 @@ import (
 )
 
 var (
-	clusterName string
-	status      string
-	probes      string
-	onceID      string
-	isList      bool
-	listAgent   bool
-	agentImage  string
+	clusterName      string
+	status           string
+	probes           string
+	onceID           string
+	isList           bool
+	listAgent        bool
+	agentImage       string
+	agentMemoryLimit string
+	agentCpuLimit    string
 )
 
 func init() {
@@ -42,6 +44,8 @@ func init() {
 
 	OpsCmd.PersistentFlags().BoolVarP(&listAgent, "list-agent", "", false, "List all agent")
 	OpsCmd.PersistentFlags().StringVarP(&agentImage, "set-agent-image", "", "", "Set image of agent")
+	OpsCmd.PersistentFlags().StringVarP(&agentMemoryLimit, "set-agent-memory", "", "", "Set Memory limit of agent")
+	OpsCmd.PersistentFlags().StringVarP(&agentCpuLimit, "set-agent-cpu", "", "", "Set Cpu limit of agent")
 
 }
 
