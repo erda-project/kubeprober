@@ -1,5 +1,7 @@
 #!/bin/bash
 
+datadisk=$2
+
 # 检查数据盘，网盘的挂载情况
 function check_mount_info() {
     datadisk=$(df -T 2>/dev/null | grep "/data" | grep "/dev")
