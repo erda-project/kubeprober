@@ -78,6 +78,15 @@ func GetClusterList(rw http.ResponseWriter, req *http.Request) {
 		list = append(list, i.Status.ExtraStatus["lbNode"])
 		list = append(list, i.Status.ExtraStatus["mysqlHost"])
 		list = append(list, i.Status.ExtraStatus["nacosAddr"])
+		list = append(list, i.Status.ExtraStatus["podNum"])
+		list = append(list, i.Status.ExtraStatus["nsNum"])
+		list = append(list, i.Status.ExtraStatus["pvcNum"])
+		list = append(list, i.Status.ExtraStatus["pvNum"])
+		list = append(list, i.Status.ExtraStatus["serviceNum"])
+		list = append(list, i.Status.ExtraStatus["ingressNum"])
+		list = append(list, i.Status.ExtraStatus["jobNum"])
+		list = append(list, i.Status.ExtraStatus["cronjobNum"])
+		list = append(list, i.Status.ExtraStatus["deploymentNum"])
 		list = append(list, i.Status.HeartBeatTimeStamp)
 		listRow = append(listRow, list)
 	}
@@ -101,6 +110,15 @@ func GetClusterList(rw http.ResponseWriter, req *http.Request) {
 			{Text: "LBNODE", Type: "string"},
 			{Text: "MYSQLHOST", Type: "string"},
 			{Text: "NACOSADDR", Type: "string"},
+			{Text: "PODNUM", Type: "string"},
+			{Text: "NSNUM", Type: "string"},
+			{Text: "PVCNUM", Type: "string"},
+			{Text: "PVNUM", Type: "string"},
+			{Text: "SERVICENUM", Type: "string"},
+			{Text: "INGRESSNUM", Type: "string"},
+			{Text: "JOBNUM", Type: "string"},
+			{Text: "CRONJOBNUM", Type: "string"},
+			{Text: "DEPLOYMENTNUM", Type: "string"},
 			{Text: "HEARTBEATTIME", Type: "string"},
 		},
 		Rows: listRow,
