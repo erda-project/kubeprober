@@ -26,6 +26,13 @@ function check_mysql() {
     return 1
   fi
 
+  #check mysql version
+  version=$(mysql -h $MYSQL_HOST -u $MYSQL_USERNAME  -P $MYSQL_PORT -p$MYSQL_PASSWORD -e "select version();"|grep -iv version)
+  if echo "$version" | grep "5.6" > /dev/null 2>&1; then
+    report-status --name=check_mysql --status=error  --message="lower mysql version: $version"
+    return 1
+  fi
+
   #check mysql create table && insert data
   msg=$(mysql -h $MYSQL_HOST -u $MYSQL_USERNAME  -P $MYSQL_PORT -p$MYSQL_PASSWORD $MYSQL_DATABASE -e "CREATE TABLE IF NOT EXISTS probe_test_table (id INT(11), name VARCHAR(25))" 2>&1)
   if [[ $msg != "" ]]; then
