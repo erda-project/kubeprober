@@ -44,6 +44,10 @@ spec:
                 description: Foo is an example field of Alert. Edit cluster_types.go
                   to remove/update
                 type: string
+              blackList:
+                items:
+                  type: string
+                type: array
               sign:
                 type: string
               token:
