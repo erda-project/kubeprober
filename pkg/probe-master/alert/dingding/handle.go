@@ -85,7 +85,26 @@ func ProxyAlert(w http.ResponseWriter, r *http.Request, alert *kubeproberv1.Aler
 	fmt.Printf("forwarding to -> %s\n", u)
 	proxy := NewProxy(u)
 	proxy.Transport = &DebugTransport{}
-	ci <- 1
+
+	var (
+		bd     []byte
+		ignore bool
+	)
+
+	// ignore if in black list
+	bd, _ = ioutil.ReadAll(r.Body)
+	str := string(bd)
+	for _, word := range alert.Spec.BlackList {
+		if strings.Contains(str, word) {
+			ignore = true
+			break
+		}
+	}
+
+	if !ignore {
+		ci <- 1
+	}
+
 	proxy.ServeHTTP(w, r)
 }
 

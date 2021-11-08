@@ -26,9 +26,10 @@ type AlertSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of Alert. Edit cluster_types.go to remove/update
-	Address string `json:"address,omitempty"`
-	Token   string `json:"token,omitempty"`
-	Sign    string `json:"sign,omitempty"`
+	Address   string   `json:"address,omitempty"`
+	Token     string   `json:"token,omitempty"`
+	Sign      string   `json:"sign,omitempty"`
+	BlackList []string `json:"blackList,omitempty"`
 }
 
 // AlertStatus defines the observed state of Alert
