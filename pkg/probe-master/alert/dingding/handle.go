@@ -82,29 +82,41 @@ func init() {
 
 func ProxyAlert(w http.ResponseWriter, r *http.Request, alert *kubeproberv1.Alert) {
 	u, _ := url.Parse(alert.Spec.Address)
-	fmt.Printf("forwarding to -> %s\n", u)
+	fmt.Printf("forwarding to -> %s\n, blacklist: %v", u, alert.Spec.BlackList)
 	proxy := NewProxy(u)
 	proxy.Transport = &DebugTransport{}
 
 	var (
-		bd     []byte
 		ignore bool
+		alertStr string
 	)
 
+	// if enable black list, check the copy of request body
+	if alert != nil && len(alert.Spec.BlackList) > 0 {
+		// get buffer
+		buf, _ := ioutil.ReadAll(r.Body)
+		// copy buffer & re-assign to request body
+		newBd := ioutil.NopCloser(bytes.NewBuffer(buf))
+		r.Body = newBd
+		// copy buffer for content check
+		alertStr = string(buf)
+	}
+
 	// ignore if in black list
-	bd, _ = ioutil.ReadAll(r.Body)
-	str := string(bd)
 	for _, word := range alert.Spec.BlackList {
-		if strings.Contains(str, word) {
+		if strings.Contains(alertStr, word) {
+			fmt.Printf("ignore alert, keywork: %s, alert: %s", word, alertStr)
 			ignore = true
 			break
 		}
 	}
 
-	if !ignore {
-		ci <- 1
+	// return if ignore
+	if ignore {
+		return
 	}
 
+	ci <- 1
 	proxy.ServeHTTP(w, r)
 }
 
