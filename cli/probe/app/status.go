@@ -117,6 +117,9 @@ func GetProbeStatus(clusterName string, status string) error {
 	for _, i := range probeStatusList.Items {
 		if IsContain(probeNames, i.Name) {
 			for _, j := range i.Spec.Checkers {
+				if j.LastRun == nil {
+					j.LastRun = &metav1.Time{time.Now()}
+				}
 				if j.LastRun.Before(&metav1.Time{Time: oneDayAgo}) {
 					continue
 				}
