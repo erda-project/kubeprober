@@ -1,0 +1,30 @@
+apiVersion: kubeprober.erda.cloud/v1
+kind: Probe
+metadata:
+  name: nginx-controller
+  namespace: kubeprober
+spec:
+  policy:
+    # unit: minute
+    runInterval: 5
+  template:
+    containers:
+      - env:
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+        name: k8s
+        image: kubeprober/probe-nginx-controller:v0.0.1-beta1
+        resources:
+          requests:
+            cpu: 10m
+            memory: 50Mi
+    restartPolicy: Never
+  configs:
+    - name: log
+      env:
+        - name: INFLUXADDR
+          value: "your influxdb addr"
+        - name: TOKEN
+          value: "your influxdb token"
