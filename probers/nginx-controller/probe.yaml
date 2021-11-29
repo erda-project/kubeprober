@@ -15,7 +15,7 @@ spec:
               fieldRef:
                 fieldPath: spec.nodeName
         name: k8s
-        image: kubeprober/probe-nginx-controller:v0.0.1-beta1
+        image: kubeprober/probe-nginx-controller:v0.0.2-beta1
         resources:
           requests:
             cpu: 10m
@@ -28,3 +28,5 @@ spec:
           value: "your influxdb addr"
         - name: TOKEN
           value: "your influxdb token"
+        - name: DOMAINS
+          value: "domain list you need to monitor"
