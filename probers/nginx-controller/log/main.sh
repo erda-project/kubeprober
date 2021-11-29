@@ -1,7 +1,7 @@
 #!/bin/bash -x
 kubectl logs --since=5m  ds/nginx-ingress-controller  -n kube-system  | awk '
   {
-    if($(NF-19) == "openapi.erda.cloud" || $(NF-19) == "kubeprober.erda.cloud")
+    if($(NF-19) ~ '$DOMAINS')
     {
       num[$(NF-19)]++
       sum[$(NF-19)]+=$(NF-4)
