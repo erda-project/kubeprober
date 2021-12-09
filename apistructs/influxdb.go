@@ -14,9 +14,10 @@
 package apistructs
 
 type InfluxdbConf struct {
-	InfluxdbEnable bool
-	InfluxdbHost   string
-	InfluxdbToken  string
-	InfluxdbOrg    string
-	InfluxdbBucket string
+	InfluxdbEnable  bool
+	InfluxdbHost    string
+	InfluxdbToken   string
+	InfluxdbOrg     string
+	InfluxdbBucket  string
+	AlertDataBucket string
 }

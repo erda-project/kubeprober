@@ -34,6 +34,7 @@ type ProbeMasterOptions struct {
 	InfluxdbToken           string
 	InfluxdbOrg             string
 	InfluxdbBucket          string
+	AlertDataBucket         string
 }
 
 // NewProbeMasterOptions creates a new NewProbeMasterOptions with a default config.
@@ -78,4 +79,6 @@ func (o *ProbeMasterOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.InfluxdbToken, "influxdb_token", o.InfluxdbToken, "influxdb token value.")
 	fs.StringVar(&o.InfluxdbOrg, "influxdb_org", o.InfluxdbOrg, "influxdb org value.")
 	fs.StringVar(&o.InfluxdbBucket, "influxdb_bucket", o.InfluxdbBucket, "influxdb kucket value.")
+	fs.StringVar(&o.AlertDataBucket, "alert_data_kucket", o.AlertDataBucket, "alert data kucket value.")
+
 }
