@@ -22,10 +22,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
+	influxdb2api "github.com/influxdata/influxdb-client-go/v2/api"
 	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -44,6 +47,27 @@ const DINGDING_ALERT_NAME = "dingding"
 
 var ci = make(chan int, 100)
 var sendMsgCh = make(chan string, 100)
+
+
+type alertStruct struct {
+	Markdown Markdown `json:"markdown"`
+	Msgtype  string   `json:"msgtype"`
+}
+
+type Markdown struct {
+	Title string `json:"title"`
+	Text  string `json:"text"`
+}
+
+type AlertItemStuct struct {
+	Cluster   string
+	Node      string
+	Component string
+	Type      string
+	Msg       string
+	Time 	  string
+}
+
 
 func init() {
 	var proxyCount = 0
@@ -80,27 +104,26 @@ func init() {
 	}()
 }
 
-func ProxyAlert(w http.ResponseWriter, r *http.Request, alert *kubeproberv1.Alert) {
+func ProxyAlert(w http.ResponseWriter, r *http.Request, alert *kubeproberv1.Alert, alertDataInfluxdb2api influxdb2api.WriteAPI) {
 	u, _ := url.Parse(alert.Spec.Address)
 	fmt.Printf("forwarding to -> %s\n, blacklist: %v", u, alert.Spec.BlackList)
 	proxy := NewProxy(u)
 	proxy.Transport = &DebugTransport{}
 
 	var (
-		ignore bool
+		ignore   bool
 		alertStr string
 	)
-
-	// if enable black list, check the copy of request body
-	if alert != nil && len(alert.Spec.BlackList) > 0 {
-		// get buffer
-		buf, _ := ioutil.ReadAll(r.Body)
-		// copy buffer & re-assign to request body
-		newBd := ioutil.NopCloser(bytes.NewBuffer(buf))
-		r.Body = newBd
-		// copy buffer for content check
-		alertStr = string(buf)
-	}
+	//
+	//// if enable black list, check the copy of request body
+	//if alert != nil && len(alert.Spec.BlackList) > 0 {
+	// get buffer
+	buf, _ := ioutil.ReadAll(r.Body)
+	// copy buffer & re-assign to request body
+	newBd := ioutil.NopCloser(bytes.NewBuffer(buf))
+	r.Body = newBd
+	alertStr = string(buf)
+	//}
 
 	// ignore if in black list
 	for _, word := range alert.Spec.BlackList {
@@ -110,16 +133,58 @@ func ProxyAlert(w http.ResponseWriter, r *http.Request, alert *kubeproberv1.Aler
 			break
 		}
 	}
-
 	// return if ignore
 	if ignore {
 		return
 	}
-
+	klog.Infof("alert string: %+v\n", alertStr)
+	if err := handlerAlertMsg(alertStr, alertDataInfluxdb2api); err != nil {
+		klog.Infof("handler alert msg [%s] error : %+v\n", alertStr, err)
+	}
 	ci <- 1
 	proxy.ServeHTTP(w, r)
 }
 
+func handlerAlertMsg(alertStr string, alertDataInfluxdb2api influxdb2api.WriteAPI) error  {
+	if strings.Contains(alertStr, "恢复") {
+		return nil
+	}
+	var as alertStruct
+	if err := json.Unmarshal([]byte(alertStr), &as); err != nil {
+		klog.Infof("unmarshal alert string error : %+v\n", err)
+	}
+	asItem := &AlertItemStuct{}
+	asItem.Msg = as.Markdown.Text
+	asItem.Type = regexpAlertStr(`【(.+)】`, as.Markdown.Text, 1)
+	asItem.Node = regexpAlertStr(`机器: (.+)`, as.Markdown.Text, 1)
+	asItem.Cluster = regexpAlertStr(`集群: (.+)`, as.Markdown.Text, 1)
+	asItem.Component = regexpAlertStr(`(组件|中间件|Pod): (.+)`, as.Markdown.Text, 2)
+	asItem.Time = regexpAlertStr(`时间: (.+)`, as.Markdown.Text, 1)
+
+
+	if alertDataInfluxdb2api != nil {
+		p := influxdb2.NewPointWithMeasurement("alert").
+			AddTag("cluster", asItem.Cluster).
+			AddTag("node", asItem.Node).
+			AddTag("type", asItem.Type).
+			AddTag("component", asItem.Component).
+			AddTag("time", asItem.Time).
+			AddField("msg", asItem.Msg).
+			SetTime(time.Now())
+		// Flush writes
+		alertDataInfluxdb2api.WritePoint(p)
+		alertDataInfluxdb2api.Flush()
+	}
+	return nil
+}
+
+func regexpAlertStr(reg string, s string, index int) string {
+	subMatchs := regexp.MustCompile(reg).FindStringSubmatch(s)
+	if len(subMatchs) > 0 {
+		return subMatchs[index]
+	}
+	return ""
+}
 func alertCount(count int) error {
 	var err error
 	alert := &kubeproberv1.Alert{}

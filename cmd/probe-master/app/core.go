@@ -151,11 +151,12 @@ func Run(opts *options.ProbeMasterOptions) {
 		os.Exit(1)
 	}
 	influxdbConfig := &apistructs.InfluxdbConf{
-		InfluxdbEnable: opts.InfluxdbEnable,
-		InfluxdbHost:   opts.InfluxdbHost,
-		InfluxdbToken:  opts.InfluxdbToken,
-		InfluxdbOrg:    opts.InfluxdbOrg,
-		InfluxdbBucket: opts.InfluxdbBucket,
+		InfluxdbEnable:  opts.InfluxdbEnable,
+		InfluxdbHost:    opts.InfluxdbHost,
+		InfluxdbToken:   opts.InfluxdbToken,
+		InfluxdbOrg:     opts.InfluxdbOrg,
+		InfluxdbBucket:  opts.InfluxdbBucket,
+		AlertDataBucket: opts.AlertDataBucket,
 	}
 	//start remote cluster dialer
 	klog.Infof("starting probe-master remote dialer server on :8088")

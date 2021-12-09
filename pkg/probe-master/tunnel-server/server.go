@@ -133,10 +133,12 @@ func Start(ctx context.Context, cfg *Config, influxdbConfig *apistructs.Influxdb
 	var err error
 	var client influxdb2.Client
 	var writeAPI influxdb2api.WriteAPI
+	var alertDataWriteAPI influxdb2api.WriteAPI
 
 	if influxdbConfig.InfluxdbEnable {
 		client = influxdb2.NewClient(influxdbConfig.InfluxdbHost, influxdbConfig.InfluxdbToken)
 		writeAPI = client.WriteAPI(influxdbConfig.InfluxdbOrg, influxdbConfig.InfluxdbBucket)
+		alertDataWriteAPI = client.WriteAPI(influxdbConfig.InfluxdbOrg, influxdbConfig.AlertDataBucket)
 		defer client.Close()
 	}
 
@@ -168,7 +170,7 @@ func Start(ctx context.Context, cfg *Config, influxdbConfig *apistructs.Influxdb
 	}
 	router.HandleFunc("/robot/send", func(rw http.ResponseWriter,
 		req *http.Request) {
-		dingding.ProxyAlert(rw, req, dingdingAlert)
+		dingding.ProxyAlert(rw, req, dingdingAlert, alertDataWriteAPI)
 	})
 
 	router.HandleFunc("/collect", func(rw http.ResponseWriter,
