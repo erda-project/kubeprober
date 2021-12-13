@@ -65,7 +65,6 @@ type AlertItemStuct struct {
 	Component string
 	Type      string
 	Msg       string
-	Time 	  string
 }
 
 
@@ -138,17 +137,17 @@ func ProxyAlert(w http.ResponseWriter, r *http.Request, alert *kubeproberv1.Aler
 		return
 	}
 	klog.Infof("alert string: %+v\n", alertStr)
-	if err := handlerAlertMsg(alertStr, alertDataInfluxdb2api); err != nil {
-		klog.Infof("handler alert msg [%s] error : %+v\n", alertStr, err)
+	if !strings.Contains(alertStr, "恢复") {
+		if err := handlerAlertMsg(alertStr, alertDataInfluxdb2api); err != nil {
+			klog.Infof("handler alert msg [%s] error : %+v\n", alertStr, err)
+		}
+		ci <- 1
 	}
-	ci <- 1
 	proxy.ServeHTTP(w, r)
 }
 
 func handlerAlertMsg(alertStr string, alertDataInfluxdb2api influxdb2api.WriteAPI) error  {
-	if strings.Contains(alertStr, "恢复") {
-		return nil
-	}
+
 	var as alertStruct
 	if err := json.Unmarshal([]byte(alertStr), &as); err != nil {
 		klog.Infof("unmarshal alert string error : %+v\n", err)
@@ -159,7 +158,6 @@ func handlerAlertMsg(alertStr string, alertDataInfluxdb2api influxdb2api.WriteAP
 	asItem.Node = regexpAlertStr(`机器: (.+)`, as.Markdown.Text, 1)
 	asItem.Cluster = regexpAlertStr(`集群: (.+)`, as.Markdown.Text, 1)
 	asItem.Component = regexpAlertStr(`(组件|中间件|Pod): (.+)`, as.Markdown.Text, 2)
-	asItem.Time = regexpAlertStr(`时间: (.+)`, as.Markdown.Text, 1)
 
 
 	if alertDataInfluxdb2api != nil {
@@ -168,7 +166,6 @@ func handlerAlertMsg(alertStr string, alertDataInfluxdb2api influxdb2api.WriteAP
 			AddTag("node", asItem.Node).
 			AddTag("type", asItem.Type).
 			AddTag("component", asItem.Component).
-			AddTag("time", asItem.Time).
 			AddField("msg", asItem.Msg).
 			SetTime(time.Now())
 		// Flush writes
