@@ -72,7 +72,6 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 		Namespace: metav1.NamespaceDefault,
 		Name:      hbData.Name,
 	}, cluster)
-
 	if apierrors.IsNotFound(err) {
 		clusterSpec.ObjectMeta = metav1.ObjectMeta{
 			Name:      hbData.Name,
@@ -81,9 +80,14 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 		if err = k8sclient.RestClient.Create(context.Background(), &clusterSpec); err != nil {
 			errMsg := fmt.Sprintf("[heartbeat] failed to create cluster [%s]: %+v\n", hbData.Name, err)
 			rw.Write([]byte(errMsg))
-			rw.WriteHeader(http.StatusBadRequest)
+			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+	} else if err != nil {
+		errMsg := fmt.Sprintf("[heartbeat] failed to check cluster existence [%s]: %+v\n", hbData.Name, err)
+		rw.Write([]byte(errMsg))
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
 	} else {
 		patch, _ := json.Marshal(clusterSpec)
 		err = k8sclient.RestClient.Patch(context.Background(), &kubeproberv1.Cluster{
@@ -96,7 +100,7 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 			errMsg := fmt.Sprintf("[heartbeat] patch cluster[%s] spec error: %+v\n", hbData.Name, err)
 			klog.Errorf(errMsg)
 			rw.Write([]byte(errMsg))
-			rw.WriteHeader(http.StatusBadRequest)
+			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 	}
@@ -121,9 +125,10 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 		errMsg := fmt.Sprintf("[heartbeat] patch cluster[%s] status error: %+v\n", hbData.Name, err)
 		klog.Errorf(errMsg)
 		rw.Write([]byte(errMsg))
-		rw.WriteHeader(http.StatusBadRequest)
+		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
 	rw.WriteHeader(http.StatusOK)
 	return
 }
@@ -225,7 +230,7 @@ func getDingDingAlert() (*kubeproberv1.Alert, error) {
 		Namespace: metav1.NamespaceDefault,
 		Name:      DINGDING_ALERT_NAME,
 	}, alert); err != nil {
-		return nil, err
+		return alert, err
 	}
 
 	return alert, nil
