@@ -14,7 +14,6 @@
 package app
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -95,8 +94,6 @@ func NewCmdProbeMasterManager(stopCh <-chan struct{}) *cobra.Command {
 }
 
 func Run(opts *options.ProbeMasterOptions) {
-	ctx := context.Background()
-
 	optts := zap.Options{
 		Development: false,
 	}
@@ -158,6 +155,8 @@ func Run(opts *options.ProbeMasterOptions) {
 		InfluxdbBucket:  opts.InfluxdbBucket,
 		AlertDataBucket: opts.AlertDataBucket,
 	}
+
+	ctx := ctrl.SetupSignalHandler()
 	//start remote cluster dialer
 	klog.Infof("starting probe-master remote dialer server on :8088")
 	go server.Start(ctx, &server.Config{
@@ -168,11 +167,10 @@ func Run(opts *options.ProbeMasterOptions) {
 
 	setupLog.Info("starting manager")
 	time.Sleep(10 * time.Second)
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
-
 }
 
 // Bind each cobra flag to its associated viper configuration (config file and environment variable)

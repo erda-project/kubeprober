@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -41,19 +42,22 @@ const (
 )
 
 type Server struct {
+	ctx             context.Context
 	client          client.Client
 	ProbeListenAddr string // the listen address, such as ":80"
 }
 
-func NewServer(c client.Client, addr string) Server {
-	s := Server{client: c, ProbeListenAddr: addr}
+func NewServer(ctx context.Context, c client.Client, addr string) Server {
+	s := Server{ctx: ctx, client: c, ProbeListenAddr: addr}
 	return s
 }
 
 func (s *Server) getClusterFromCm() (string, error) {
+	ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
+	defer cancel()
 	cm := &corev1.ConfigMap{}
 	var err error
-	if err = k8sclient.RestClient.Get(context.Background(), client.ObjectKey{
+	if err = k8sclient.RestClient.Get(ctx, client.ObjectKey{
 		Name:      clusterInfoCm,
 		Namespace: metav1.NamespaceDefault,
 	}, cm); err != nil {
@@ -83,13 +87,24 @@ func (s *Server) Start(masterAddr string, clusterName string) {
 
 		for {
 			logger.Log.Info(fmt.Sprintf("starting web server on port: %s", s.ProbeListenAddr))
-			err := http.ListenAndServe(s.ProbeListenAddr, nil)
+			server := &http.Server{
+				BaseContext: func(net.Listener) context.Context {
+					return s.ctx
+				},
+				Addr:    s.ProbeListenAddr,
+				Handler: nil, // use http.DefaultServeMux
+			}
+			err := server.ListenAndServe()
 			if err != nil {
 				logger.Log.Error(err, "start web server failed", "ProbeListenAddr", s.ProbeListenAddr)
 				time.Sleep(time.Second)
 			}
-		}
 
+			select {
+			case <-s.ctx.Done():
+				return
+			}
+		}
 	}()
 }
 

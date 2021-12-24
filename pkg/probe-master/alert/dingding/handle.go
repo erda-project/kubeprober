@@ -48,7 +48,6 @@ const DINGDING_ALERT_NAME = "dingding"
 var ci = make(chan int, 100)
 var sendMsgCh = make(chan string, 100)
 
-
 type alertStruct struct {
 	Markdown Markdown `json:"markdown"`
 	Msgtype  string   `json:"msgtype"`
@@ -66,7 +65,6 @@ type AlertItemStuct struct {
 	Type      string
 	Msg       string
 }
-
 
 func init() {
 	var proxyCount = 0
@@ -146,7 +144,7 @@ func ProxyAlert(w http.ResponseWriter, r *http.Request, alert *kubeproberv1.Aler
 	proxy.ServeHTTP(w, r)
 }
 
-func handlerAlertMsg(alertStr string, alertDataInfluxdb2api influxdb2api.WriteAPI) error  {
+func handlerAlertMsg(alertStr string, alertDataInfluxdb2api influxdb2api.WriteAPI) error {
 
 	var as alertStruct
 	if err := json.Unmarshal([]byte(alertStr), &as); err != nil {
@@ -158,7 +156,6 @@ func handlerAlertMsg(alertStr string, alertDataInfluxdb2api influxdb2api.WriteAP
 	asItem.Node = regexpAlertStr(`机器: (.+)`, as.Markdown.Text, 1)
 	asItem.Cluster = regexpAlertStr(`集群: (.+)`, as.Markdown.Text, 1)
 	asItem.Component = regexpAlertStr(`(组件|中间件|Pod): (.+)`, as.Markdown.Text, 2)
-
 
 	if alertDataInfluxdb2api != nil {
 		p := influxdb2.NewPointWithMeasurement("alert").
