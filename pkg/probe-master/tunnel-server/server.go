@@ -14,9 +14,11 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"strings"
@@ -175,7 +177,7 @@ func Start(ctx context.Context, cfg *Config, influxdbConfig *apistructs.Influxdb
 	}
 	router.HandleFunc("/robot/send", func(rw http.ResponseWriter,
 		req *http.Request) {
-		dingding.ProxyAlert(rw, req, dingdingAlert, alertDataWriteAPI)
+		proxyDingdingAlert(rw, req, dingdingAlert, alertDataWriteAPI)
 	})
 
 	router.HandleFunc("/collect", func(rw http.ResponseWriter,
@@ -236,10 +238,61 @@ func getDingDingAlert() (*kubeproberv1.Alert, error) {
 	return alert, nil
 }
 
-func collectProbeStatus(rw http.ResponseWriter, req *http.Request, alert *kubeproberv1.Alert, influxdb2api influxdb2api.WriteAPI) {
+func proxyDingdingAlert(rw http.ResponseWriter, req *http.Request,
+	alert *kubeproberv1.Alert, influxdb2api influxdb2api.WriteAPI) {
+	var (
+		ignore   bool
+		alertStr string
+	)
+	//
+	//// if enable black list, check the copy of request body
+	//if alert != nil && len(alert.Spec.BlackList) > 0 {
+	// get buffer
+	buf, _ := ioutil.ReadAll(req.Body)
+	// copy buffer & re-assign to request body
+	newBd := ioutil.NopCloser(bytes.NewBuffer(buf))
+	req.Body = newBd
+	alertStr = string(buf)
+	//}
+
+	// ignore if in black list
+	for _, word := range alert.Spec.BlackList {
+		if strings.Contains(alertStr, word) {
+			fmt.Printf("ignore alert, keywork: %s, alert: %s", word, alertStr)
+			ignore = true
+			break
+		}
+	}
+	// return if ignore
+	if ignore {
+		return
+	}
+
+	klog.Infof("alert string: %+v\n", alertStr)
+	asItem, err := dingding.ParseAlert(alertStr)
+	if err == nil && asItem != nil {
+		if influxdb2api != nil {
+			p := influxdb2.NewPointWithMeasurement("alert").
+				AddTag("cluster", asItem.Cluster).
+				AddTag("node", asItem.Node).
+				AddTag("type", asItem.Type).
+				AddTag("component", asItem.Component).
+				AddTag("level", asItem.Level).
+				AddField("msg", asItem.Msg).
+				SetTime(time.Now())
+			// Flush writes
+			influxdb2api.WritePoint(p)
+			influxdb2api.Flush()
+		}
+	}
+
+	dingding.ProxyAlert(rw, req, alert)
+}
+
+func collectProbeStatus(rw http.ResponseWriter, req *http.Request,
+	alert *kubeproberv1.Alert, influxdb2api influxdb2api.WriteAPI) {
 	ps := apistructs.CollectProbeStatusReq{}
 	var err error
-
 	if err = json.NewDecoder(req.Body).Decode(&ps); err != nil {
 		errMsg := fmt.Sprintf("receive probe status err: %+v\n", err)
 		klog.Errorf(errMsg)
