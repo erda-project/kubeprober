@@ -156,6 +156,15 @@ func Run(opts *options.ProbeMasterOptions) {
 		AlertDataBucket: opts.AlertDataBucket,
 	}
 
+	erdaConfig := &apistructs.ErdaConfig{
+		TicketEnable: opts.ErdaTicketEnable,
+		OpenapiURL:   opts.ErdaOpenapiURL,
+		Username:     opts.ErdaUsername,
+		Password:     opts.ErdaPassword,
+		Org:          opts.ErdaOrg,
+		ProjectId:    opts.ErdaProjectId,
+	}
+
 	ctx := ctrl.SetupSignalHandler()
 	//start remote cluster dialer
 	klog.Infof("starting probe-master remote dialer server on :8088")
@@ -163,7 +172,7 @@ func Run(opts *options.ProbeMasterOptions) {
 		Debug:   false,
 		Timeout: 0,
 		Listen:  opts.ProbeMasterListenAddr,
-	}, influxdbConfig)
+	}, influxdbConfig, erdaConfig)
 
 	setupLog.Info("starting manager")
 	time.Sleep(10 * time.Second)

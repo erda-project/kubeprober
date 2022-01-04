@@ -102,13 +102,13 @@ func init() {
 
 func ProxyAlert(w http.ResponseWriter, r *http.Request, alert *kubeproberv1.Alert) {
 	u, _ := url.Parse(alert.Spec.Address)
-	fmt.Printf("forwarding to -> %s\n, blacklist: %v", u, alert.Spec.BlackList)
+	fmt.Printf("forwarding to -> %s, blacklist: %v\n", u, alert.Spec.BlackList)
 	proxy := NewProxy(u)
 	proxy.Transport = &DebugTransport{}
 	proxy.ServeHTTP(w, r)
 }
 
-func ParseAlert(alertStr string) (*AlertItemStuct, error){
+func ParseAlert(alertStr string) (*AlertItemStuct, error) {
 	if !strings.Contains(alertStr, "恢复") {
 		ci <- 1
 

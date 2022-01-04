@@ -24,13 +24,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/erda-project/kubeprober/pkg/probe-master/k8sclient"
-
-	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
-	"github.com/erda-project/kubeprober/apistructs"
-	"github.com/erda-project/kubeprober/pkg/probe-master/alert/dingding"
-	_ "github.com/erda-project/kubeprober/pkg/probe-master/k8sclient"
-	httphandler "github.com/erda-project/kubeprober/pkg/probe-master/tunnel-server/handler"
 	"github.com/gorilla/mux"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	influxdb2api "github.com/influxdata/influxdb-client-go/v2/api"
@@ -40,6 +33,15 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	erda_api "github.com/erda-project/erda/apistructs"
+	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
+	"github.com/erda-project/kubeprober/apistructs"
+	"github.com/erda-project/kubeprober/pkg/probe-master/alert/dingding"
+	"github.com/erda-project/kubeprober/pkg/probe-master/alert/ticket"
+	"github.com/erda-project/kubeprober/pkg/probe-master/k8sclient"
+	_ "github.com/erda-project/kubeprober/pkg/probe-master/k8sclient"
+	httphandler "github.com/erda-project/kubeprober/pkg/probe-master/tunnel-server/handler"
 )
 
 const DINGDING_ALERT_NAME = "dingding"
@@ -135,7 +137,7 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 	return
 }
 
-func Start(ctx context.Context, cfg *Config, influxdbConfig *apistructs.InfluxdbConf) error {
+func Start(ctx context.Context, cfg *Config, influxdbConfig *apistructs.InfluxdbConf, erdaConfig *apistructs.ErdaConfig) error {
 	var dingdingAlert *kubeproberv1.Alert
 	var err error
 	var client influxdb2.Client
@@ -147,6 +149,14 @@ func Start(ctx context.Context, cfg *Config, influxdbConfig *apistructs.Influxdb
 		writeAPI = client.WriteAPI(influxdbConfig.InfluxdbOrg, influxdbConfig.InfluxdbBucket)
 		alertDataWriteAPI = client.WriteAPI(influxdbConfig.InfluxdbOrg, influxdbConfig.AlertDataBucket)
 		defer client.Close()
+	}
+
+	if erdaConfig.TicketEnable {
+		err = ticket.Init(erdaConfig.Username, erdaConfig.Password, erdaConfig.OpenapiURL,
+			erdaConfig.Org, erdaConfig.ProjectId)
+		if err != nil {
+			klog.Errorf("failed to connect erda: %+v\n", err)
+		}
 	}
 
 	handler := remotedialer.New(Authorizer, remotedialer.DefaultErrorWriter)
@@ -258,7 +268,7 @@ func proxyDingdingAlert(rw http.ResponseWriter, req *http.Request,
 	// ignore if in black list
 	for _, word := range alert.Spec.BlackList {
 		if strings.Contains(alertStr, word) {
-			fmt.Printf("ignore alert, keywork: %s, alert: %s", word, alertStr)
+			fmt.Printf("ignore alert, keywork: %s, alert: %s\n", word, alertStr)
 			ignore = true
 			break
 		}
@@ -283,6 +293,18 @@ func proxyDingdingAlert(rw http.ResponseWriter, req *http.Request,
 			// Flush writes
 			influxdb2api.WritePoint(p)
 			influxdb2api.Flush()
+		}
+
+		level := strings.ToLower(asItem.Level)
+		if level == "fatal" || level == "critical" {
+			t := &ticket.Ticket{}
+			t.Title = fmt.Sprintf("(请勿改标题) 异常告警-[级别]: %s,[集群]: %s,[节点]: %s,[类别]: %s,[组件]：%s",
+				asItem.Level, asItem.Cluster, asItem.Node, asItem.Type, asItem.Component)
+			t.Content = asItem.Msg
+			t.Type = erda_api.IssueTypeTicket
+			t.Priority = erda_api.IssuePriorityHigh
+
+			ticket.SendTicket(t)
 		}
 	}
 
@@ -312,11 +334,21 @@ func collectProbeStatus(rw http.ResponseWriter, req *http.Request,
 		influxdb2api.WritePoint(p)
 		influxdb2api.Flush()
 	}
-	if alert.Spec.Token == "" || alert.Spec.Sign == "" {
-		return
-	}
+
 	if ps.Status == "ERROR" {
-		if err = dingding.SendAlert(&ps); err != nil {
+		t := &ticket.Ticket{}
+		t.Title = fmt.Sprintf("(请勿改标题)巡检异常-[集群]: %s,[类别]: %s,[检查项]：%s",
+			ps.ClusterName, ps.ProbeName, ps.CheckerName)
+		t.Content = fmt.Sprintf("[集群]: %s\n[类别]: %s\n[检查项]：%s\n[错误信息]: \n%s",
+			ps.ClusterName, ps.ProbeName, ps.CheckerName, ps.Message)
+		t.Type = erda_api.IssueTypeTicket
+		t.Priority = erda_api.IssuePriorityHigh
+
+		ticket.SendTicket(t)
+
+		if alert.Spec.Token == "" || alert.Spec.Sign == "" {
+			return
+		} else if err = dingding.SendAlert(&ps); err != nil {
 			errMsg := fmt.Sprintf("send dingding alert err: %+v\n", err)
 			klog.Errorf(errMsg)
 		}
