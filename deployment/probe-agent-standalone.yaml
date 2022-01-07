@@ -4373,7 +4373,7 @@ roleRef:
   name: kubeprober-worker-role
 subjects:
 - kind: ServiceAccount
-  name: kubeprober-worker
+  name: kubeprober
   namespace: kubeprober
 ---
 apiVersion: v1
@@ -4432,7 +4432,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        image: kubeprober/probe-agent:v0.1.0-beta6
+        image: kubeprober/probe-agent:v0.1.0-beta11
         imagePullPolicy: Always
         livenessProbe:
           httpGet:
@@ -4465,3 +4465,14 @@ spec:
       - configMap:
           name: probeagent
         name: probe-config-volume
+---
+apiVersion: v1
+data:
+  probe-conf.yaml: |
+    cluster_name: moon
+    agent_debug: false
+    debug_level: 1
+kind: ConfigMap
+metadata:
+  name: probeagent
+  namespace: kubeprober
