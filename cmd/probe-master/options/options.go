@@ -88,7 +88,7 @@ func (o *ProbeMasterOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.InfluxdbBucket, "influxdb_bucket", o.InfluxdbBucket, "influxdb kucket value.")
 	fs.StringVar(&o.AlertDataBucket, "alert_data_kucket", o.AlertDataBucket, "alert data kucket value.")
 	fs.BoolVar(&o.ErdaTicketEnable, "erda_ticket_enable", o.ErdaTicketEnable, "if true, send ticket to erda.")
-	fs.StringVar(&o.ErdaOpenapiURL, "erda_openai_url", o.ErdaOpenapiURL, "erda openapi url.")
+	fs.StringVar(&o.ErdaOpenapiURL, "erda_openapi_url", o.ErdaOpenapiURL, "erda openapi url.")
 	fs.StringVar(&o.ErdaUsername, "erda_username", o.ErdaUsername, "erda username.")
 	fs.StringVar(&o.ErdaPassword, "erda_password", o.ErdaPassword, "erda password.")
 	fs.StringVar(&o.ErdaOrg, "erda_org", o.ErdaOrg, "erda organization.")
