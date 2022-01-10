@@ -14,21 +14,16 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/erda-project/kubeprober/pkg/probe-master/k8sclient"
-
-	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
-	"github.com/erda-project/kubeprober/apistructs"
-	"github.com/erda-project/kubeprober/pkg/probe-master/alert/dingding"
-	_ "github.com/erda-project/kubeprober/pkg/probe-master/k8sclient"
-	httphandler "github.com/erda-project/kubeprober/pkg/probe-master/tunnel-server/handler"
 	"github.com/gorilla/mux"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	influxdb2api "github.com/influxdata/influxdb-client-go/v2/api"
@@ -38,6 +33,15 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	erda_api "github.com/erda-project/erda/apistructs"
+	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
+	"github.com/erda-project/kubeprober/apistructs"
+	"github.com/erda-project/kubeprober/pkg/probe-master/alert/dingding"
+	"github.com/erda-project/kubeprober/pkg/probe-master/alert/ticket"
+	"github.com/erda-project/kubeprober/pkg/probe-master/k8sclient"
+	_ "github.com/erda-project/kubeprober/pkg/probe-master/k8sclient"
+	httphandler "github.com/erda-project/kubeprober/pkg/probe-master/tunnel-server/handler"
 )
 
 const DINGDING_ALERT_NAME = "dingding"
@@ -72,7 +76,6 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 		Namespace: metav1.NamespaceDefault,
 		Name:      hbData.Name,
 	}, cluster)
-
 	if apierrors.IsNotFound(err) {
 		clusterSpec.ObjectMeta = metav1.ObjectMeta{
 			Name:      hbData.Name,
@@ -81,9 +84,14 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 		if err = k8sclient.RestClient.Create(context.Background(), &clusterSpec); err != nil {
 			errMsg := fmt.Sprintf("[heartbeat] failed to create cluster [%s]: %+v\n", hbData.Name, err)
 			rw.Write([]byte(errMsg))
-			rw.WriteHeader(http.StatusBadRequest)
+			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+	} else if err != nil {
+		errMsg := fmt.Sprintf("[heartbeat] failed to check cluster existence [%s]: %+v\n", hbData.Name, err)
+		rw.Write([]byte(errMsg))
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
 	} else {
 		patch, _ := json.Marshal(clusterSpec)
 		err = k8sclient.RestClient.Patch(context.Background(), &kubeproberv1.Cluster{
@@ -96,7 +104,7 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 			errMsg := fmt.Sprintf("[heartbeat] patch cluster[%s] spec error: %+v\n", hbData.Name, err)
 			klog.Errorf(errMsg)
 			rw.Write([]byte(errMsg))
-			rw.WriteHeader(http.StatusBadRequest)
+			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 	}
@@ -121,14 +129,15 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 		errMsg := fmt.Sprintf("[heartbeat] patch cluster[%s] status error: %+v\n", hbData.Name, err)
 		klog.Errorf(errMsg)
 		rw.Write([]byte(errMsg))
-		rw.WriteHeader(http.StatusBadRequest)
+		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
 	rw.WriteHeader(http.StatusOK)
 	return
 }
 
-func Start(ctx context.Context, cfg *Config, influxdbConfig *apistructs.InfluxdbConf) error {
+func Start(ctx context.Context, cfg *Config, influxdbConfig *apistructs.InfluxdbConf, erdaConfig *apistructs.ErdaConfig) error {
 	var dingdingAlert *kubeproberv1.Alert
 	var err error
 	var client influxdb2.Client
@@ -140,6 +149,14 @@ func Start(ctx context.Context, cfg *Config, influxdbConfig *apistructs.Influxdb
 		writeAPI = client.WriteAPI(influxdbConfig.InfluxdbOrg, influxdbConfig.InfluxdbBucket)
 		alertDataWriteAPI = client.WriteAPI(influxdbConfig.InfluxdbOrg, influxdbConfig.AlertDataBucket)
 		defer client.Close()
+	}
+
+	if erdaConfig.TicketEnable {
+		err = ticket.Init(erdaConfig.Username, erdaConfig.Password, erdaConfig.OpenapiURL,
+			erdaConfig.Org, erdaConfig.ProjectId)
+		if err != nil {
+			klog.Errorf("failed to connect erda: %+v\n", err)
+		}
 	}
 
 	handler := remotedialer.New(Authorizer, remotedialer.DefaultErrorWriter)
@@ -170,7 +187,7 @@ func Start(ctx context.Context, cfg *Config, influxdbConfig *apistructs.Influxdb
 	}
 	router.HandleFunc("/robot/send", func(rw http.ResponseWriter,
 		req *http.Request) {
-		dingding.ProxyAlert(rw, req, dingdingAlert, alertDataWriteAPI)
+		proxyDingdingAlert(rw, req, dingdingAlert, alertDataWriteAPI)
 	})
 
 	router.HandleFunc("/collect", func(rw http.ResponseWriter,
@@ -225,16 +242,79 @@ func getDingDingAlert() (*kubeproberv1.Alert, error) {
 		Namespace: metav1.NamespaceDefault,
 		Name:      DINGDING_ALERT_NAME,
 	}, alert); err != nil {
-		return nil, err
+		return alert, err
 	}
 
 	return alert, nil
 }
 
-func collectProbeStatus(rw http.ResponseWriter, req *http.Request, alert *kubeproberv1.Alert, influxdb2api influxdb2api.WriteAPI) {
+func proxyDingdingAlert(rw http.ResponseWriter, req *http.Request,
+	alert *kubeproberv1.Alert, influxdb2api influxdb2api.WriteAPI) {
+	var (
+		ignore   bool
+		alertStr string
+	)
+	//
+	//// if enable black list, check the copy of request body
+	//if alert != nil && len(alert.Spec.BlackList) > 0 {
+	// get buffer
+	buf, _ := ioutil.ReadAll(req.Body)
+	// copy buffer & re-assign to request body
+	newBd := ioutil.NopCloser(bytes.NewBuffer(buf))
+	req.Body = newBd
+	alertStr = string(buf)
+	//}
+
+	// ignore if in black list
+	for _, word := range alert.Spec.BlackList {
+		if strings.Contains(alertStr, word) {
+			fmt.Printf("ignore alert, keywork: %s, alert: %s\n", word, alertStr)
+			ignore = true
+			break
+		}
+	}
+	// return if ignore
+	if ignore {
+		return
+	}
+
+	klog.Infof("alert string: %+v\n", alertStr)
+	asItem, err := dingding.ParseAlert(alertStr)
+	if err == nil && asItem != nil {
+		if influxdb2api != nil {
+			p := influxdb2.NewPointWithMeasurement("alert").
+				AddTag("cluster", asItem.Cluster).
+				AddTag("node", asItem.Node).
+				AddTag("type", asItem.Type).
+				AddTag("component", asItem.Component).
+				AddTag("level", asItem.Level).
+				AddField("msg", asItem.Msg).
+				SetTime(time.Now())
+			// Flush writes
+			influxdb2api.WritePoint(p)
+			influxdb2api.Flush()
+		}
+
+		level := strings.ToLower(asItem.Level)
+		if level == "fatal" || level == "critical" {
+			t := &ticket.Ticket{}
+			t.Title = fmt.Sprintf("(请勿改标题) 异常告警-[级别]: %s,[集群]: %s,[节点]: %s,[类别]: %s,[组件]：%s",
+				asItem.Level, asItem.Cluster, asItem.Node, asItem.Type, asItem.Component)
+			t.Content = asItem.Msg
+			t.Type = erda_api.IssueTypeTicket
+			t.Priority = erda_api.IssuePriorityHigh
+
+			ticket.SendTicket(t)
+		}
+	}
+
+	dingding.ProxyAlert(rw, req, alert)
+}
+
+func collectProbeStatus(rw http.ResponseWriter, req *http.Request,
+	alert *kubeproberv1.Alert, influxdb2api influxdb2api.WriteAPI) {
 	ps := apistructs.CollectProbeStatusReq{}
 	var err error
-
 	if err = json.NewDecoder(req.Body).Decode(&ps); err != nil {
 		errMsg := fmt.Sprintf("receive probe status err: %+v\n", err)
 		klog.Errorf(errMsg)
@@ -254,11 +334,21 @@ func collectProbeStatus(rw http.ResponseWriter, req *http.Request, alert *kubepr
 		influxdb2api.WritePoint(p)
 		influxdb2api.Flush()
 	}
-	if alert.Spec.Token == "" || alert.Spec.Sign == "" {
-		return
-	}
+
 	if ps.Status == "ERROR" {
-		if err = dingding.SendAlert(&ps); err != nil {
+		t := &ticket.Ticket{}
+		t.Title = fmt.Sprintf("(请勿改标题)巡检异常-[集群]: %s,[类别]: %s,[检查项]：%s",
+			ps.ClusterName, ps.ProbeName, ps.CheckerName)
+		t.Content = fmt.Sprintf("[集群]: %s\n[类别]: %s\n[检查项]：%s\n[错误信息]: \n%s",
+			ps.ClusterName, ps.ProbeName, ps.CheckerName, ps.Message)
+		t.Type = erda_api.IssueTypeTicket
+		t.Priority = erda_api.IssuePriorityHigh
+
+		ticket.SendTicket(t)
+
+		if alert.Spec.Token == "" || alert.Spec.Sign == "" {
+			return
+		} else if err = dingding.SendAlert(&ps); err != nil {
 			errMsg := fmt.Sprintf("send dingding alert err: %+v\n", err)
 			klog.Errorf(errMsg)
 		}

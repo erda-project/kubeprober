@@ -107,11 +107,8 @@ func NewCmdProbeAgentManager(stopCh <-chan struct{}) *cobra.Command {
 }
 
 func doRun() error {
-	ctx := signals.SetupSignalHandler()
-
 	// receive config file update events over a channel
 	confUpdateChan := make(chan struct{}, 1)
-
 	viper.OnConfigChange(func(evt fsnotify.Event) {
 		if evt.Op&fsnotify.Write == fsnotify.Write || evt.Op&fsnotify.Create == fsnotify.Create {
 			confUpdateChan <- struct{}{}
@@ -120,6 +117,7 @@ func doRun() error {
 
 	// start the operator in a goroutine
 	errChan := make(chan error, 1)
+	ctx := signals.SetupSignalHandler()
 	ctx, cancelFunc := context.WithCancel(ctx)
 	defer cancelFunc()
 
@@ -213,9 +211,9 @@ func startOperator(ctx context.Context) error {
 	}
 
 	setupLog.Info("starting probe server")
-	s := webserver.NewServer(mgr.GetClient(), opts.ProbeListenAddr)
+	s := webserver.NewServer(ctx, mgr.GetClient(), opts.ProbeListenAddr)
 	s.Start(opts.ProbeMasterAddr, opts.ClusterName)
-	heartbeat.Start(opts.ClusterName, opts.ProbeMasterAddr)
+	heartbeat.Start(ctx, opts.ClusterName, opts.ProbeMasterAddr)
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")

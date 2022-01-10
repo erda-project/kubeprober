@@ -35,5 +35,4 @@ func (o *ReportStatusOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.CheckerName, "name", o.CheckerName, "The name of the checker.")
 	fs.StringVar(&o.Status, "status", o.Status, "The status of the checker.")
 	fs.StringVar(&o.Message, "message", o.Message, "The message of the checker .")
-
 }

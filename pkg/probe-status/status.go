@@ -129,9 +129,9 @@ func renderProbeStatus(status []kubeproberv1.ProbeCheckerStatus, info ProbeStatu
 
 	// set lastRun to now if not set
 	now := metav1.Now()
-	for _, s := range status {
-		if s.LastRun == nil {
-			s.LastRun = &now
+	for i, _ := range status {
+		if status[i].LastRun == nil {
+			status[i].LastRun = &now
 		}
 	}
 

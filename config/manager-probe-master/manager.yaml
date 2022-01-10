@@ -74,6 +74,12 @@ data:
       influxdb_token:
       influxdb_org:
       influxdb_bucket:
+      erda_ticket_enalbe: false
+      erda_openapi_url:
+      erda_username:
+      erda_password:
+      erda_org:
+      erda_project_id:
 ---
 apiVersion: v1
 kind: Service

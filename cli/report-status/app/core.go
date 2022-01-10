@@ -44,13 +44,13 @@ func NewCmdReportStatusManager(stopCh <-chan struct{}) *cobra.Command {
 
 func Run(opts *options.ReportStatusOptions) {
 	now := metav1.Now()
-	dnsChecker := kubeproberv1.ProbeCheckerStatus{
+	checkerStatus := kubeproberv1.ProbeCheckerStatus{
 		Name:    opts.CheckerName,
 		Status:  kubeproberv1.CheckerStatus(opts.Status),
 		Message: opts.Message,
 		LastRun: &now,
 	}
-	if err := status.ReportProbeStatus([]kubeproberv1.ProbeCheckerStatus{dnsChecker}); err != nil {
+	if err := status.ReportProbeStatus([]kubeproberv1.ProbeCheckerStatus{checkerStatus}); err != nil {
 		fmt.Printf("%+v\n", err)
 	}
 }

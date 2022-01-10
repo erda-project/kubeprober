@@ -47,7 +47,7 @@ const (
 	clusterInfoCm           = "dice-cluster-info"
 )
 
-func Start(clusterName string, masterAddr string) {
+func Start(ctx context.Context, clusterName string, masterAddr string) {
 	var clusterHeartBeatEndpoint string
 	var clientset *kubernetes.Clientset
 	var name string
@@ -87,6 +87,8 @@ func Start(clusterName string, masterAddr string) {
 					klog.Errorf("[heartbeat] send heartbeat request error: %+v\n", err)
 					break
 				}
+			case <-ctx.Done():
+				return
 			}
 		}
 	}()

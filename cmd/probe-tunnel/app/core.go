@@ -34,9 +34,9 @@ import (
 // NewCmdProbeTunnelManager creates a *cobra.Command object with default parameters
 func NewCmdProbeTunnelManager(stopCh <-chan struct{}) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "probe-agent",
-		Short: "Launch probe-agent",
-		Long:  "Launch probe-agent",
+		Use:   "probe-tunnel",
+		Short: "Launch probe-tunnel",
+		Long:  "Launch probe-tunnel",
 		PreRunE: func(cmd *cobra.Command, _ []string) error {
 			viper.AutomaticEnv()
 
