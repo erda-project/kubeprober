@@ -79,8 +79,11 @@ func sendIssue(t *Ticket) error {
 	}
 
 	if issue != nil {
+		sameContent := strings.Contains(issue.Content, t.Content)
+		sameAssignee := sender.Assignee == issue.Assignee
 		// already exist
-		if strings.Contains(issue.Content, t.Content) {
+
+		if sameContent && sameAssignee {
 			return nil
 		}
 
@@ -89,10 +92,15 @@ func sendIssue(t *Ticket) error {
 		reqU.Title = &issue.Title
 		reqU.Priority = &t.Priority
 		reqU.State = &issue.State
+
 		reqU.Assignee = &sender.Assignee
 
-		c := fmt.Sprintf("%s\n%s", t.Content, issue.Content)
-		reqU.Content = &c
+		if sameContent {
+			reqU.Content = &issue.Content
+		} else {
+			c := fmt.Sprintf("%s\n%s", t.Content, issue.Content)
+			reqU.Content = &c
+		}
 
 		reqU.UserID = sender.UserID
 

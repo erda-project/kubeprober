@@ -23,7 +23,7 @@ spec:
         app: probe-master
     spec:
       containers:
-        - image: kubeprober/probe-master:v0.1.0-beta13
+        - image: kubeprober/probe-master:v0.1.0-beta22
           imagePullPolicy: "Always"
           command: ["/bin/sh"]
           args: ["-c", "/probe-master --config-file=/opt/probe-master-conf.yaml"]
@@ -74,7 +74,7 @@ data:
       influxdb_token:
       influxdb_org:
       influxdb_bucket:
-      erda_ticket_enalbe: false
+      erda_ticket_enable: false
       erda_openapi_url:
       erda_username:
       erda_password:

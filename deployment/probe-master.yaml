@@ -44,6 +44,10 @@ spec:
               address:
                 description: Foo is an example field of Alert. Edit cluster_types.go to remove/update
                 type: string
+              blackList:
+                items:
+                  type: string
+                type: array
               sign:
                 type: string
               token:
@@ -4533,7 +4537,7 @@ data:
     influxdb_token:
     influxdb_org:
     influxdb_bucket:
-    erda_ticket_enalbe: false
+    erda_ticket_enable: false
     erda_openapi_url:
     erda_username:
     erda_password:
@@ -4597,7 +4601,7 @@ spec:
         env:
         - name: SERVER_SECRET_KEY
           value: your-token-here
-        image: kubeprober/probe-master:v0.1.0-beta8
+        image: kubeprober/probe-master:v0.1.0-beta22
         imagePullPolicy: Always
         livenessProbe:
           httpGet:
