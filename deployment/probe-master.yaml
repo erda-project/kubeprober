@@ -4601,7 +4601,7 @@ spec:
         env:
         - name: SERVER_SECRET_KEY
           value: your-token-here
-        image: kubeprober/probe-master:v0.1.0-beta22
+        image: kubeprober/probe-master:v0.1.0-beta23
         imagePullPolicy: Always
         livenessProbe:
           httpGet:

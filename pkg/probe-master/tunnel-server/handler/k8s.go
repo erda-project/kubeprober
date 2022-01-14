@@ -49,16 +49,15 @@ type TimeSerieResponse struct {
 func GetClusterList(rw http.ResponseWriter, req *http.Request) {
 	var err error
 	var listRow [][]interface{}
-	clusters := &kubeproberv1.ClusterList{}
-
-	if err = k8sclient.RestClient.List(context.Background(), clusters, client.InNamespace(metav1.NamespaceDefault)); err != nil {
+	clusters, err := k8sclient.GetClusters()
+	if err != nil {
 		errMsg := fmt.Sprintf("[cluster query] failed to get cluster list: %+v\n", err)
 		rw.Write([]byte(errMsg))
-		rw.WriteHeader(http.StatusBadRequest)
+		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	for _, i := range clusters.Items {
+	for _, i := range clusters {
 		var list []interface{}
 		list = append(list, i.Name)
 		list = append(list, i.Spec.K8sVersion)

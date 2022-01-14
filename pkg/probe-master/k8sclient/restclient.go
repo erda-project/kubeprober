@@ -14,16 +14,21 @@
 package k8sclient
 
 import (
+	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 
-	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
+	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 )
 
 var (
@@ -52,4 +57,29 @@ func init() {
 	if err != nil {
 		return
 	}
+}
+
+func GetClusters() ([]kubeproberv1.Cluster, error) {
+	clusters := &kubeproberv1.ClusterList{}
+
+	err := RestClient.List(context.Background(), clusters, client.InNamespace(metav1.NamespaceDefault))
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("Get clusters in namespaces %s failed", metav1.NamespaceDefault))
+	}
+	return clusters.Items, nil
+}
+
+func GetCluster(name string) (*kubeproberv1.Cluster, error) {
+	clusters, err := GetClusters()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, c := range clusters {
+		if c.Name == name {
+			return &c, nil
+		}
+	}
+
+	return nil, nil
 }

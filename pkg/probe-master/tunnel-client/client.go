@@ -17,11 +17,18 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"strings"
 
-	"github.com/erda-project/kubeprober/pkg/probe-master/tunnel-client/clusterdialer"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/flowcontrol"
+	"k8s.io/klog"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
+	"github.com/erda-project/kubeprober/pkg/probe-master/tunnel-client/clusterdialer"
 )
 
 type ManageConfig struct {
@@ -102,6 +109,7 @@ func GetDialerRestConfig(clusterName string, c *ManageConfig) (*rest.Config, err
 
 	rc.TLSClientConfig.NextProtos = []string{"http/1.1"}
 	rc.UserAgent = rest.DefaultKubernetesUserAgent() + " cluster " + clusterName
+
 	rc.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
 		if ht, ok := rt.(*http.Transport); ok {
 			ht.DialContext = clusterdialer.DialContext(clusterName)
@@ -110,4 +118,64 @@ func GetDialerRestConfig(clusterName string, c *ManageConfig) (*rest.Config, err
 	}
 
 	return rc, nil
+}
+
+func GenerateProbeClientConf(cluster *kubeproberv1.Cluster) (*rest.Config, error) {
+	var err error
+	var clusterToken []byte
+	var config *rest.Config
+
+	if cluster.Spec.ClusterConfig.Token != "" {
+		if clusterToken, err = base64.StdEncoding.DecodeString(cluster.Spec.ClusterConfig.Token); err != nil {
+			klog.Errorf("token, %+v\n", err)
+			return nil, err
+		}
+		config, err = GetDialerRestConfig(cluster.Name, &ManageConfig{
+			Type:    ManageProxy,
+			Address: cluster.Spec.ClusterConfig.Address,
+			Token:   strings.Trim(string(clusterToken), "\n"),
+			CaData:  cluster.Spec.ClusterConfig.CACert,
+		})
+		if err != nil {
+			klog.Errorf("failed to generate dialer rest config for cluster %s, %+v\n", err, cluster.Name)
+			return nil, err
+		}
+	} else {
+		config, err = GetDialerRestConfig(cluster.Name, &ManageConfig{
+			Type:     ManageProxy,
+			Address:  cluster.Spec.ClusterConfig.Address,
+			CertData: cluster.Spec.ClusterConfig.CertData,
+			KeyData:  cluster.Spec.ClusterConfig.KeyData,
+			CaData:   cluster.Spec.ClusterConfig.CACert,
+		})
+		if err != nil {
+			klog.Errorf("failed to generate dialer rest config for cluster %s, %+v\n", err, cluster.Name)
+			return nil, err
+		}
+	}
+
+	return config, err
+}
+
+//Generate k8sclient of cluster
+func GenerateProbeClient(cluster *kubeproberv1.Cluster) (client.Client, error) {
+
+	var err error
+	var c client.Client
+
+	config, err := GenerateProbeClientConf(cluster)
+	if err != nil {
+		klog.Errorf("failed to generate dialer k8s client config for cluster %s, %+v\n", err, cluster.Name)
+		return nil, err
+	}
+
+	scheme := runtime.NewScheme()
+	kubeproberv1.AddToScheme(scheme)
+	clientgoscheme.AddToScheme(scheme)
+	c, err = client.New(config, client.Options{Scheme: scheme})
+	if err != nil {
+		klog.Errorf("failed to generate dialer k8s client for cluster %s, %+v\n", err, cluster.Name)
+		return nil, err
+	}
+	return c, nil
 }

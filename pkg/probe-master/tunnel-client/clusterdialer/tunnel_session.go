@@ -79,7 +79,7 @@ func (s *TunnelSession) getClusterDialer(ctx context.Context, clusterKey string)
 			logrus.Errorf("get clusterdial session failed, cost %.3fs", time.Since(start).Seconds())
 			return nil
 		case <-time.After(1 * time.Second):
-			logrus.Infof("waiting fo clusterdial session ready... ")
+			logrus.Info("waiting fo clusterdial session ready...")
 		}
 	}
 	return remotedialer.ToDialer(session, clusterKey)
