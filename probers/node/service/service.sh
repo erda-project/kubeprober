@@ -8,7 +8,7 @@ fi
 
 ## docker层面检查
 function check_docker_status() {
-    if systemctl is-active docker | grep active > /dev/null 2>&1; then
+    if systemctl is-active docker | grep '^active' > /dev/null 2>&1; then
         echo host_dockerstatus ok
     else
         echo host_dockerstatus error "docker not running"
@@ -51,7 +51,7 @@ function check_docker_dir() {
 }
 
 function check_kubelet_status() {
-    if systemctl is-active kubelet | grep active > /dev/null 2>&1; then
+    if systemctl is-active kubelet | grep '^active' > /dev/null 2>&1; then
         echo host_kubeletstatus ok
     else
         echo host_kubeletstatus error "kubelet not running"

@@ -43,6 +43,7 @@ func getExtraStatus(k8sRestClient client.Client, config *rest.Config) map[string
 	cm := &v1.ConfigMap{}
 	masterHost := &v1.NodeList{}
 	lbHost := &v1.NodeList{}
+	nodes := &v1.NodeList{}
 
 	var err error
 	if err = k8sRestClient.Get(context.Background(), client.ObjectKey{
@@ -87,6 +88,20 @@ func getExtraStatus(k8sRestClient client.Client, config *rest.Config) map[string
 	}
 	s["masterNode"] = fmt.Sprintf("%d", len(masterHost.Items))
 	s["lbNode"] = fmt.Sprintf("%d", len(lbHost.Items))
+
+	if err = k8sRestClient.List(context.Background(), nodes); err != nil {
+		klog.Errorf("fail to get node: %+v\n", err)
+	}
+
+	osImagesMap := map[string]interface{}{}
+	for _, n := range nodes.Items {
+		osImagesMap[n.Status.NodeInfo.OSImage] = struct{}{}
+	}
+	var osImages []string
+	for o := range osImagesMap {
+		osImages = append(osImages, o)
+	}
+	s["osImages"] = strings.Join(osImages, ",")
 
 	podOfKb := &v1.PodList{}
 	var nsenterPodName string

@@ -76,6 +76,7 @@ func GetClusterList(rw http.ResponseWriter, req *http.Request) {
 		list = append(list, i.Status.ExtraStatus["k8sVendor"])
 		list = append(list, i.Status.ExtraStatus["masterNode"])
 		list = append(list, i.Status.ExtraStatus["lbNode"])
+		list = append(list, i.Status.ExtraStatus["osImages"])
 		list = append(list, i.Status.ExtraStatus["mysqlHost"])
 		list = append(list, i.Status.ExtraStatus["nacosAddr"])
 		list = append(list, i.Status.ExtraStatus["podNum"])
@@ -108,6 +109,7 @@ func GetClusterList(rw http.ResponseWriter, req *http.Request) {
 			{Text: "K8SVENDER", Type: "string"},
 			{Text: "MASTERNODE", Type: "string"},
 			{Text: "LBNODE", Type: "string"},
+			{Text: "OSIMAGE", Type: "string"},
 			{Text: "MYSQLHOST", Type: "string"},
 			{Text: "NACOSADDR", Type: "string"},
 			{Text: "PODNUM", Type: "string"},
@@ -154,7 +156,7 @@ func GetAlertStatistic(rw http.ResponseWriter, req *http.Request) {
 		listRow = append(listRow, list)
 	}
 	sort.Slice(listRow, func(i, j int) bool {
-		return listRow[i][1] > listRow[j][1]
+		return listRow[i][1] < listRow[j][1]
 	})
 	resp := TimeSerieResponse{
 		Tatget:     "count",
