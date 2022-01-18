@@ -77,11 +77,11 @@ function check_resolved() {
     fi
 }
 
-function check_ntpd() {
-    if systemctl is-active ntpd | grep active > /dev/null 2>&1; then
-        echo host_ntpd ok
+function check_chronyd() {
+    if systemctl is-active chronyd | grep '^active' > /dev/null 2>&1; then
+        echo host_chronyd ok
     else
-        echo host_ntpd error "ntpd not running"
+        echo host_chronyd error "chronyd not running"
     fi
 }
 
@@ -121,6 +121,6 @@ check_docker_dir
 check_kubelet_status
 check_firewall
 check_resolved
-check_ntpd
+check_chronyd
 check_docker_notify
 check_kubelet_eviction_config
