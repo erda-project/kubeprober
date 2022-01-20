@@ -117,7 +117,6 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 			ExtraStatus:        hbData.ExtraStatus,
 		},
 	}
-	fmt.Printf("%v\n", statusPatchBody)
 	statusPatch, _ := json.Marshal(statusPatchBody)
 	err = k8sclient.RestClient.Status().Patch(context.Background(), &kubeproberv1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{

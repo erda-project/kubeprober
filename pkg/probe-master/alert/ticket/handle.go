@@ -14,7 +14,6 @@
 package ticket
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -90,17 +89,11 @@ func sendIssue(t *Ticket) error {
 		reqU := &erda_api.IssueUpdateRequest{}
 		reqU.ID = uint64(issue.ID)
 		reqU.Title = &issue.Title
-		reqU.Priority = &t.Priority
+		reqU.Priority = &issue.Priority
 		reqU.State = &issue.State
 
 		reqU.Assignee = &sender.Assignee
-
-		if sameContent {
-			reqU.Content = &issue.Content
-		} else {
-			c := fmt.Sprintf("%s\n%s", t.Content, issue.Content)
-			reqU.Content = &c
-		}
+		reqU.Content = &t.Content
 
 		reqU.UserID = sender.UserID
 

@@ -305,7 +305,7 @@ func (u *ErdaIdentity) UpdateIssue(req *erda_api.IssueUpdateRequest) error {
 	r := erda_api.IssueUpdateResponse{}
 	err = unmarshalResponse(resp, &r)
 	if err != nil {
-		logrus.Errorf("unmarshal response failed, error: %v", err)
+		logrus.Errorf("unmarshal response failed for issue %d, error: %v", req.ID, err)
 		return err
 	}
 	if !r.Success || r.Error.Msg != "" {
