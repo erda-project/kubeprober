@@ -210,6 +210,12 @@ func Start(ctx context.Context, cfg *Config, influxdbConfig *apistructs.Influxdb
 		json.NewEncoder(rw).Encode([]string{"NODECOUNT"})
 	})
 
+	httphandler.NewAggregator(ctx)
+	router.HandleFunc("/api/k8s/clusters/{clusterName}", func(rw http.ResponseWriter,
+		req *http.Request) {
+		httphandler.ClusterConsole(rw, req)
+	})
+
 	router.HandleFunc("/alertstatistic", func(rw http.ResponseWriter,
 		req *http.Request) {
 		rw.WriteHeader(http.StatusOK)

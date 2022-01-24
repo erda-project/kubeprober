@@ -49,16 +49,15 @@ type TimeSerieResponse struct {
 func GetClusterList(rw http.ResponseWriter, req *http.Request) {
 	var err error
 	var listRow [][]interface{}
-	clusters := &kubeproberv1.ClusterList{}
-
-	if err = k8sclient.RestClient.List(context.Background(), clusters, client.InNamespace(metav1.NamespaceDefault)); err != nil {
+	clusters, err := k8sclient.GetClusters()
+	if err != nil {
 		errMsg := fmt.Sprintf("[cluster query] failed to get cluster list: %+v\n", err)
 		rw.Write([]byte(errMsg))
-		rw.WriteHeader(http.StatusBadRequest)
+		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	for _, i := range clusters.Items {
+	for _, i := range clusters {
 		var list []interface{}
 		list = append(list, i.Name)
 		list = append(list, i.Spec.K8sVersion)
@@ -76,6 +75,7 @@ func GetClusterList(rw http.ResponseWriter, req *http.Request) {
 		list = append(list, i.Status.ExtraStatus["k8sVendor"])
 		list = append(list, i.Status.ExtraStatus["masterNode"])
 		list = append(list, i.Status.ExtraStatus["lbNode"])
+		list = append(list, i.Status.ExtraStatus["osImages"])
 		list = append(list, i.Status.ExtraStatus["mysqlHost"])
 		list = append(list, i.Status.ExtraStatus["nacosAddr"])
 		list = append(list, i.Status.ExtraStatus["podNum"])
@@ -108,6 +108,7 @@ func GetClusterList(rw http.ResponseWriter, req *http.Request) {
 			{Text: "K8SVENDER", Type: "string"},
 			{Text: "MASTERNODE", Type: "string"},
 			{Text: "LBNODE", Type: "string"},
+			{Text: "OSIMAGE", Type: "string"},
 			{Text: "MYSQLHOST", Type: "string"},
 			{Text: "NACOSADDR", Type: "string"},
 			{Text: "PODNUM", Type: "string"},
@@ -154,7 +155,7 @@ func GetAlertStatistic(rw http.ResponseWriter, req *http.Request) {
 		listRow = append(listRow, list)
 	}
 	sort.Slice(listRow, func(i, j int) bool {
-		return listRow[i][1] > listRow[j][1]
+		return listRow[i][1] < listRow[j][1]
 	})
 	resp := TimeSerieResponse{
 		Tatget:     "count",

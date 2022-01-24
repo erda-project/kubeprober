@@ -15,7 +15,6 @@ package controller
 
 import (
 	"context"
-	"encoding/base64"
 	"reflect"
 	"sort"
 	"strings"
@@ -29,8 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/json"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
 	"k8s.io/klog"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -170,7 +167,7 @@ func updateCmForCluster(cluster *kubeproberv1.Cluster) error {
 	var c client.Client
 	cmData := make(map[string]string)
 
-	c, err = GenerateProbeClient(cluster)
+	c, err = dialclient.GenerateProbeClient(cluster)
 	if err != nil {
 		return err
 	}
@@ -213,7 +210,7 @@ func AddProbeToCluster(cluster *kubeproberv1.Cluster, probe *kubeproberv1.Probe)
 	var err error
 	var c client.Client
 
-	c, err = GenerateProbeClient(cluster)
+	c, err = dialclient.GenerateProbeClient(cluster)
 	if err != nil {
 		return err
 	}
@@ -243,7 +240,7 @@ func DeleteProbeOfCluster(cluster *kubeproberv1.Cluster, probeName string) error
 	var err error
 	var c client.Client
 
-	c, err = GenerateProbeClient(cluster)
+	c, err = dialclient.GenerateProbeClient(cluster)
 	if err != nil {
 		return err
 	}
@@ -269,7 +266,7 @@ func GetProbeOfCluster(cluster *kubeproberv1.Cluster, probeName string) (*kubepr
 	var err error
 	var c client.Client
 
-	c, err = GenerateProbeClient(cluster)
+	c, err = dialclient.GenerateProbeClient(cluster)
 	if err != nil {
 		return nil, err
 	}
@@ -294,7 +291,7 @@ func UpdateProbeOfCluster(cluster *kubeproberv1.Cluster, probe *kubeproberv1.Pro
 	remoteProbe := &kubeproberv1.Probe{}
 	//var patch []byte
 
-	c, err = GenerateProbeClient(cluster)
+	c, err = dialclient.GenerateProbeClient(cluster)
 	if err != nil {
 		return err
 	}
@@ -322,52 +319,6 @@ func UpdateProbeOfCluster(cluster *kubeproberv1.Cluster, probe *kubeproberv1.Pro
 		return err
 	}
 	return nil
-}
-
-//Generate k8sclient of cluster
-func GenerateProbeClient(cluster *kubeproberv1.Cluster) (client.Client, error) {
-	var clusterToken []byte
-	var err error
-	var c client.Client
-	var config *rest.Config
-
-	if cluster.Spec.ClusterConfig.Token != "" {
-		if clusterToken, err = base64.StdEncoding.DecodeString(cluster.Spec.ClusterConfig.Token); err != nil {
-			klog.Errorf("token, %+v\n", err)
-			return nil, err
-		}
-		config, err = dialclient.GetDialerRestConfig(cluster.Name, &dialclient.ManageConfig{
-			Type:    dialclient.ManageProxy,
-			Address: cluster.Spec.ClusterConfig.Address,
-			Token:   strings.Trim(string(clusterToken), "\n"),
-			CaData:  cluster.Spec.ClusterConfig.CACert,
-		})
-		if err != nil {
-			klog.Errorf("failed to generate dialer rest config for cluster %s, %+v\n", err, cluster.Name)
-			return nil, err
-		}
-	} else {
-		config, err = dialclient.GetDialerRestConfig(cluster.Name, &dialclient.ManageConfig{
-			Type:     dialclient.ManageProxy,
-			Address:  cluster.Spec.ClusterConfig.Address,
-			CertData: cluster.Spec.ClusterConfig.CertData,
-			KeyData:  cluster.Spec.ClusterConfig.KeyData,
-			CaData:   cluster.Spec.ClusterConfig.CACert,
-		})
-		if err != nil {
-			klog.Errorf("failed to generate dialer rest config for cluster %s, %+v\n", err, cluster.Name)
-			return nil, err
-		}
-	}
-	scheme := runtime.NewScheme()
-	kubeproberv1.AddToScheme(scheme)
-	clientgoscheme.AddToScheme(scheme)
-	c, err = client.New(config, client.Options{Scheme: scheme})
-	if err != nil {
-		klog.Errorf("failed to generate dialer k8s client for cluster %s, %+v\n", err, cluster.Name)
-		return nil, err
-	}
-	return c, nil
 }
 
 type ClusterPredicate struct {

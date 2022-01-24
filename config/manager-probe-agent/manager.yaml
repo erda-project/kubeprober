@@ -23,13 +23,13 @@ spec:
         app: probe-agent
     spec:
       containers:
-        - image: kubeprober/probe-agent:v0.1.0-beta12
+        - image: kubeprober/probe-agent:v0.1.0-beta13
           imagePullPolicy: "Always"
           name: probe-agent
           command: ["/bin/sh"]
           args: ["-c", "/probe-agent --config-file=/opt/probe-conf.yaml"]
           securityContext:
-            allowPrivilegeEscalation: false
+            privileged: true
           livenessProbe:
             httpGet:
               path: /healthz

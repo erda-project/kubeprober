@@ -24,7 +24,7 @@ import (
 var session TunnelSession
 
 func InitSession(masterAddr string) {
-	clusterDialerEndpoint := masterAddr
+	clusterDialerEndpoint := masterAddr + "/clusterdialer"
 	go session.initialize(clusterDialerEndpoint)
 }
 

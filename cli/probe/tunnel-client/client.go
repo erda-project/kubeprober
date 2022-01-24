@@ -20,11 +20,16 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
+	"sync"
 
-	"github.com/erda-project/kubeprober/cli/probe/tunnel-client/clusterdialer"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/flowcontrol"
+	"k8s.io/klog"
+
+	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
+	"github.com/erda-project/kubeprober/cli/probe/tunnel-client/clusterdialer"
 )
 
 type ManageConfig struct {
@@ -45,12 +50,12 @@ const (
 	KpConfigFlie = ".kubeprober/config"
 )
 
-var masterAddr string
+var MasterAddr string
 
 // get master-addr by config file
 func init() {
 	filePath := fmt.Sprintf("%s/%s", os.Getenv("HOME"), KpConfigFlie)
-	masterAddr, _ = LoadConfig(filePath)
+	MasterAddr, _ = LoadConfig(filePath)
 }
 
 func LoadConfig(path string) (string, error) {
@@ -124,11 +129,18 @@ func GetRestConfig(c *ManageConfig) (*rest.Config, error) {
 	return rc, nil
 }
 
-func GetDialerRestConfig(clusterName string, c *ManageConfig) (*rest.Config, error) {
-	if masterAddr == "" {
-		masterAddr = "ws://probe-master.kubeprober.svc.cluster.local:8088/clusterdialer"
+var once sync.Once
+
+func Init() {
+	if MasterAddr == "" {
+		MasterAddr = "ws://probe-master.kubeprober.svc.cluster.local:8088"
 	}
-	clusterdialer.InitSession(masterAddr)
+	clusterdialer.InitSession(MasterAddr)
+}
+
+func GetDialerRestConfig(clusterName string, c *ManageConfig) (*rest.Config, error) {
+	once.Do(func() { Init() })
+
 	rc, err := GetRestConfig(c)
 	if err != nil {
 		return nil, err
@@ -144,4 +156,41 @@ func GetDialerRestConfig(clusterName string, c *ManageConfig) (*rest.Config, err
 	}
 
 	return rc, nil
+}
+
+func GenerateProbeClientConf(cluster *kubeproberv1.Cluster) (*rest.Config, error) {
+	var err error
+	var clusterToken []byte
+	var config *rest.Config
+
+	if cluster.Spec.ClusterConfig.Token != "" {
+		if clusterToken, err = base64.StdEncoding.DecodeString(cluster.Spec.ClusterConfig.Token); err != nil {
+			klog.Errorf("token, %+v\n", err)
+			return nil, err
+		}
+		config, err = GetDialerRestConfig(cluster.Name, &ManageConfig{
+			Type:    ManageProxy,
+			Address: cluster.Spec.ClusterConfig.Address,
+			Token:   strings.Trim(string(clusterToken), "\n"),
+			CaData:  cluster.Spec.ClusterConfig.CACert,
+		})
+		if err != nil {
+			klog.Errorf("failed to generate dialer rest config for cluster %s, %+v\n", err, cluster.Name)
+			return nil, err
+		}
+	} else {
+		config, err = GetDialerRestConfig(cluster.Name, &ManageConfig{
+			Type:     ManageProxy,
+			Address:  cluster.Spec.ClusterConfig.Address,
+			CertData: cluster.Spec.ClusterConfig.CertData,
+			KeyData:  cluster.Spec.ClusterConfig.KeyData,
+			CaData:   cluster.Spec.ClusterConfig.CACert,
+		})
+		if err != nil {
+			klog.Errorf("failed to generate dialer rest config for cluster %s, %+v\n", err, cluster.Name)
+			return nil, err
+		}
+	}
+
+	return config, err
 }

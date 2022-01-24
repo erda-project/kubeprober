@@ -47,6 +47,7 @@ func init() {
 	OpsCmd.PersistentFlags().StringVarP(&agentMemoryLimit, "set-agent-memory", "", "", "Set Memory limit of agent")
 	OpsCmd.PersistentFlags().StringVarP(&agentCpuLimit, "set-agent-cpu", "", "", "Set Cpu limit of agent")
 
+	TerminalCmd.PersistentFlags().StringVarP(&clusterName, "cluster", "c", "", "Name of specify cluster")
 }
 
 // NewCmdProbeStatusManager creates a *cobra.Command object with default parameters
