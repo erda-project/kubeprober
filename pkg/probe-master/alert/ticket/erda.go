@@ -54,6 +54,7 @@ func Init(loginUser, loginPassword, openapiURL, orgName string, projectId uint64
 		OpenapiUrl: openapiURL,
 		OrgName:    orgName,
 		ProjectId:  projectId,
+		Assignee:   "1001863", // erda-bot
 
 		client: resty.New().SetRetryCount(3).SetRetryWaitTime(3 * time.Second).SetRetryMaxWaitTime(20 * time.Second),
 	}
@@ -72,7 +73,6 @@ func Init(loginUser, loginPassword, openapiURL, orgName string, projectId uint64
 		err = sender.GetAssignee()
 		if err != nil {
 			klog.Errorf("failed to fetch assignee for sre: %+v\n", err)
-			return err
 		}
 	}
 
@@ -259,7 +259,7 @@ func (u *ErdaIdentity) SearchUser(username string) (*erda_api.UserInfo, error) {
 	}
 
 	l := len(r.Data.Users)
-	if l < 0 {
+	if l <= 0 {
 		return nil, errors.New(fmt.Sprintf("not found user %s, in erda", username))
 	} else if l > 1 {
 		logrus.Warnf("more than one user find with name %s, only choose one", username)

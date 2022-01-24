@@ -79,10 +79,10 @@ func sendIssue(t *Ticket) error {
 
 	if issue != nil {
 		sameContent := strings.Contains(issue.Content, t.Content)
-		sameAssignee := sender.Assignee == issue.Assignee
+		//sameAssignee := sender.Assignee == issue.Assignee
 		// already exist
 
-		if sameContent && sameAssignee {
+		if sameContent {
 			return nil
 		}
 

@@ -44,8 +44,6 @@ import (
 	httphandler "github.com/erda-project/kubeprober/pkg/probe-master/tunnel-server/handler"
 )
 
-const DINGDING_ALERT_NAME = "dingding"
-
 func clusterRegister(server *remotedialer.Server, rw http.ResponseWriter, req *http.Request) {
 	server.ServeHTTP(rw, req)
 }
@@ -273,17 +271,18 @@ func proxyDingdingAlert(rw http.ResponseWriter, req *http.Request, influxdb2api 
 			influxdb2api.Flush()
 		}
 
-		level := strings.ToLower(asItem.Level)
-		if level == "fatal" || level == "critical" {
-			t := &ticket.Ticket{}
-			t.Title = fmt.Sprintf("(请勿改标题) 异常告警-[级别]: %s,[集群]: %s,[节点]: %s,[类别]: %s,[组件]：%s",
-				asItem.Level, asItem.Cluster, asItem.Node, asItem.Type, asItem.Component)
-			t.Content = asItem.Msg
-			t.Type = erda_api.IssueTypeTicket
-			t.Priority = erda_api.IssuePriorityHigh
-
-			ticket.SendTicket(t)
-		}
+		// TODO open in feature
+		//level := strings.ToLower(asItem.Level)
+		//if level == "fatal" || level == "critical" {
+		//	t := &ticket.Ticket{}
+		//	t.Title = fmt.Sprintf("(请勿改标题) 异常告警-[级别]: %s,[集群]: %s,[节点]: %s,[类别]: %s,[组件]：%s",
+		//		asItem.Level, asItem.Cluster, asItem.Node, asItem.Type, asItem.Component)
+		//	t.Content = asItem.Msg
+		//	t.Type = erda_api.IssueTypeTicket
+		//	t.Priority = erda_api.IssuePriorityHigh
+		//
+		//	ticket.SendTicket(t)
+		//}
 	}
 
 	dingding.ProxyAlert(rw, req)
