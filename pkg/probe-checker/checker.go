@@ -39,7 +39,9 @@ func RunCheckers(cs CheckerList) error {
 			}
 			err := RunChecker(cr)
 			if err != nil {
-				if cr.GetStatus() != kubeproberv1.CheckerStatusPass || cr.GetStatus() != kubeproberv1.CheckerStatusWARN {
+				if cr.GetStatus() == kubeproberv1.CheckerStatusWARN {
+					s.Status = kubeproberv1.CheckerStatusWARN
+				} else if cr.GetStatus() != kubeproberv1.CheckerStatusPass {
 					s.Status = kubeproberv1.CheckerStatusError
 				}
 				s.Message = err.Error()

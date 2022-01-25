@@ -2,7 +2,7 @@
 
 if [[ $1 == "" ]]
 then
-    echo "usage: kubectl probe name <script-file-name>"
+    echo "usage: kubectl probe node <script-file-name>"
     exit 1
 fi
 NAMESPACE="kubeprober"
@@ -77,7 +77,7 @@ do
     else
         type=$(echo $item | awk -F" " '{print $4}')
         minfo=$(cat /tmp/.probe_host_result | grep -v "=======" | grep $name | grep $type | awk -F"|" '{print $NF}' | head -n 1 )
-        nodeList=$(cat /tmp/.probe_host_result | grep $name | grep $type | grep -v "====" | awk '{print $1}' | xargs echo)
+        nodeList=$(cat /tmp/.probe_host_result | grep $name | grep $type | grep -v "====" | awk '{print $1}' | sort | xargs echo)
         message="$minfo, $type node: [ $nodeList ]"
         report-status --name=$name --status=$type --message="$message"
     fi

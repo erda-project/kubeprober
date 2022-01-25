@@ -30,6 +30,7 @@ import (
 	"strings"
 	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
@@ -43,8 +44,11 @@ import (
 
 const DINGDING_ALERT_NAME = "dingding"
 
-var ci = make(chan int, 100)
-var sendMsgCh = make(chan string, 100)
+var (
+	dingdingAlert *kubeproberv1.Alert
+	ci            = make(chan int, 100)
+	sendMsgCh     = make(chan string, 100)
+)
 
 type alertStruct struct {
 	Markdown Markdown `json:"markdown"`
@@ -68,29 +72,36 @@ type AlertItemStuct struct {
 func init() {
 	var proxyCount = 0
 	var sendMsg = ""
-	var err error
+
+	// init dingding alert
+	if err := getDingDingAlert(); err != nil {
+		klog.Errorf("failed to get dingding alert crd: %+v\n", err)
+	}
+
 	go func() {
+		dingTicker := time.NewTicker(60 * time.Second)
+		senderTicker := time.NewTicker(10 * time.Second)
 		for {
 			select {
 			case <-ci:
 				proxyCount++
-			case <-time.After(60 * time.Second):
-				if err = alertCount(proxyCount); err != nil {
-					klog.Errorf("failed to count alert number: %+v\n", err)
+			case <-dingTicker.C:
+				// refresh dingding alert
+				err := getDingDingAlert()
+				if err != nil {
+					klog.Errorf("failed to get dingding alert crd: %+v\n", err)
+				} else {
+					err = alertCount(proxyCount)
+					if err != nil {
+						klog.Errorf("failed to count alert number: %+v\n", err)
+					}
+					proxyCount = 0
 				}
-				proxyCount = 0
-			}
-		}
-	}()
-
-	go func() {
-		for {
-			select {
 			case msg := <-sendMsgCh:
 				sendMsg = sendMsg + fmt.Sprintf("%s", msg)
-			case <-time.After(10 * time.Second):
+			case <-senderTicker.C:
 				if sendMsg != "" {
-					if err = sendAlertAfterAggregation(sendMsg); err != nil {
+					if err := sendAlertAfterAggregation(sendMsg); err != nil {
 						klog.Errorf("failed to send dingding proxy: %+v\n", err)
 					}
 				}
@@ -100,12 +111,48 @@ func init() {
 	}()
 }
 
-func ProxyAlert(w http.ResponseWriter, r *http.Request, alert *kubeproberv1.Alert) {
-	u, _ := url.Parse(alert.Spec.Address)
-	fmt.Printf("forwarding to -> %s, blacklist: %v\n", u, alert.Spec.BlackList)
+func CheckBlacklist(alertStr string) bool {
+	if dingdingAlert == nil {
+		return true
+	}
+
+	ignore := false
+	// ignore if in black list
+	for _, word := range dingdingAlert.Spec.BlackList {
+		if strings.Contains(alertStr, word) {
+			fmt.Printf("ignore alert, keywork: %s, alert: %s\n", word, alertStr)
+			ignore = true
+			break
+		}
+	}
+
+	return ignore
+}
+
+func ProxyAlert(w http.ResponseWriter, r *http.Request) {
+	if dingdingAlert == nil || dingdingAlert.Spec.Address == "" {
+		return
+	}
+
+	u, _ := url.Parse(dingdingAlert.Spec.Address)
+	fmt.Printf("forwarding to -> %s, blacklist: %v\n", u, dingdingAlert.Spec.BlackList)
 	proxy := NewProxy(u)
 	proxy.Transport = &DebugTransport{}
 	proxy.ServeHTTP(w, r)
+}
+
+func SendAlert(ps *apistructs.CollectProbeStatusReq) error {
+	if dingdingAlert == nil || dingdingAlert.Spec.Token == "" || dingdingAlert.Spec.Sign == "" {
+		return nil
+	}
+
+	istr := "[类别]: " + ps.ProbeName + "\n" +
+		"[检查项]：" + ps.CheckerName + "\n" +
+		"[集群]：" + ps.ClusterName + "\n" +
+		"[状态]: " + ps.Status + "\n" +
+		"[错误信息]: " + ps.Message + "\n\n"
+	sendMsgCh <- istr
+	return nil
 }
 
 func ParseAlert(alertStr string) (*AlertItemStuct, error) {
@@ -139,29 +186,43 @@ func regexpAlertStr(reg string, s string, index int) string {
 	return ""
 }
 
-func alertCount(count int) error {
-	var err error
+func getDingDingAlert() error {
 	alert := &kubeproberv1.Alert{}
-	if err = k8sclient.RestClient.Get(context.Background(), client.ObjectKey{
+	err := k8sclient.RestClient.Get(context.Background(), client.ObjectKey{
 		Namespace: metav1.NamespaceDefault,
 		Name:      DINGDING_ALERT_NAME,
-	}, alert); err != nil {
+	}, alert)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			dingdingAlert = nil
+		}
 		return err
 	}
+
+	dingdingAlert = alert
+	return nil
+}
+
+func alertCount(count int) error {
+	if dingdingAlert == nil {
+		return nil
+	}
+
+	var err error
 	now := time.Now()
 	loc, _ := time.LoadLocation("Asia/Shanghai")
 	nowDay := now.In(loc).Format("2006-01-02")
-	if alert.Status.AlertCount == nil {
-		alert.Status.AlertCount = make(map[string]int)
+	if dingdingAlert.Status.AlertCount == nil {
+		dingdingAlert.Status.AlertCount = make(map[string]int)
 	}
-	alert.Status.AlertCount[nowDay] = alert.Status.AlertCount[nowDay] + count
+	dingdingAlert.Status.AlertCount[nowDay] = dingdingAlert.Status.AlertCount[nowDay] + count
 
-	if len(alert.Status.AlertCount) > 200 {
+	if len(dingdingAlert.Status.AlertCount) > 200 {
 		deleteDay := now.AddDate(0, 0, -200).Format("2006-01-02")
-		delete(alert.Status.AlertCount, deleteDay)
+		delete(dingdingAlert.Status.AlertCount, deleteDay)
 	}
 	statusPatchBody := kubeproberv1.Alert{
-		Status: alert.Status,
+		Status: dingdingAlert.Status,
 	}
 	statusPatch, _ := json.Marshal(statusPatchBody)
 	err = k8sclient.RestClient.Status().Patch(context.Background(), &kubeproberv1.Alert{
@@ -224,24 +285,20 @@ func sendAlertAfterAggregation(msg string) error {
 	var resp *http.Response
 	var result []byte
 
-	alert := &kubeproberv1.Alert{}
-	if err = k8sclient.RestClient.Get(context.Background(), client.ObjectKey{
-		Namespace: metav1.NamespaceDefault,
-		Name:      DINGDING_ALERT_NAME,
-	}, alert); err != nil {
-		return err
+	if dingdingAlert == nil {
+		return nil
 	}
-
-	if alert.Spec.Address == "" || alert.Spec.Token == "" || alert.Spec.Sign == "" {
+	if dingdingAlert.Spec.Address == "" || dingdingAlert.Spec.Token == "" || dingdingAlert.Spec.Sign == "" {
 		return errors.New("address or token or sign is emtpy in this alert spec")
 	}
-	addr := fmt.Sprintf("%s/robot/send?access_token=%s", alert.Spec.Address, alert.Spec.Token)
-	if signUrl, err = getSignURL(addr, alert.Spec.Sign); err != nil {
+
+	addr := fmt.Sprintf("%s/robot/send?access_token=%s", dingdingAlert.Spec.Address, dingdingAlert.Spec.Token)
+	if signUrl, err = getSignURL(addr, dingdingAlert.Spec.Sign); err != nil {
 		return err
 	}
 
 	content, data := make(map[string]string), make(map[string]interface{})
-	content["content"] = SubstrByByte(msg, 1800)
+	content["content"] = substrByByte(msg, 1800)
 	data["msgtype"] = "text"
 	data["text"] = content
 	b, _ := json.Marshal(data)
@@ -260,16 +317,6 @@ func sendAlertAfterAggregation(msg string) error {
 		return err
 	}
 	klog.Infof("dingding return msg: %s\n", result)
-	return nil
-}
-
-func SendAlert(ps *apistructs.CollectProbeStatusReq) error {
-	istr := "[类别]: " + ps.ProbeName + "\n" +
-		"[检查项]：" + ps.CheckerName + "\n" +
-		"[集群]：" + ps.ClusterName + "\n" +
-		"[状态]: " + ps.Status + "\n" +
-		"[错误信息]: " + ps.Message + "\n\n"
-	sendMsgCh <- istr
 	return nil
 }
 
@@ -297,7 +344,7 @@ func getSignURL(addr string, sign string) (string, error) {
 	return u.String(), nil
 }
 
-func SubstrByByte(str string, length int) string {
+func substrByByte(str string, length int) string {
 	var bs []byte
 	s := []byte(str)
 	if len(s) > length {

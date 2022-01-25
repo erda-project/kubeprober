@@ -44,8 +44,6 @@ import (
 	httphandler "github.com/erda-project/kubeprober/pkg/probe-master/tunnel-server/handler"
 )
 
-const DINGDING_ALERT_NAME = "dingding"
-
 func clusterRegister(server *remotedialer.Server, rw http.ResponseWriter, req *http.Request) {
 	server.ServeHTTP(rw, req)
 }
@@ -117,7 +115,6 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 			ExtraStatus:        hbData.ExtraStatus,
 		},
 	}
-	fmt.Printf("%v\n", statusPatchBody)
 	statusPatch, _ := json.Marshal(statusPatchBody)
 	err = k8sclient.RestClient.Status().Patch(context.Background(), &kubeproberv1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
@@ -138,7 +135,6 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 }
 
 func Start(ctx context.Context, cfg *Config, influxdbConfig *apistructs.InfluxdbConf, erdaConfig *apistructs.ErdaConfig) error {
-	var dingdingAlert *kubeproberv1.Alert
 	var err error
 	var client influxdb2.Client
 	var writeAPI influxdb2api.WriteAPI
@@ -181,18 +177,14 @@ func Start(ctx context.Context, cfg *Config, influxdbConfig *apistructs.Influxdb
 		clusterRegister(handler, rw, req)
 	})
 
-	//proxy dingding alert
-	if dingdingAlert, err = getDingDingAlert(); err != nil {
-		klog.Errorf("failed to get dingding alert crd: %+v\n", err)
-	}
 	router.HandleFunc("/robot/send", func(rw http.ResponseWriter,
 		req *http.Request) {
-		proxyDingdingAlert(rw, req, dingdingAlert, alertDataWriteAPI)
+		proxyDingdingAlert(rw, req, alertDataWriteAPI)
 	})
 
 	router.HandleFunc("/collect", func(rw http.ResponseWriter,
 		req *http.Request) {
-		collectProbeStatus(rw, req, dingdingAlert, writeAPI)
+		collectProbeStatus(rw, req, writeAPI)
 	})
 
 	router.HandleFunc("/cluster", func(rw http.ResponseWriter,
@@ -240,22 +232,7 @@ func Start(ctx context.Context, cfg *Config, influxdbConfig *apistructs.Influxdb
 	return server.ListenAndServe()
 }
 
-func getDingDingAlert() (*kubeproberv1.Alert, error) {
-	alert := &kubeproberv1.Alert{}
-	var err error
-
-	if err = k8sclient.RestClient.Get(context.Background(), client.ObjectKey{
-		Namespace: metav1.NamespaceDefault,
-		Name:      DINGDING_ALERT_NAME,
-	}, alert); err != nil {
-		return alert, err
-	}
-
-	return alert, nil
-}
-
-func proxyDingdingAlert(rw http.ResponseWriter, req *http.Request,
-	alert *kubeproberv1.Alert, influxdb2api influxdb2api.WriteAPI) {
+func proxyDingdingAlert(rw http.ResponseWriter, req *http.Request, influxdb2api influxdb2api.WriteAPI) {
 	var (
 		ignore   bool
 		alertStr string
@@ -271,14 +248,7 @@ func proxyDingdingAlert(rw http.ResponseWriter, req *http.Request,
 	alertStr = string(buf)
 	//}
 
-	// ignore if in black list
-	for _, word := range alert.Spec.BlackList {
-		if strings.Contains(alertStr, word) {
-			fmt.Printf("ignore alert, keywork: %s, alert: %s\n", word, alertStr)
-			ignore = true
-			break
-		}
-	}
+	ignore = dingding.CheckBlacklist(alertStr)
 	// return if ignore
 	if ignore {
 		return
@@ -301,24 +271,24 @@ func proxyDingdingAlert(rw http.ResponseWriter, req *http.Request,
 			influxdb2api.Flush()
 		}
 
-		level := strings.ToLower(asItem.Level)
-		if level == "fatal" || level == "critical" {
-			t := &ticket.Ticket{}
-			t.Title = fmt.Sprintf("(请勿改标题) 异常告警-[级别]: %s,[集群]: %s,[节点]: %s,[类别]: %s,[组件]：%s",
-				asItem.Level, asItem.Cluster, asItem.Node, asItem.Type, asItem.Component)
-			t.Content = asItem.Msg
-			t.Type = erda_api.IssueTypeTicket
-			t.Priority = erda_api.IssuePriorityHigh
-
-			ticket.SendTicket(t)
-		}
+		// TODO open in feature
+		//level := strings.ToLower(asItem.Level)
+		//if level == "fatal" || level == "critical" {
+		//	t := &ticket.Ticket{}
+		//	t.Title = fmt.Sprintf("(请勿改标题) 异常告警-[级别]: %s,[集群]: %s,[节点]: %s,[类别]: %s,[组件]：%s",
+		//		asItem.Level, asItem.Cluster, asItem.Node, asItem.Type, asItem.Component)
+		//	t.Content = asItem.Msg
+		//	t.Type = erda_api.IssueTypeTicket
+		//	t.Priority = erda_api.IssuePriorityHigh
+		//
+		//	ticket.SendTicket(t)
+		//}
 	}
 
-	dingding.ProxyAlert(rw, req, alert)
+	dingding.ProxyAlert(rw, req)
 }
 
-func collectProbeStatus(rw http.ResponseWriter, req *http.Request,
-	alert *kubeproberv1.Alert, influxdb2api influxdb2api.WriteAPI) {
+func collectProbeStatus(rw http.ResponseWriter, req *http.Request, influxdb2api influxdb2api.WriteAPI) {
 	ps := apistructs.CollectProbeStatusReq{}
 	var err error
 	if err = json.NewDecoder(req.Body).Decode(&ps); err != nil {
@@ -352,9 +322,7 @@ func collectProbeStatus(rw http.ResponseWriter, req *http.Request,
 
 		ticket.SendTicket(t)
 
-		if alert.Spec.Token == "" || alert.Spec.Sign == "" {
-			return
-		} else if err = dingding.SendAlert(&ps); err != nil {
+		if err = dingding.SendAlert(&ps); err != nil {
 			errMsg := fmt.Sprintf("send dingding alert err: %+v\n", err)
 			klog.Errorf(errMsg)
 		}
