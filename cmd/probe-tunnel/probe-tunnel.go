@@ -17,9 +17,10 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/erda-project/kubeprober/cmd/probe-tunnel/app"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog"
+
+	"github.com/erda-project/kubeprober/cmd/probe-tunnel/app"
 )
 
 func main() {

@@ -81,15 +81,22 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 	klog.Infof("labels of cluster [%s] is: %+v\n", req.Name, labelKeys)
 
+	// fetch probe from cluster
+	existProbes := make(map[string]kubeproberv1.Probe)
+	err = ListProbeOfCluster(cluster, existProbes)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	//add probe
-	for i, _ := range labelKeys {
-		if !IsContain(cluster.Status.AttachedProbes, labelKeys[i]) {
+	for _, label := range labelKeys {
+		if _, ok := existProbes[label]; !ok {
 			probe := &kubeproberv1.Probe{}
 			if err = r.Get(ctx, types.NamespacedName{
 				Namespace: "default",
-				Name:      labelKeys[i],
+				Name:      label,
 			}, probe); err != nil {
-				klog.Infof("fail to get probe [%s], error: %+v\n", labelKeys[i], err)
+				klog.Infof("fail to get probe [%s], error: %+v\n", label, err)
 				return ctrl.Result{}, err
 			}
 			klog.Errorf("create probe [%s] for cluster [%s]\n", probe.Name, cluster.Name)
@@ -99,12 +106,13 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			}
 		}
 	}
+
 	//delete probe
-	for i, _ := range cluster.Status.AttachedProbes {
-		if !IsContain(labelKeys, cluster.Status.AttachedProbes[i]) {
-			klog.Infof("delete probe [%s] for cluster [%s]\n", cluster.Status.AttachedProbes[i], cluster.Name)
-			if err = DeleteProbeOfCluster(cluster, cluster.Status.AttachedProbes[i]); err != nil {
-				klog.Errorf("delete probe [%s] for cluster [%s] err: %+v\n", cluster.Status.AttachedProbes[i], cluster.Name, err)
+	for name := range existProbes {
+		if !IsContain(labelKeys, name) {
+			klog.Infof("delete probe [%s] for cluster [%s]\n", name, cluster.Name)
+			if err = DeleteProbeOfCluster(cluster, name); err != nil {
+				klog.Errorf("delete probe [%s] for cluster [%s] err: %+v\n", name, cluster.Name, err)
 				return ctrl.Result{}, err
 			}
 		}
@@ -230,6 +238,33 @@ func AddProbeToCluster(cluster *kubeproberv1.Cluster, probe *kubeproberv1.Probe)
 	err = c.Create(context.Background(), pp)
 	if err != nil && !strings.Contains(err.Error(), "already exists") {
 		return err
+	}
+
+	return nil
+}
+
+func ListProbeOfCluster(cluster *kubeproberv1.Cluster, probes map[string]kubeproberv1.Probe) error {
+	var err error
+	var c client.Client
+
+	c, err = dialclient.GenerateProbeClient(cluster)
+	if err != nil {
+		return err
+	}
+
+	probeList := &kubeproberv1.ProbeList{}
+	err = c.List(context.Background(), probeList, client.InNamespace("kubeprober"))
+	if err != nil {
+		return err
+	}
+
+	for _, p := range probeList.Items {
+		// ignore once probe
+		if p.Spec.Policy.RunInterval <= 0 {
+			continue
+		}
+
+		probes[p.Name] = p
 	}
 
 	return nil

@@ -81,12 +81,17 @@ func (r *ProbeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		//update probe of cluster attatched
 		for i := range clusterList.Items {
 			cluster := clusterList.Items[i]
-			if IsContain(cluster.Status.AttachedProbes, probe.Name) {
-				klog.Infof("update probe [%s] of cluster [%s]\n", probe.Name, cluster.Name)
-				err = UpdateProbeOfCluster(&cluster, probe)
-				if err != nil {
-					klog.Errorf("update probe [%s] of cluster [%s] error: %+v\n", probe.Name, cluster.Name, err)
-				}
+
+			_, err = GetProbeOfCluster(&cluster, probe.Name)
+			if err != nil {
+				klog.Errorf("get probe [%s] of cluster [%s] error: %+v\n", probe.Name, cluster.Name, err)
+				continue
+			}
+
+			klog.Infof("update probe [%s] of cluster [%s]\n", probe.Name, cluster.Name)
+			err = UpdateProbeOfCluster(&cluster, probe)
+			if err != nil {
+				klog.Errorf("update probe [%s] of cluster [%s] error: %+v\n", probe.Name, cluster.Name, err)
 			}
 		}
 	}
