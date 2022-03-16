@@ -159,7 +159,7 @@ func sendProbeStatusToMaster(masterAddr string, clusterName string, ps *kubeprob
 			ClusterName: clusterName,
 			ProbeName:   ps.ProbeName,
 			CheckerName: ps.Checkers[i].Name,
-			Status:      string(ps.Checkers[i].Status),
+			Status:      ps.Checkers[i].Status,
 			Message:     ps.Checkers[i].Message,
 			LastRun:     ps.Checkers[i].LastRun,
 		}
