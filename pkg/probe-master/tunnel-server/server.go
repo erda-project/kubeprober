@@ -311,12 +311,15 @@ func collectProbeStatus(rw http.ResponseWriter, req *http.Request, influxdb2api 
 		influxdb2api.Flush()
 	}
 
-	if ps.Status == "ERROR" {
-		t := &ticket.Ticket{}
+	if ps.Status == kubeproberv1.CheckerStatusError {
+		t := &ticket.Ticket{
+			Kind:   ticket.ErrorTicket,
+			Labels: []string{ps.CheckerName, ps.ProbeName, ps.ClusterName},
+		}
 		t.Title = fmt.Sprintf("(请勿改标题)巡检异常-[集群]: %s,[类别]: %s,[检查项]：%s",
 			ps.ClusterName, ps.ProbeName, ps.CheckerName)
-		t.Content = fmt.Sprintf("[集群]: %s\n[类别]: %s\n[检查项]：%s\n[错误信息]: \n%s",
-			ps.ClusterName, ps.ProbeName, ps.CheckerName, ps.Message)
+		t.Content = fmt.Sprintf("[集群]: %s\n[类别]: %s\n[检查项]：%s\n[检查状态]：%s\n[错误信息]：\n%s",
+			ps.ClusterName, ps.ProbeName, ps.CheckerName, ps.Status, ps.Message)
 		t.Type = erda_api.IssueTypeTicket
 		t.Priority = erda_api.IssuePriorityHigh
 
@@ -326,6 +329,16 @@ func collectProbeStatus(rw http.ResponseWriter, req *http.Request, influxdb2api 
 			errMsg := fmt.Sprintf("send dingding alert err: %+v\n", err)
 			klog.Errorf(errMsg)
 		}
+	} else if ps.Status == kubeproberv1.CheckerStatusPass {
+		t := &ticket.Ticket{Kind: ticket.PassTicket}
+		t.Title = fmt.Sprintf("(请勿改标题)巡检异常-[集群]: %s,[类别]: %s,[检查项]：%s",
+			ps.ClusterName, ps.ProbeName, ps.CheckerName)
+		t.Content = fmt.Sprintf("[集群]: %s\n[类别]: %s\n[检查项]：%s\n[检查状态]: %s\n[错误信息]：\n%s",
+			ps.ClusterName, ps.ProbeName, ps.CheckerName, ps.Status, ps.Message)
+		t.Type = erda_api.IssueTypeTicket
+		t.Priority = erda_api.IssuePriorityLow
+
+		ticket.SendTicket(t)
 	}
 
 	rw.WriteHeader(http.StatusOK)

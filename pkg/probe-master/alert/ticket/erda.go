@@ -42,9 +42,11 @@ type ErdaIdentity struct {
 	OrgID     uint64
 	SessionID string
 
-	Assignee string
-	StateIds []int64
-	StateId  int64
+	Assignee         string
+	StateIds         []int64
+	TodoStateId      int64
+	NoprocessStateId int64
+	Labels           map[string]interface{}
 }
 
 func Init(loginUser, loginPassword, openapiURL, orgName string, projectId uint64) error {
@@ -55,6 +57,7 @@ func Init(loginUser, loginPassword, openapiURL, orgName string, projectId uint64
 		OrgName:    orgName,
 		ProjectId:  projectId,
 		Assignee:   "1001863", // erda-bot
+		Labels:     make(map[string]interface{}),
 
 		client: resty.New().SetRetryCount(3).SetRetryWaitTime(3 * time.Second).SetRetryMaxWaitTime(20 * time.Second),
 	}
@@ -73,6 +76,11 @@ func Init(loginUser, loginPassword, openapiURL, orgName string, projectId uint64
 		err = sender.GetAssignee()
 		if err != nil {
 			klog.Errorf("failed to fetch assignee for sre: %+v\n", err)
+		}
+
+		err = sender.GetLabels()
+		if err != nil {
+			klog.Errorf("failed to fetch labels: %+v\n", err)
 		}
 	}
 
@@ -197,9 +205,12 @@ func (u *ErdaIdentity) GetTicketStates() error {
 	for _, r := range rs {
 		if r.StateName == "待处理" {
 			u.StateIds = append(u.StateIds, r.StateID)
-			u.StateId = r.StateID
+			u.TodoStateId = r.StateID
 		} else if r.StateName == "重新打开" {
 			u.StateIds = append(u.StateIds, r.StateID)
+		} else if r.StateName == "无需修复" {
+			u.StateIds = append(u.StateIds, r.StateID)
+			u.NoprocessStateId = r.StateID
 		}
 	}
 
@@ -325,7 +336,7 @@ func (u *ErdaIdentity) PagingIssue(req *erda_api.IssuePagingRequest) ([]erda_api
 		SetQueryParam("title", req.Title).
 		SetQueryParam("orderBy", "planStartedAt").
 		SetQueryParam("asc", "false").
-		SetQueryParam("state", strconv.FormatInt(u.StateId, 10)).
+		SetQueryParam("state", strconv.FormatInt(u.TodoStateId, 10)).
 		Get(strings.Join([]string{u.OpenapiUrl, "/api/issues"}, ""))
 
 	if err != nil {
@@ -369,4 +380,30 @@ func (u *ErdaIdentity) GetStateRelations(req *erda_api.IssueStateRelationGetRequ
 	}
 
 	return r.Data, nil
+}
+
+func (u *ErdaIdentity) GetLabels() error {
+	resp, err := u.client.R().
+		SetCookie(&http.Cookie{Name: "OPENAPISESSION", Value: u.SessionID}).
+		SetHeader("USER-ID", u.UserID).
+		SetQueryParam("type", "issue").
+		SetQueryParam("projectID", strconv.FormatUint(u.ProjectId, 10)).
+		SetQueryParam("pageSize", "300").
+		Get(strings.Join([]string{u.OpenapiUrl, "/api/labels"}, ""))
+
+	r := &erda_api.ProjectLabelListResponse{}
+	err = unmarshalResponse(resp, &r)
+	if err != nil {
+		logrus.Errorf("unmarshal response failed, error: %v", err)
+		return err
+	}
+	if !r.Success || r.Error.Msg != "" {
+		err = fmt.Errorf("%v", r.Error)
+		return err
+	}
+
+	for _, l := range r.Data.List {
+		u.Labels[l.Name] = struct{}{}
+	}
+	return nil
 }

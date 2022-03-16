@@ -58,13 +58,28 @@ func initWorker() {
 					if err != nil {
 						klog.Errorf("get assingee failed, %v", err)
 					}
+
+					err = sender.GetLabels()
+					if err != nil {
+						klog.Errorf("get labels failed, %v", err)
+					}
 				}
 			}
 		}
 	}()
 }
 
+type TicketKind string
+
+const (
+	ErrorTicket TicketKind = "Error"
+	PassTicket  TicketKind = "Pass"
+)
+
 type Ticket struct {
+	Kind   TicketKind
+	Labels []string
+
 	Title    string
 	Content  string
 	Priority erda_api.IssuePriority
@@ -79,10 +94,9 @@ func sendIssue(t *Ticket) error {
 
 	if issue != nil {
 		sameContent := strings.Contains(issue.Content, t.Content)
-		//sameAssignee := sender.Assignee == issue.Assignee
-		// already exist
+		newLabel, existLabel := existLabels(issue.Labels, t.newLabels())
 
-		if sameContent {
+		if sameContent && existLabel {
 			return nil
 		}
 
@@ -90,17 +104,53 @@ func sendIssue(t *Ticket) error {
 		reqU.ID = uint64(issue.ID)
 		reqU.Title = &issue.Title
 		reqU.Priority = &issue.Priority
-		reqU.State = &issue.State
+
+		if t.Kind == PassTicket {
+			// duplicate msg
+			if issue.State == sender.NoprocessStateId {
+				return nil
+			}
+
+			reqU.State = &sender.NoprocessStateId
+		} else {
+			reqU.State = &issue.State
+		}
 
 		reqU.Assignee = &sender.Assignee
 		reqU.Content = &t.Content
 
 		reqU.UserID = sender.UserID
 
+		reqU.Labels = newLabel
+
 		return updateIssue(reqU)
 	}
 
+	// no need to send issue
+	if t.Kind == PassTicket {
+		return nil
+	}
+
 	return createIssue(t)
+}
+
+func existLabels(oldL, newL []string) ([]string, bool) {
+	newLabels := []string{}
+	oldMap := map[string]interface{}{}
+	for _, l := range oldL {
+		oldMap[l] = struct{}{}
+		newLabels = append(newLabels, l)
+	}
+
+	exist := true
+	for _, nl := range newL {
+		if _, ok := oldMap[nl]; !ok {
+			exist = false
+			newLabels = append(newLabels, nl)
+		}
+	}
+
+	return newLabels, exist
 }
 
 func updateIssue(req *erda_api.IssueUpdateRequest) error {
@@ -122,7 +172,23 @@ func createIssue(t *Ticket) error {
 	req.UserID = sender.UserID
 	req.ProjectID = sender.ProjectId
 
+	logrus.Infof("server label %+v", sender.Labels)
+	logrus.Infof("ticket label %+v", t.Labels)
+
+	req.Labels = t.newLabels()
+
 	return sender.CreateIssue(req)
+}
+
+func (t *Ticket) newLabels() []string {
+	var labels []string
+	for _, l := range t.Labels {
+		if _, ok := sender.Labels[l]; ok {
+			labels = append(labels, l)
+		}
+	}
+
+	return labels
 }
 
 func existIssue(t *Ticket) (*erda_api.Issue, error) {

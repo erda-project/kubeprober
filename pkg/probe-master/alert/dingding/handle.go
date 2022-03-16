@@ -149,7 +149,7 @@ func SendAlert(ps *apistructs.CollectProbeStatusReq) error {
 	istr := "[类别]: " + ps.ProbeName + "\n" +
 		"[检查项]：" + ps.CheckerName + "\n" +
 		"[集群]：" + ps.ClusterName + "\n" +
-		"[状态]: " + ps.Status + "\n" +
+		"[状态]: " + string(ps.Status) + "\n" +
 		"[错误信息]: " + ps.Message + "\n\n"
 	sendMsgCh <- istr
 	return nil
