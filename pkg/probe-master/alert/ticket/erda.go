@@ -390,6 +390,9 @@ func (u *ErdaIdentity) GetLabels() error {
 		SetQueryParam("projectID", strconv.FormatUint(u.ProjectId, 10)).
 		SetQueryParam("pageSize", "300").
 		Get(strings.Join([]string{u.OpenapiUrl, "/api/labels"}, ""))
+	if err != nil {
+		return err
+	}
 
 	r := &erda_api.ProjectLabelListResponse{}
 	err = unmarshalResponse(resp, &r)

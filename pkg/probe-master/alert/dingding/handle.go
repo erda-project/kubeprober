@@ -60,7 +60,15 @@ type Markdown struct {
 	Text  string `json:"text"`
 }
 
+type AlertStatus string
+
+var (
+	AlertEmit    AlertStatus = "emit"
+	AlertRecover AlertStatus = "recover"
+)
+
 type AlertItemStuct struct {
+	Status    AlertStatus
 	Cluster   string
 	Node      string
 	Component string
@@ -156,26 +164,32 @@ func SendAlert(ps *apistructs.CollectProbeStatusReq) error {
 }
 
 func ParseAlert(alertStr string) (*AlertItemStuct, error) {
+	asItem := &AlertItemStuct{}
+
 	if !strings.Contains(alertStr, "恢复") {
 		ci <- 1
-
-		var as alertStruct
-		if err := json.Unmarshal([]byte(alertStr), &as); err != nil {
-			klog.Errorf("unmarshal alert string error : %+v\n", err)
-			return nil, err
-		}
-		asItem := &AlertItemStuct{}
-		asItem.Msg = as.Markdown.Text
-		asItem.Type = regexpAlertStr(`【(.+)】`, as.Markdown.Text, 1)
-		asItem.Node = regexpAlertStr(`机器: (.+)`, as.Markdown.Text, 1)
-		asItem.Cluster = regexpAlertStr(`集群: (.+)`, as.Markdown.Text, 1)
-		asItem.Component = regexpAlertStr(`(组件|中间件|Pod): (.+)`, as.Markdown.Text, 2)
-		asItem.Level = regexpAlertStr(`告警级别: (.+)`, as.Markdown.Text, 1)
-
-		return asItem, nil
+		asItem.Status = AlertEmit
+	} else {
+		asItem.Status = AlertRecover
 	}
 
-	return nil, nil
+	var as alertStruct
+	if err := json.Unmarshal([]byte(alertStr), &as); err != nil {
+		klog.Errorf("unmarshal alert string error : %+v\n", err)
+		return nil, err
+	}
+
+	asItem.Msg = as.Markdown.Text
+	asItem.Type = regexpAlertStr(`【(.+)】`, as.Markdown.Text, 1)
+	if strings.HasSuffix(asItem.Type, "恢复") {
+		asItem.Type = fmt.Sprintf("%s%s", strings.TrimRight(asItem.Type, "恢复"), "告警")
+	}
+	asItem.Node = regexpAlertStr(`机器: (.+)`, as.Markdown.Text, 1)
+	asItem.Cluster = regexpAlertStr(`集群: (.+)`, as.Markdown.Text, 1)
+	asItem.Component = regexpAlertStr(`(组件|中间件|Pod): (.+)`, as.Markdown.Text, 2)
+	asItem.Level = regexpAlertStr(`告警级别: (.+)`, as.Markdown.Text, 1)
+
+	return asItem, nil
 }
 
 func regexpAlertStr(reg string, s string, index int) string {
