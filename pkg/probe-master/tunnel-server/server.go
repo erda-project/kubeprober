@@ -256,8 +256,8 @@ func proxyDingdingAlert(rw http.ResponseWriter, req *http.Request, influxdb2api 
 
 	klog.Infof("alert string: %+v\n", alertStr)
 	asItem, err := dingding.ParseAlert(alertStr)
-	if err == nil && asItem != nil {
-		if influxdb2api != nil {
+	if err == nil {
+		if influxdb2api != nil && asItem.Status == dingding.AlertEmit {
 			p := influxdb2.NewPointWithMeasurement("alert").
 				AddTag("cluster", asItem.Cluster).
 				AddTag("node", asItem.Node).
@@ -271,18 +271,34 @@ func proxyDingdingAlert(rw http.ResponseWriter, req *http.Request, influxdb2api 
 			influxdb2api.Flush()
 		}
 
-		// TODO open in feature
-		//level := strings.ToLower(asItem.Level)
-		//if level == "fatal" || level == "critical" {
-		//	t := &ticket.Ticket{}
-		//	t.Title = fmt.Sprintf("(请勿改标题) 异常告警-[级别]: %s,[集群]: %s,[节点]: %s,[类别]: %s,[组件]：%s",
-		//		asItem.Level, asItem.Cluster, asItem.Node, asItem.Type, asItem.Component)
-		//	t.Content = asItem.Msg
-		//	t.Type = erda_api.IssueTypeTicket
-		//	t.Priority = erda_api.IssuePriorityHigh
-		//
-		//	ticket.SendTicket(t)
-		//}
+		level := strings.ToLower(asItem.Level)
+		if level == "fatal" || level == "critical" || level == "warning" ||
+			asItem.Status == dingding.AlertRecover {
+			t := &ticket.Ticket{
+				Labels: []string{asItem.Cluster, asItem.Node, asItem.Type},
+			}
+			if asItem.Component != "" {
+				t.Labels = append(t.Labels, asItem.Component)
+			}
+			if asItem.Status == dingding.AlertRecover {
+				t.Kind = ticket.PassTicket
+			} else { // asItem.Status == dingding.AlertRecover
+				t.Kind = ticket.ErrorTicket
+			}
+			t.Title = fmt.Sprintf("(请勿改标题) 异常告警-[集群]: %s,[节点]: %s,[类别]: %s,[组件]: %s",
+				asItem.Cluster, asItem.Node, asItem.Type, asItem.Component)
+			t.Content = asItem.Msg
+			t.Type = erda_api.IssueTypeTicket
+			if level == "fatal" {
+				t.Priority = erda_api.IssuePriorityUrgent
+			} else if level == "critical" {
+				t.Priority = erda_api.IssuePriorityHigh
+			} else if level == "warning" {
+				t.Priority = erda_api.IssuePriorityNormal
+			}
+
+			ticket.SendTicket(t)
+		}
 	}
 
 	dingding.ProxyAlert(rw, req)
