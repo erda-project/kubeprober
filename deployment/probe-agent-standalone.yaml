@@ -4476,3 +4476,12 @@ kind: ConfigMap
 metadata:
   name: probeagent
   namespace: kubeprober
+---
+# fix for prober-demo-example
+apiVersion: v1
+data:
+  test: moon
+kind: ConfigMap
+metadata:
+  name: extra-config
+  namespace: kubeprober
