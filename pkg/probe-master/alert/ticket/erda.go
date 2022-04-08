@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -46,6 +47,8 @@ type ErdaIdentity struct {
 	StateIds         []int64
 	TodoStateId      int64
 	NoprocessStateId int64
+	ReopenStateId    int64
+	SolvedStateId    int64
 	Labels           map[string]interface{}
 }
 
@@ -202,17 +205,24 @@ func (u *ErdaIdentity) GetTicketStates() error {
 		return err
 	}
 
+	var states []int64
 	for _, r := range rs {
 		if r.StateName == "待处理" {
-			u.StateIds = append(u.StateIds, r.StateID)
+			states = append(states, r.StateID)
 			u.TodoStateId = r.StateID
 		} else if r.StateName == "重新打开" {
-			u.StateIds = append(u.StateIds, r.StateID)
+			states = append(states, r.StateID)
+			u.ReopenStateId = r.StateID
 		} else if r.StateName == "无需修复" {
-			u.StateIds = append(u.StateIds, r.StateID)
+			states = append(states, r.StateID)
 			u.NoprocessStateId = r.StateID
+		} else if r.StateName == "已解决" {
+			states = append(states, r.StateID)
+			u.SolvedStateId = r.StateID
 		}
 	}
+
+	u.StateIds = states
 
 	if len(u.StateIds) == 0 {
 		logrus.Warnf("fetch states for project %d from erda failed ", u.ProjectId)
@@ -328,6 +338,11 @@ func (u *ErdaIdentity) UpdateIssue(req *erda_api.IssueUpdateRequest) error {
 }
 
 func (u *ErdaIdentity) PagingIssue(req *erda_api.IssuePagingRequest) ([]erda_api.Issue, error) {
+	reqStates := url.Values{"state": []string{}}
+	for _, s := range req.State {
+		reqStates["state"] = append(reqStates["state"], strconv.FormatInt(s, 10))
+	}
+
 	resp, err := u.client.R().
 		SetCookie(&http.Cookie{Name: "OPENAPISESSION", Value: u.SessionID}).
 		SetHeader("USER-ID", u.UserID).
@@ -336,7 +351,8 @@ func (u *ErdaIdentity) PagingIssue(req *erda_api.IssuePagingRequest) ([]erda_api
 		SetQueryParam("title", req.Title).
 		SetQueryParam("orderBy", "planStartedAt").
 		SetQueryParam("asc", "false").
-		SetQueryParam("state", strconv.FormatInt(u.TodoStateId, 10)).
+		SetQueryParam("pageSize", strconv.FormatUint(req.PageSize, 10)).
+		SetQueryParamsFromValues(reqStates).
 		Get(strings.Join([]string{u.OpenapiUrl, "/api/issues"}, ""))
 
 	if err != nil {
@@ -408,5 +424,29 @@ func (u *ErdaIdentity) GetLabels() error {
 	for _, l := range r.Data.List {
 		u.Labels[l.Name] = struct{}{}
 	}
+	return nil
+}
+
+func (u *ErdaIdentity) CreateIssueComment(req *apistructs.CommentIssueStreamBatchCreateRequest) error {
+	resp, err := u.client.R().SetBody(req).
+		SetCookie(&http.Cookie{Name: "OPENAPISESSION", Value: u.SessionID}).
+		SetHeader("Org-ID", strconv.FormatUint(u.OrgID, 10)).
+		SetHeader("USER-ID", u.UserID).
+		Post(strings.Join([]string{u.OpenapiUrl, "/api/issues/actions/batch-create-comment-stream"}, ""))
+	if err != nil {
+		return err
+	}
+
+	r := erda_api.Header{}
+	err = unmarshalResponse(resp, &r)
+	if err != nil {
+		logrus.Errorf("unmarshal response failed, error: %v", err)
+		return err
+	}
+	if !r.Success || r.Error.Msg != "" {
+		err = fmt.Errorf("%v", r.Error)
+		return err
+	}
+
 	return nil
 }

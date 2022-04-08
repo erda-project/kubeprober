@@ -170,7 +170,7 @@ function check_node_label() {
     if [[ $total_count != $org_count ]]
     then
         nlist=$(kubectl get node --show-labels --no-headers=true | grep -v org- | awk '{print $1}' | xargs echo)
-        echo k8s_node_label error "some node do not have org label:" nlist
+        echo k8s_node_label error "some node do not have org label:" $nlist
         return
     fi
     # at least three nodes contain labels 'location-cluster-service' & 'stateful-service'
