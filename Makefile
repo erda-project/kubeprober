@@ -83,7 +83,7 @@ deploy-build: manifests kustomize ## Deploy controller to the K8s cluster specif
 ##@ Deployment
 
 deploy:  ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	if [[ "${uname -s}" == "Linux" ]]; then cp dist/linux_probe /usr/local/bin/kubectl-probe; else cp dist/darwin_probe /usr/local/bin/kubectl-probe;fi
+	if [[ "$(shell uname -s)" == "Linux" ]]; then cp dist/linux_probe /usr/local/bin/kubectl-probe; else cp dist/darwin_probe /usr/local/bin/kubectl-probe;fi
 	kubectl apply -f deployment/${APP}.yaml
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	kubectl delete -f deployment/${APP}.yaml
