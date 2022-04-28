@@ -27,3 +27,21 @@ type ErdaConfig struct {
 	Org          string
 	ProjectId    uint64
 }
+
+// TODO replicate because could not import erda v2+
+type CommentIssueStreamBatchCreateRequest struct {
+	IssueStreams []*CommentIssueStreamCreateRequest `json:"issueStreams,omitempty"`
+}
+
+type CommentIssueStreamCreateRequest struct {
+	IssueID int64          `json:"issueID,omitempty"`
+	Type    string         `json:"type,omitempty"`
+	Content string         `json:"content,omitempty"`
+	MrInfo  *MRCommentInfo `json:"mrInfo,omitempty"`
+	UserID  string         `json:"userID,omitempty"`
+}
+type MRCommentInfo struct {
+	AppID   int64  `json:"appID,omitempty"`
+	MrID    int64  `json:"mrID,omitempty"`
+	MrTitle string `json:"mrTitle,omitempty"`
+}
