@@ -106,8 +106,8 @@ function check_kubelet_eviction_config() {
     fi
   fi
 
-  if [ "$value" -gt 10 ]; then
-    echo host_kubelet_eviction_config error "imagefs.available is more than 10%"
+  if [ "$value" -gt 5 ]; then
+    echo host_kubelet_eviction_config error "imagefs.available is greater than 5%"
     return 0
   fi
 
