@@ -142,3 +142,4 @@ check_resolved
 check_chronyd
 check_docker_notify
 check_kubelet_eviction_config
+check_kubelet_eviction_soft_config
