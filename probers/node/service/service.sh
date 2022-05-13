@@ -98,21 +98,43 @@ function check_docker_notify() {
 }
 
 function check_kubelet_eviction_config() {
-  value=$(ps aux | grep /usr/bin/kubelet | egrep -o  "imagefs.available<([0-9]+)" | awk -F"<" '{print $2}')
+  value=$(ps aux | grep /usr/bin/kubelet | egrep -o  "eviction-hard=imagefs.available<([0-9]+)" | awk -F"<" '{print $2}')
   if [ "$value" == "" ]; then
-    configFile=$(ps aux | grep "/usr/bin/kubelet" | egrep -o  "\--config=.+" | awk '{print $1}' | awk -F"=" '{print $2}')
+    configFile=$(ps aux | grep "/usr/bin/kubelet" | egrep -o  "\--config=.+" | awk '{print $1}' | awk -F"=" '{print $2}'|head -1)
     if [ "$configFile" != "" ]; then
       value=$(cat $configFile | grep "evictionHard:" -a4 | grep imagefs.available | egrep -o "[0-9]+")
     fi
   fi
 
   if [ "$value" -gt 5 ]; then
-    echo host_kubelet_eviction_config error "imagefs.available is greater than 5%"
+    echo host_kubelet_eviction_config error "evictionHard: imagefs.available is greater than 5%"
     return 0
   fi
 
   echo host_kubelet_eviction_config ok "-"
 }
+
+function check_kubelet_eviction_soft_config() {
+  value=$(ps aux | grep /usr/bin/kubelet | egrep -o  "eviction-soft=imagefs.available<([0-9]+)" | awk -F"<" '{print $2}')
+  if [ "$value" == "" ]; then
+    configFile=$(ps aux | grep "/usr/bin/kubelet" | egrep -o  "\--config=.+" | awk '{print $1}' | awk -F"=" '{print $2}'|head -1)
+    if [ "$configFile" != "" ]; then
+      value=$(cat $configFile | grep "evictionSoft:" -a4 | grep imagefs.available | egrep -o "[0-9]+")
+    fi
+  fi
+
+  if [ "$value" -gt 15 ]; then
+    echo host_kubelet_eviction_config error "evictionSoft: imagefs.available is greater than 15%"
+    return 0
+  fi
+
+  echo host_kubelet_evictionSoft_config ok "-"
+}
+
+
+
+
+
 
 check_docker_status
 check_container_number
