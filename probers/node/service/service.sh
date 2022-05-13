@@ -132,10 +132,6 @@ function check_kubelet_eviction_soft_config() {
 }
 
 
-
-
-
-
 check_docker_status
 check_container_number
 check_image_number
