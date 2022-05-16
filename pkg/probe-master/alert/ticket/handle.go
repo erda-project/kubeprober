@@ -91,7 +91,7 @@ type Ticket struct {
 func GetWeek() string {
 	timeLayout := "20060102"
 	now := time.Now().Unix()
-	datetime := time.Unix(now, 0).Format(timeLayout)
+	datetime := time.Unix(now+8*3600, 0).Format(timeLayout)
 
 	loc, _ := time.LoadLocation("Asia/Shanghai")
 	tmp, _ := time.ParseInLocation(timeLayout, datetime, loc)
@@ -142,7 +142,6 @@ func sendIssue(t *Ticket) error {
 			return err
 		}
 
-		reqU.Content = &t.Content
 		reqU.Assignee = &sender.Assignee
 		reqU.UserID = sender.UserID
 

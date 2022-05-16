@@ -169,11 +169,22 @@ function check_zombie_process_num() {
 }
 
 function check_iptables_forward() {
-    if /usr/bin/env iptables -nL|grep 'Chain FORWARD (policy ACCEPT)' >/dev/null 2>&1; then
+    i=0
+    while true; do
+      if [[ "$i" -gt 3 ]]; then
+        break
+      fi
+
+      if /usr/bin/env iptables -nL|grep 'Chain FORWARD (policy ACCEPT)' >/dev/null 2>&1; then
         echo host_iptables_forward ok
-    else
-        echo host_iptables_forward error "Chain FORWARD (policy ACCEPT) does not exist"
-    fi
+        return
+      fi
+
+      sleep 5
+      i=$((i+1))
+    done
+
+    echo host_iptables_forward error "Chain FORWARD (policy ACCEPT) does not exist"
 }
 # 节点mem异常是否异常
 function check_system_mem() {
@@ -188,5 +199,5 @@ check_kernel_param
 check_not_k8s_container
 check_ipvs_module
 check_zombie_process_num
-check_iptables_forward
 check_system_mem
+check_iptables_forward

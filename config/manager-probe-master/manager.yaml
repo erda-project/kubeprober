@@ -23,7 +23,7 @@ spec:
         app: probe-master
     spec:
       containers:
-        - image: kubeprober/probe-master:v0.1.0-beta27
+        - image: kubeprober/probe-master:v0.1.0-beta28
           imagePullPolicy: "Always"
           command: ["/bin/sh"]
           args: ["-c", "/probe-master --config-file=/opt/probe-master-conf.yaml"]
