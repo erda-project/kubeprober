@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/erda-project/kubeprober/probers/k8s/control-plane/fluentbit_checker"
 	"github.com/sirupsen/logrus"
 
 	proberchecker "github.com/erda-project/kubeprober/pkg/probe-checker"
@@ -60,8 +61,13 @@ func main() {
 		return
 	}
 
+	flb, err := fluentbit_checker.NewChecker()
+	if err != nil {
+		err = fmt.Errorf("new fluent-bit checker failed, error: %v", err)
+		return
+	}
 	// run checkers
-	err = proberchecker.RunCheckers(proberchecker.CheckerList{s, d, n})
+	err = proberchecker.RunCheckers(proberchecker.CheckerList{s, d, n, flb})
 	if err != nil {
 		err = fmt.Errorf("run deployment service checker failed, error: %v", err)
 		return

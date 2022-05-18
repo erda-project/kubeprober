@@ -43,6 +43,13 @@ type Conf struct {
 	KubeConfigFile string        `env:"KUBECONFIG_FILE"`
 	Debug          bool          `env:"DEBUG" default:"false"`
 
+	// fluent-bit process check
+	FluentBitDaemonSetName     string        `env:"FLUENT_BIT_DAEMON_SET_NAME" default:"dice-fluent-bit"`
+	FluentBitNamespace         string        `env:"FLUENT_BIT_NAMESPACE" default:"default"`
+	FluentBitLabelSelector     string        `env:"FLUENT_BIT_LABEL" default:"dice/component=fluent-bit"`
+	FluentBitSelfHealingEnable bool          `env:"FLUENT_BIT_SELF_HEALING_ENABLE" default:"true"`
+	FluentBitSampling          time.Duration `env:"FLUENT_BIT_SAMPLING" default:"60s"`
+
 	CheckDeploymentToleration     []apiv1.Toleration
 	CheckDeploymentNodeSelectors  map[string]string
 	CheckDeploymentAdditionalEnvs map[string]string
