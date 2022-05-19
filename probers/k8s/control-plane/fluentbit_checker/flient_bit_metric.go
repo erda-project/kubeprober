@@ -56,16 +56,15 @@ func getMetricByIp(ip string) (*FluentBitMetric, error) {
 	}
 	return r, nil
 }
-func totalProc(metrics map[string]*FluentBitMetric) (int, int) {
+
+func (metric FluentBitMetric) totalProc() (int, int) {
 	inputProc := 0
 	outputProc := 0
-	for _, metric := range metrics {
-		for _, outputMetric := range metric.Output {
-			outputProc += outputMetric.ProcRecords
-		}
-		for _, inputMetric := range metric.Input {
-			inputProc += inputMetric.Records
-		}
+	for _, outputMetric := range metric.Output {
+		outputProc += outputMetric.ProcRecords
+	}
+	for _, inputMetric := range metric.Input {
+		inputProc += inputMetric.Records
 	}
 	return inputProc, outputProc
 }
