@@ -76,6 +76,7 @@ func GetClusterList(rw http.ResponseWriter, req *http.Request) {
 		list = append(list, i.Status.ExtraStatus["masterNode"])
 		list = append(list, i.Status.ExtraStatus["lbNode"])
 		list = append(list, i.Status.ExtraStatus["osImages"])
+		list = append(list, i.Status.ExtraStatus["kernelVersions"])
 		list = append(list, i.Status.ExtraStatus["mysqlHost"])
 		list = append(list, i.Status.ExtraStatus["nacosAddr"])
 		list = append(list, i.Status.ExtraStatus["podNum"])
@@ -109,6 +110,7 @@ func GetClusterList(rw http.ResponseWriter, req *http.Request) {
 			{Text: "MASTERNODE", Type: "string"},
 			{Text: "LBNODE", Type: "string"},
 			{Text: "OSIMAGE", Type: "string"},
+			{Text: "KERNELVERSION", Type: "string"},
 			{Text: "MYSQLHOST", Type: "string"},
 			{Text: "NACOSADDR", Type: "string"},
 			{Text: "PODNUM", Type: "string"},

@@ -44,8 +44,14 @@ function check_docker_dir() {
 
     dataroot=$(docker info -f '{{.DockerRootDir}}')
     if [[ $dataroot != $docker_data_dir ]]; then
-        echo host_dockerdir error "docker data-root should be '$docker_data_dir'"
+      if [[ "$cluster_vendor" == cs_managed && $dataroot == '/var/lib/docker' && $docker_data_dir == '/var/lib/container/docker' ]]; then
+        # cs_managed ack bind /var/lib/container/docker /var/lib/docker in /etc/fstab
+        echo host_dockerdir ok
         return
+      fi
+
+      echo host_dockerdir error "docker data-root should be '$docker_data_dir'"
+      return
     fi
     echo host_dockerdir ok
 }

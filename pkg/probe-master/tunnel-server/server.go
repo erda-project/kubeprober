@@ -275,7 +275,7 @@ func proxyDingdingAlert(rw http.ResponseWriter, req *http.Request, influxdb2api 
 		if level == "fatal" || level == "critical" || level == "warning" ||
 			asItem.Status == dingding.AlertRecover {
 			t := &ticket.Ticket{
-				Labels: []string{asItem.Cluster, asItem.Node, asItem.Type},
+				Labels: []string{asItem.Cluster, asItem.Node, asItem.Type, "告警"},
 			}
 			if asItem.Component != "" {
 				t.Labels = append(t.Labels, asItem.Component)
@@ -330,7 +330,7 @@ func collectProbeStatus(rw http.ResponseWriter, req *http.Request, influxdb2api 
 	if ps.Status == kubeproberv1.CheckerStatusError {
 		t := &ticket.Ticket{
 			Kind:   ticket.ErrorTicket,
-			Labels: []string{ps.CheckerName, ps.ProbeName, ps.ClusterName},
+			Labels: []string{ps.CheckerName, ps.ProbeName, ps.ClusterName, "巡检"},
 		}
 		t.Title = fmt.Sprintf("(请勿改标题)巡检异常-[集群]: %s,[类别]: %s,[检查项]：%s",
 			ps.ClusterName, ps.ProbeName, ps.CheckerName)

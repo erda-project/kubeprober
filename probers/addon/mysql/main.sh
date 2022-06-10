@@ -18,7 +18,7 @@ function check_mysql() {
   fi
 
   #check mysql connection percent
-  max_connections=$(mysql -h $MYSQL_HOST -u $MYSQL_USERNAME  -P $MYSQL_PORT -p$MYSQL_PASSWORD -e "show variables like '%max_connections%';" | grep max_connections | awk '{print $2}')
+  max_connections=$(mysql -h $MYSQL_HOST -u $MYSQL_USERNAME  -P $MYSQL_PORT -p$MYSQL_PASSWORD -e "show variables like 'max_connections';" | grep max_connections | awk '{print $2}')
   threads_connected=$(mysql -h $MYSQL_HOST -u $MYSQL_USERNAME  -P $MYSQL_PORT -p$MYSQL_PASSWORD -e " show status like 'Threads%';;" | grep Threads_connected | awk '{print $2}')
   connection_percent=$(echo "scale=2; $threads_connected / $max_connections * 100" | bc | awk -F"." '{print $1}')
   if [[ "$connection_percent" -gt 85 ]]; then

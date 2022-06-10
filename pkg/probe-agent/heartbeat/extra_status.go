@@ -94,14 +94,21 @@ func getExtraStatus(k8sRestClient client.Client, config *rest.Config) map[string
 	}
 
 	osImagesMap := map[string]interface{}{}
+	kernelVersionsMap := map[string]interface{}{}
 	for _, n := range nodes.Items {
 		osImagesMap[n.Status.NodeInfo.OSImage] = struct{}{}
+		kernelVersionsMap[n.Status.NodeInfo.KernelVersion] = struct{}{}
 	}
 	var osImages []string
 	for o := range osImagesMap {
 		osImages = append(osImages, o)
 	}
 	s["osImages"] = strings.Join(osImages, ",")
+	var kernelVersions []string
+	for k := range kernelVersionsMap {
+		kernelVersions = append(kernelVersions, k)
+	}
+	s["kernelVersions"] = strings.Join(kernelVersions, ",")
 
 	podOfKb := &v1.PodList{}
 	var nsenterPodName string
