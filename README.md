@@ -39,7 +39,7 @@ The operator running on the management cluster. This operator maintains two CRDs
 
 The operator running on the managed cluster. This operator maintains two CRDs. One is a Probe that is exactly the same as the probe-master. The probe-agent executes the cluster’s diagnostic items according to the definition of the probe. The other is ProbeStatus for Record the diagnosis results of each Probe. Users can view the diagnosis results of the cluster through kubectl get probestatus in the managed cluster.
 ## Getting started
-Get start with this [doc](https://docs.erda.cloud/1.2/manual/eco-tools/kubeprober/guides/install.html).
+Get start with this [doc](https://docs.erda.cloud/2.1/manual/eco-tools/kubeprober/guides/install.html).
 ## To start developing kubeprober
 You can run and build probe-master and probe-agent locally. please make sure that ~/.kube/config can access the kubernetes cluster.
 ### install crd && webhook resources
