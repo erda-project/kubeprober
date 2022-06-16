@@ -290,6 +290,7 @@ func (u *ErdaIdentity) SearchUser(username string) (*erda_api.UserInfo, error) {
 }
 
 func (u *ErdaIdentity) CreateIssue(req *erda_api.IssueCreateRequest) error {
+	klog.Errorf("start send ticket to cloud address: %s\n", u.OpenapiUrl)
 	resp, err := u.client.R().SetBody(req).
 		SetCookie(&http.Cookie{Name: "OPENAPISESSION", Value: u.SessionID}).
 		SetHeader("USER-ID", u.UserID).

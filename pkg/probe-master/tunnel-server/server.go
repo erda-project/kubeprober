@@ -300,7 +300,7 @@ func proxyDingdingAlert(rw http.ResponseWriter, req *http.Request, influxdb2api 
 			ticket.SendTicket(t)
 		}
 	}
-
+	klog.Errorf("alert start send to dingding\n")
 	dingding.ProxyAlert(rw, req)
 }
 
@@ -339,7 +339,7 @@ func collectProbeStatus(rw http.ResponseWriter, req *http.Request, influxdb2api 
 		t.Type = erda_api.IssueTypeTicket
 		t.Priority = erda_api.IssuePriorityHigh
 
-		ticket.SendTicket(t)
+		//ticket.SendTicket(t)
 
 		if err = dingding.SendAlert(&ps); err != nil {
 			errMsg := fmt.Sprintf("send dingding alert err: %+v\n", err)
@@ -354,7 +354,7 @@ func collectProbeStatus(rw http.ResponseWriter, req *http.Request, influxdb2api 
 		t.Type = erda_api.IssueTypeTicket
 		t.Priority = erda_api.IssuePriorityLow
 
-		ticket.SendTicket(t)
+		//ticket.SendTicket(t)
 	}
 
 	rw.WriteHeader(http.StatusOK)
