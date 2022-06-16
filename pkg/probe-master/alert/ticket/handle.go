@@ -100,6 +100,7 @@ func GetWeek() string {
 }
 
 func sendIssue(t *Ticket) error {
+	klog.Errorf("start send ticket to cloud, %+v\n", t)
 	issue, err := existIssue(t)
 	if err != nil {
 		return err
