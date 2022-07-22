@@ -18,7 +18,6 @@ import (
 	"crypto/md5"
 	"fmt"
 	"math/rand"
-	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -29,7 +28,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/json"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -115,18 +113,18 @@ func (r *ProbeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		if patch, err = json.Marshal(statusPatch); err != nil {
 			return ctrl.Result{}, err
 		}
-		if err = r.Status().Patch(ctx, &kubeproberv1.Probe{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      probe.Name,
-				Namespace: probe.Namespace,
-			},
-		}, client.RawPatch(types.MergePatchType, patch)); err != nil {
-			r.log.V(1).Error(err, "update cluster status error")
-			if !strings.Contains(err.Error(), "could not find the requested resource") {
-				return ctrl.Result{}, err
-			}
-		}
-
+		fmt.Printf("%+v\n", patch)
+		//if err = r.Status().Patch(ctx, &kubeproberv1.Probe{
+		//	ObjectMeta: metav1.ObjectMeta{
+		//		Name:      probe.Name,
+		//		Namespace: probe.Namespace,
+		//	},
+		//}, client.RawPatch(types.MergePatchType, patch)); err != nil {
+		//	r.log.V(1).Error(err, "update cluster status error")
+		//	if !strings.Contains(err.Error(), "could not find the requested resource") {
+		//		return ctrl.Result{}, err
+		//	}
+		//}
 	}
 
 	// check whether it's single probe or cron probe
