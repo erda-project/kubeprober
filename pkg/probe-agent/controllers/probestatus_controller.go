@@ -18,8 +18,6 @@ import (
 	"fmt"
 	"time"
 
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/json"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
@@ -64,7 +62,7 @@ func (r *ProbeStatusReconciler) initLogger(ctx context.Context) {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *ProbeStatusReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.initLogger(ctx)
-	var patch []byte
+	//var patch []byte
 	var err error
 
 	//update status of probestatus
@@ -101,25 +99,25 @@ func (r *ProbeStatusReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if fMessage == "" {
 		fMessage = "-"
 	}
-	statusPatch := kubeproberv1.ProbeStatus{
-		Status: kubeproberv1.ProbeStatusStates{
-			Message: fMessage,
-			Status:  fStatus,
-			LastRun: fLastRun,
-		},
-	}
-	if patch, err = json.Marshal(statusPatch); err != nil {
-		return ctrl.Result{}, err
-	}
-	if err = r.Status().Patch(ctx, &kubeproberv1.ProbeStatus{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      ps.Name,
-			Namespace: ps.Namespace,
-		},
-	}, client.RawPatch(types.MergePatchType, patch)); err != nil {
-		r.log.V(1).Error(err, "update probestatus status error", "probestatus", ps.Name)
-		return ctrl.Result{}, err
-	}
+	//statusPatch := kubeproberv1.ProbeStatus{
+	//	Status: kubeproberv1.ProbeStatusStates{
+	//		Message: fMessage,
+	//		Status:  fStatus,
+	//		LastRun: fLastRun,
+	//	},
+	//}
+	//if patch, err = json.Marshal(statusPatch); err != nil {
+	//	return ctrl.Result{}, err
+	//}
+	//if err = r.Status().Patch(ctx, &kubeproberv1.ProbeStatus{
+	//	ObjectMeta: metav1.ObjectMeta{
+	//		Name:      ps.Name,
+	//		Namespace: ps.Namespace,
+	//	},
+	//}, client.RawPatch(types.MergePatchType, patch)); err != nil {
+	//	r.log.V(1).Error(err, "update probestatus status error", "probestatus", ps.Name)
+	//	return ctrl.Result{}, err
+	//}
 
 	pod := corev1.Pod{}
 	err = r.Get(ctx, req.NamespacedName, &pod)

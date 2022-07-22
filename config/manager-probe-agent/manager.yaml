@@ -23,7 +23,7 @@ spec:
         app: probe-agent
     spec:
       containers:
-        - image: kubeprober/probe-agent:v0.1.0-beta14
+        - image: kubeprober/probe-agent:v0.1.0-beta15
           imagePullPolicy: "Always"
           name: probe-agent
           command: ["/bin/sh"]
