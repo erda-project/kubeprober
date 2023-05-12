@@ -18,16 +18,20 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	influxdb2api "github.com/influxdata/influxdb-client-go/v2/api"
+	"github.com/pkg/errors"
 	"github.com/rancher/remotedialer"
+	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -222,6 +226,8 @@ func Start(ctx context.Context, cfg *Config, influxdbConfig *apistructs.Influxdb
 		req *http.Request) {
 		json.NewEncoder(rw).Encode([]string{})
 	})
+	router.HandleFunc("/tunnel/{cluster}/{path:.*}", handlePrometheusBypass(cfg, handler))
+
 	server := &http.Server{
 		BaseContext: func(net.Listener) context.Context {
 			return ctx
@@ -230,6 +236,120 @@ func Start(ctx context.Context, cfg *Config, influxdbConfig *apistructs.Influxdb
 		Handler: router,
 	}
 	return server.ListenAndServe()
+}
+
+func handlePrometheusBypass(cfg *Config, remoteServer *remotedialer.Server) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Extract the cluster name and target from the URL path
+		vars := mux.Vars(r)
+		clusterName := vars["cluster"]
+		path := vars["path"]
+
+		timeout := r.URL.Query().Get("timeout")
+		if timeout == "" {
+			timeout = "15"
+		}
+
+		cluster := &kubeproberv1.Cluster{}
+		if err := k8sclient.RestClient.Get(context.Background(), client.ObjectKey{
+			Namespace: metav1.NamespaceDefault,
+			Name:      clusterName,
+		}, cluster); err != nil {
+			err = errors.Wrap(err, fmt.Sprintf("get cluster %v info", cluster))
+			logrus.Errorf(err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		client := getClient(remoteServer, clusterName, timeout)
+		if client == nil {
+			err := errors.New(fmt.Sprintf("Get client for cluster %v failed", clusterName))
+			logrus.Errorf(err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		targetURL := fmt.Sprintf("http://%s", path)
+
+		req, err := http.NewRequest(r.Method, targetURL, r.Body)
+		if err != nil {
+			err = errors.Wrap(err, fmt.Sprintf("create request for %v", targetURL))
+			logrus.Errorf(err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Copy headers from the original request to the new request
+		for key, values := range r.Header {
+			for _, value := range values {
+				req.Header.Add(key, value)
+			}
+		}
+
+		// Perform basic authentication if Authorization header is present
+		if username, password, ok := r.BasicAuth(); ok {
+			req.SetBasicAuth(username, password)
+		}
+
+		// Start timer
+		startTime := time.Now()
+
+		// Perform the request using the client
+		resp, err := client.Do(req)
+		defer resp.Body.Close()
+
+		if err != nil {
+			err = errors.Wrap(err, fmt.Sprintf("perform request for %v", targetURL))
+			logrus.Errorf(err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if cfg.Debug {
+			duration := time.Since(startTime)
+			logrus.Println("exec: %v,duration: %v, response.code: %v", targetURL, duration, resp.StatusCode)
+		}
+
+		// Copy the response headers to the client
+		for key, values := range resp.Header {
+			for _, value := range values {
+				w.Header().Add(key, value)
+			}
+		}
+
+		// Copy the response status code to the client
+		w.WriteHeader(resp.StatusCode)
+
+		// Copy the response body to the client
+		if _, err := io.Copy(w, resp.Body); err != nil {
+			err = errors.Wrap(err, fmt.Sprintf("copy response body for %v", targetURL))
+			logrus.Errorf(err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+func getClient(remoteServer *remotedialer.Server, clientKey string, timeout string) *http.Client {
+	dialer := remoteServer.Dialer(clientKey)
+	if dialer == nil {
+		return nil
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			DialContext: dialer,
+		},
+	}
+
+	if timeout != "" {
+		t, err := strconv.Atoi(timeout)
+		if err == nil {
+			client.Timeout = time.Duration(t) * time.Second
+		}
+	}
+
+	return client
 }
 
 func proxyDingdingAlert(rw http.ResponseWriter, req *http.Request, influxdb2api influxdb2api.WriteAPI) {
