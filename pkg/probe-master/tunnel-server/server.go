@@ -32,6 +32,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rancher/remotedialer"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -134,8 +136,88 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	err = updateExternalPrometheusConfigMap(hbData.Name)
+	if err != nil {
+		errMsg := fmt.Sprintf("[heartbeat] update configmap error for cluster[%s]: %+v\n", hbData.Name, err)
+		klog.Errorf(errMsg)
+		rw.Write([]byte(errMsg))
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	rw.WriteHeader(http.StatusOK)
 	return
+}
+
+func newDatasource(clusterName string) (string, error) {
+	type Datasource struct {
+		Name       string `yaml:"name"`
+		Version    int    `yaml:"version"`
+		Type       string `yaml:"type"`
+		Url        string `yaml:"url"`
+		HttpMethod string `yaml:"httpMethod"`
+		Editable   bool   `yaml:"editable"`
+	}
+	type Config struct {
+		APIVersion  int          `yaml:"apiVersion"`
+		Datasources []Datasource `yaml:"datasources"`
+	}
+
+	dataName := fmt.Sprintf("external_%v", clusterName)
+	cfg := Config{
+		APIVersion: 1,
+		Datasources: []Datasource{
+			{
+				Name:       dataName,
+				Version:    1,
+				Type:       "prometheus",
+				Url:        fmt.Sprintf("http:///probe-master.kubeprober.svc.cluster.local:8088/%v/prometheus-bypass.erda-monitoring:9090", clusterName),
+				HttpMethod: "post",
+				Editable:   true,
+			},
+		},
+	}
+
+	cfgBytes, err := yaml.Marshal(cfg)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal config for %v: %w", clusterName, err)
+	}
+
+	return string(cfgBytes), nil
+}
+
+func updateExternalPrometheusConfigMap(clusterName string) error {
+	configMapName := "grafana-datasource"
+
+	configMap := &corev1.ConfigMap{}
+	if err := k8sclient.RestClient.Get(context.Background(), client.ObjectKey{
+		Name: configMapName,
+	}, configMap); err != nil {
+		err = errors.Wrap(err, fmt.Sprintf("get config %v info", configMapName))
+		return err
+	}
+
+	if configMap.Data == nil {
+		configMap.Data = make(map[string]string)
+	}
+
+	dataName := fmt.Sprintf("external_%v", clusterName)
+	dataFileName := fmt.Sprintf("%v.yaml", dataName)
+
+	if _, ok := configMap.Data[dataFileName]; !ok {
+		datasource, err := newDatasource(clusterName)
+		if err != nil {
+			err = errors.Wrap(err, fmt.Sprintf("create %v datasource is failed", clusterName))
+			return err
+		}
+		configMap.Data[dataFileName] = datasource
+		err = k8sclient.RestClient.Update(context.Background(), configMap)
+		if err != nil {
+			err = errors.Wrap(err, fmt.Sprintf("update config map is failed: %v ", clusterName))
+			return err
+		}
+	}
+	return nil
 }
 
 func Start(ctx context.Context, cfg *Config, influxdbConfig *apistructs.InfluxdbConf, erdaConfig *apistructs.ErdaConfig) error {

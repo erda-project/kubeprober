@@ -27,6 +27,7 @@ require (
 	github.com/spf13/viper v1.8.1
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/zap v1.17.0
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.21.2
 	k8s.io/apimachinery v0.21.2
