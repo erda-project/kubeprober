@@ -189,15 +189,30 @@ func newDatasource(clusterName string) (string, error) {
 	return string(cfgBytes), nil
 }
 
-func updateExternalPrometheusConfigMap(clusterName string) error {
+var configMapCache map[string]struct {
+	ConfigMap *corev1.ConfigMap
+	TimeStamp time.Time
+}
+
+// 5 minute
+const cacheExpiration = 5 * time.Minute
+
+func getConfigMap(clusterName string) (*corev1.ConfigMap, error) {
 	configMapName := "grafana-datasource"
+
+	// check cache expire
+	if cacheEntry, ok := configMapCache[clusterName]; ok {
+		if time.Since(cacheEntry.TimeStamp) < cacheExpiration {
+			return cacheEntry.ConfigMap, nil
+		}
+	}
 
 	configMap := &corev1.ConfigMap{}
 	if err := k8sclient.RestClient.Get(context.Background(), client.ObjectKey{
 		Name: configMapName,
 	}, configMap); err != nil {
 		err = errors.Wrap(err, fmt.Sprintf("get config %v info", configMapName))
-		return err
+		return nil, err
 	}
 
 	if configMap.Data == nil {
@@ -211,13 +226,46 @@ func updateExternalPrometheusConfigMap(clusterName string) error {
 		datasource, err := newDatasource(clusterName)
 		if err != nil {
 			err = errors.Wrap(err, fmt.Sprintf("create %v datasource is failed", clusterName))
-			return err
+			return nil, err
 		}
 		configMap.Data[dataFileName] = datasource
 		err = k8sclient.RestClient.Update(context.Background(), configMap)
 		if err != nil {
 			err = errors.Wrap(err, fmt.Sprintf("update config map is failed: %v ", clusterName))
-			return err
+			return nil, err
+		}
+	}
+
+	// 将获取的配置项添加到缓存中，包括时间戳
+	configMapCache[clusterName] = struct {
+		ConfigMap *corev1.ConfigMap
+		TimeStamp time.Time
+	}{ConfigMap: configMap, TimeStamp: time.Now()}
+
+	return configMap, nil
+}
+
+func updateExternalPrometheusConfigMap(clusterName string) error {
+	configMap, err := getConfigMap(clusterName)
+	if err != nil {
+		return errors.Wrap(err, "get config map is failed")
+	}
+	if configMap.Data == nil {
+		configMap.Data = make(map[string]string)
+	}
+
+	dataName := fmt.Sprintf("external_%v", clusterName)
+	dataFileName := fmt.Sprintf("%v.yaml", dataName)
+
+	if _, ok := configMap.Data[dataFileName]; !ok {
+		datasource, err := newDatasource(clusterName)
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("create %v datasource is failed", clusterName))
+		}
+		configMap.Data[dataFileName] = datasource
+		err = k8sclient.RestClient.Update(context.Background(), configMap)
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("update config map is failed: %v ", clusterName))
 		}
 	}
 	return nil
