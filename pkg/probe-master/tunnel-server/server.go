@@ -22,6 +22,8 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -307,6 +309,19 @@ func Start(ctx context.Context, cfg *Config, influxdbConfig *apistructs.Influxdb
 	router.HandleFunc("/alertstatistic/search", func(rw http.ResponseWriter,
 		req *http.Request) {
 		json.NewEncoder(rw).Encode([]string{})
+	})
+	router.HandleFunc("/collect/bypass", func(rw http.ResponseWriter,
+		req *http.Request) {
+		targetURL := "http://prometheus.erda-monitoring:9090/api/v1/write"
+
+		target, err := url.Parse(targetURL)
+		if err != nil {
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		proxy := httputil.NewSingleHostReverseProxy(target)
+		req.Host = target.Host
+		proxy.ServeHTTP(rw, req)
 	})
 	router.HandleFunc("/tunnel/{cluster}/{path:.*}", handlePrometheusBypass(cfg, handler))
 
