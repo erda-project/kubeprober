@@ -16,6 +16,7 @@ package server
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -313,6 +314,18 @@ func Start(ctx context.Context, cfg *Config, influxdbConfig *apistructs.Influxdb
 	router.HandleFunc("/collect/bypass", func(rw http.ResponseWriter,
 		req *http.Request) {
 		targetURL := "http://prometheus.erda-monitoring:9090/api/v1/write"
+
+		username := "probemaster"
+		password := cfg.BypassAuthPassword
+
+		// check basic auth
+		auth := req.Header.Get("Authorization")
+		validAuth := "Basic " + base64.StdEncoding.EncodeToString([]byte(username+":"+password))
+		if auth != validAuth {
+			rw.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
+			http.Error(rw, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
 
 		target, err := url.Parse(targetURL)
 		if err != nil {

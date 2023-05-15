@@ -169,9 +169,10 @@ func Run(opts *options.ProbeMasterOptions) {
 	//start remote cluster dialer
 	klog.Infof("starting probe-master remote dialer server on :8088")
 	go server.Start(ctx, &server.Config{
-		Debug:   false,
-		Timeout: 0,
-		Listen:  opts.ProbeMasterListenAddr,
+		Debug:              false,
+		Timeout:            0,
+		Listen:             opts.ProbeMasterListenAddr,
+		BypassAuthPassword: opts.BypassPushMetricPassword,
 	}, influxdbConfig, erdaConfig)
 
 	setupLog.Info("starting manager")
