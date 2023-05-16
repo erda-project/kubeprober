@@ -20,7 +20,7 @@ jobs:
 
     - name: Read version file
       id: version
-      run: echo "::set-output name=version::$(cat version)"
+      run: echo "::set-output name=version::$(cat VERSION)"
 
     - name: Make controller-gen
       run: make controller-gen
