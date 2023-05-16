@@ -25,5 +25,7 @@ jobs:
     - name: Make controller-gen
       run: make controller-gen
 
-    - name: Build Docker image
-      run: APP=probe-master V=${{ steps.version.outputs.version }} make docker-build
+#     - name: Build Docker image
+#       run: APP=probe-master V=${{ steps.version.outputs.version }} make docker-build
+    - name: Build
+      run: APP=probe-master make build
