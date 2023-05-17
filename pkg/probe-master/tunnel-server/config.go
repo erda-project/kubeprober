@@ -16,7 +16,8 @@ package server
 import "time"
 
 type Config struct {
-	Debug   bool          `default:"false" desc:"enable debug logging"`
-	Timeout time.Duration `default:"60s" desc:"default timeout"`
-	Listen  string        `default:":8088" desc:"listen address"`
+	Debug              bool          `default:"false" desc:"enable debug logging"`
+	Timeout            time.Duration `default:"60s" desc:"default timeout"`
+	Listen             string        `default:":8088" desc:"listen address"`
+	BypassAuthPassword string        `default:"29hgUEJUefyzcTjoYbJQ" desc:"bypass auth password"`
 }

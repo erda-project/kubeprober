@@ -16,18 +16,27 @@ package server
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	influxdb2api "github.com/influxdata/influxdb-client-go/v2/api"
+	"github.com/pkg/errors"
 	"github.com/rancher/remotedialer"
+	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -130,8 +139,136 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	err = updateExternalPrometheusConfigMap(hbData.Name)
+	if err != nil {
+		errMsg := fmt.Sprintf("[heartbeat] update configmap error for cluster[%s]: %+v\n", hbData.Name, err)
+		klog.Errorf(errMsg)
+		rw.Write([]byte(errMsg))
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	rw.WriteHeader(http.StatusOK)
 	return
+}
+
+func newDatasource(clusterName string) (string, error) {
+	type Datasource struct {
+		Name       string `yaml:"name"`
+		Version    int    `yaml:"version"`
+		Type       string `yaml:"type"`
+		Url        string `yaml:"url"`
+		HttpMethod string `yaml:"httpMethod"`
+		Editable   bool   `yaml:"editable"`
+	}
+	type Config struct {
+		APIVersion  int          `yaml:"apiVersion"`
+		Datasources []Datasource `yaml:"datasources"`
+	}
+
+	dataName := fmt.Sprintf("external_%v", clusterName)
+	cfg := Config{
+		APIVersion: 1,
+		Datasources: []Datasource{
+			{
+				Name:       dataName,
+				Version:    1,
+				Type:       "prometheus",
+				Url:        fmt.Sprintf("http:///probe-master.kubeprober.svc.cluster.local:8088/%v/prometheus-bypass.erda-monitoring:9090", clusterName),
+				HttpMethod: "post",
+				Editable:   true,
+			},
+		},
+	}
+
+	cfgBytes, err := yaml.Marshal(cfg)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal config for %v: %w", clusterName, err)
+	}
+
+	return string(cfgBytes), nil
+}
+
+var configMapCache map[string]struct {
+	ConfigMap *corev1.ConfigMap
+	TimeStamp time.Time
+}
+
+// 5 minute
+const cacheExpiration = 5 * time.Minute
+
+func getConfigMap(clusterName string) (*corev1.ConfigMap, error) {
+	configMapName := "grafana-datasource"
+
+	// check cache expire
+	if cacheEntry, ok := configMapCache[clusterName]; ok {
+		if time.Since(cacheEntry.TimeStamp) < cacheExpiration {
+			return cacheEntry.ConfigMap, nil
+		}
+	}
+
+	configMap := &corev1.ConfigMap{}
+	if err := k8sclient.RestClient.Get(context.Background(), client.ObjectKey{
+		Name: configMapName,
+	}, configMap); err != nil {
+		err = errors.Wrap(err, fmt.Sprintf("get config %v info", configMapName))
+		return nil, err
+	}
+
+	if configMap.Data == nil {
+		configMap.Data = make(map[string]string)
+	}
+
+	dataName := fmt.Sprintf("external_%v", clusterName)
+	dataFileName := fmt.Sprintf("%v.yaml", dataName)
+
+	if _, ok := configMap.Data[dataFileName]; !ok {
+		datasource, err := newDatasource(clusterName)
+		if err != nil {
+			err = errors.Wrap(err, fmt.Sprintf("create %v datasource is failed", clusterName))
+			return nil, err
+		}
+		configMap.Data[dataFileName] = datasource
+		err = k8sclient.RestClient.Update(context.Background(), configMap)
+		if err != nil {
+			err = errors.Wrap(err, fmt.Sprintf("update config map is failed: %v ", clusterName))
+			return nil, err
+		}
+	}
+
+	// 将获取的配置项添加到缓存中，包括时间戳
+	configMapCache[clusterName] = struct {
+		ConfigMap *corev1.ConfigMap
+		TimeStamp time.Time
+	}{ConfigMap: configMap, TimeStamp: time.Now()}
+
+	return configMap, nil
+}
+
+func updateExternalPrometheusConfigMap(clusterName string) error {
+	configMap, err := getConfigMap(clusterName)
+	if err != nil {
+		return errors.Wrap(err, "get config map is failed")
+	}
+	if configMap.Data == nil {
+		configMap.Data = make(map[string]string)
+	}
+
+	dataName := fmt.Sprintf("external_%v", clusterName)
+	dataFileName := fmt.Sprintf("%v.yaml", dataName)
+
+	if _, ok := configMap.Data[dataFileName]; !ok {
+		datasource, err := newDatasource(clusterName)
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("create %v datasource is failed", clusterName))
+		}
+		configMap.Data[dataFileName] = datasource
+		err = k8sclient.RestClient.Update(context.Background(), configMap)
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("update config map is failed: %v ", clusterName))
+		}
+	}
+	return nil
 }
 
 func Start(ctx context.Context, cfg *Config, influxdbConfig *apistructs.InfluxdbConf, erdaConfig *apistructs.ErdaConfig) error {
@@ -222,6 +359,33 @@ func Start(ctx context.Context, cfg *Config, influxdbConfig *apistructs.Influxdb
 		req *http.Request) {
 		json.NewEncoder(rw).Encode([]string{})
 	})
+	router.HandleFunc("/collect/bypass", func(rw http.ResponseWriter,
+		req *http.Request) {
+		targetURL := "http://prometheus.erda-monitoring:9090/api/v1/write"
+
+		username := "probemaster"
+		password := cfg.BypassAuthPassword
+
+		// check basic auth
+		auth := req.Header.Get("Authorization")
+		validAuth := "Basic " + base64.StdEncoding.EncodeToString([]byte(username+":"+password))
+		if auth != validAuth {
+			rw.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
+			http.Error(rw, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		target, err := url.Parse(targetURL)
+		if err != nil {
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		proxy := httputil.NewSingleHostReverseProxy(target)
+		req.Host = target.Host
+		proxy.ServeHTTP(rw, req)
+	})
+	router.HandleFunc("/tunnel/{cluster}/{path:.*}", handlePrometheusBypass(cfg, handler))
+
 	server := &http.Server{
 		BaseContext: func(net.Listener) context.Context {
 			return ctx
@@ -230,6 +394,120 @@ func Start(ctx context.Context, cfg *Config, influxdbConfig *apistructs.Influxdb
 		Handler: router,
 	}
 	return server.ListenAndServe()
+}
+
+func handlePrometheusBypass(cfg *Config, remoteServer *remotedialer.Server) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Extract the cluster name and target from the URL path
+		vars := mux.Vars(r)
+		clusterName := vars["cluster"]
+		path := vars["path"]
+
+		timeout := r.URL.Query().Get("timeout")
+		if timeout == "" {
+			timeout = "15"
+		}
+
+		cluster := &kubeproberv1.Cluster{}
+		if err := k8sclient.RestClient.Get(context.Background(), client.ObjectKey{
+			Namespace: metav1.NamespaceDefault,
+			Name:      clusterName,
+		}, cluster); err != nil {
+			err = errors.Wrap(err, fmt.Sprintf("get cluster %v info", cluster))
+			logrus.Errorf(err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		client := getClient(remoteServer, clusterName, timeout)
+		if client == nil {
+			err := errors.New(fmt.Sprintf("Get client for cluster %v failed", clusterName))
+			logrus.Errorf(err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		targetURL := fmt.Sprintf("http://%s", path)
+
+		req, err := http.NewRequest(r.Method, targetURL, r.Body)
+		if err != nil {
+			err = errors.Wrap(err, fmt.Sprintf("create request for %v", targetURL))
+			logrus.Errorf(err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Copy headers from the original request to the new request
+		for key, values := range r.Header {
+			for _, value := range values {
+				req.Header.Add(key, value)
+			}
+		}
+
+		// Perform basic authentication if Authorization header is present
+		if username, password, ok := r.BasicAuth(); ok {
+			req.SetBasicAuth(username, password)
+		}
+
+		// Start timer
+		startTime := time.Now()
+
+		// Perform the request using the client
+		resp, err := client.Do(req)
+		defer resp.Body.Close()
+
+		if err != nil {
+			err = errors.Wrap(err, fmt.Sprintf("perform request for %v", targetURL))
+			logrus.Errorf(err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if cfg.Debug {
+			duration := time.Since(startTime)
+			logrus.Println("exec: %v,duration: %v, response.code: %v", targetURL, duration, resp.StatusCode)
+		}
+
+		// Copy the response headers to the client
+		for key, values := range resp.Header {
+			for _, value := range values {
+				w.Header().Add(key, value)
+			}
+		}
+
+		// Copy the response status code to the client
+		w.WriteHeader(resp.StatusCode)
+
+		// Copy the response body to the client
+		if _, err := io.Copy(w, resp.Body); err != nil {
+			err = errors.Wrap(err, fmt.Sprintf("copy response body for %v", targetURL))
+			logrus.Errorf(err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+func getClient(remoteServer *remotedialer.Server, clientKey string, timeout string) *http.Client {
+	dialer := remoteServer.Dialer(clientKey)
+	if dialer == nil {
+		return nil
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			DialContext: dialer,
+		},
+	}
+
+	if timeout != "" {
+		t, err := strconv.Atoi(timeout)
+		if err == nil {
+			client.Timeout = time.Duration(t) * time.Second
+		}
+	}
+
+	return client
 }
 
 func proxyDingdingAlert(rw http.ResponseWriter, req *http.Request, influxdb2api influxdb2api.WriteAPI) {
