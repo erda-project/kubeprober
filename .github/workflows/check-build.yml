@@ -1,4 +1,4 @@
-name: Build
+name: PR Build and Merge Validation
 
 on:
   pull_request:
