@@ -454,6 +454,12 @@ func handlePrometheusBypass(cfg *Config, remoteServer *remotedialer.Server) func
 
 		// Perform the request using the client
 		resp, err := client.Do(req)
+		if err != nil {
+			err = errors.Wrap(err, fmt.Sprintf("[%v]do request is failed %v", clusterName, err))
+			logrus.Errorf(err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		defer resp.Body.Close()
 
 		if err != nil {
@@ -465,7 +471,7 @@ func handlePrometheusBypass(cfg *Config, remoteServer *remotedialer.Server) func
 
 		if cfg.Debug {
 			duration := time.Since(startTime)
-			logrus.Println("exec: %v,duration: %v, response.code: %v", targetURL, duration, resp.StatusCode)
+			logrus.Println("exec:", targetURL, ", duration:", duration, ", response.code:", resp.StatusCode)
 		}
 
 		// Copy the response headers to the client
