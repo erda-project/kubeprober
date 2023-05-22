@@ -237,7 +237,7 @@ func updateExternalPrometheusConfigMap(clusterName string) error {
 		configMap.Data = make(map[string]string)
 	}
 
-	dataName := fmt.Sprintf("external:%v", clusterName)
+	dataName := fmt.Sprintf("external.%v", clusterName)
 	dataFileName := fmt.Sprintf("%v.yaml", dataName)
 
 	if _, ok := configMap.Data[dataFileName]; !ok {
