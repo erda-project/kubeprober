@@ -172,7 +172,7 @@ func Run(opts *options.ProbeMasterOptions) {
 		Debug:              false,
 		Timeout:            0,
 		Listen:             opts.ProbeMasterListenAddr,
-		BypassAuthPassword: opts.BypassPushMetricPassword,
+		BypassAuthPassword: os.Getenv("BYPASS_PUSH_METRIC_PASSWORD"),
 	}, influxdbConfig, erdaConfig)
 
 	setupLog.Info("starting manager")
