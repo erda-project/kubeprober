@@ -53,6 +53,12 @@ import (
 	httphandler "github.com/erda-project/kubeprober/pkg/probe-master/tunnel-server/handler"
 )
 
+func init() {
+	configMapCache = make(map[string]struct {
+		ConfigMap *corev1.ConfigMap
+		TimeStamp time.Time
+	})
+}
 func clusterRegister(server *remotedialer.Server, rw http.ResponseWriter, req *http.Request) {
 	server.ServeHTTP(rw, req)
 }
@@ -174,7 +180,7 @@ func newDatasource(clusterName string) (string, error) {
 				Name:       dataName,
 				Version:    1,
 				Type:       "prometheus",
-				Url:        fmt.Sprintf("http:///probe-master.kubeprober.svc.cluster.local:8088/%v/prometheus-bypass.erda-monitoring:9090", clusterName),
+				Url:        fmt.Sprintf("http://probe-master.kubeprober.svc.cluster.local:8088/tunnel/%v/prometheus-bypass.erda-monitoring:9090", clusterName),
 				HttpMethod: "post",
 				Editable:   true,
 			},
@@ -209,7 +215,8 @@ func getConfigMap(clusterName string) (*corev1.ConfigMap, error) {
 
 	configMap := &corev1.ConfigMap{}
 	if err := k8sclient.RestClient.Get(context.Background(), client.ObjectKey{
-		Name: configMapName,
+		Name:      configMapName,
+		Namespace: "default",
 	}, configMap); err != nil {
 		err = errors.Wrap(err, fmt.Sprintf("get config %v info", configMapName))
 		return nil, err
@@ -218,30 +225,6 @@ func getConfigMap(clusterName string) (*corev1.ConfigMap, error) {
 	if configMap.Data == nil {
 		configMap.Data = make(map[string]string)
 	}
-
-	dataName := fmt.Sprintf("external_%v", clusterName)
-	dataFileName := fmt.Sprintf("%v.yaml", dataName)
-
-	if _, ok := configMap.Data[dataFileName]; !ok {
-		datasource, err := newDatasource(clusterName)
-		if err != nil {
-			err = errors.Wrap(err, fmt.Sprintf("create %v datasource is failed", clusterName))
-			return nil, err
-		}
-		configMap.Data[dataFileName] = datasource
-		err = k8sclient.RestClient.Update(context.Background(), configMap)
-		if err != nil {
-			err = errors.Wrap(err, fmt.Sprintf("update config map is failed: %v ", clusterName))
-			return nil, err
-		}
-	}
-
-	// 将获取的配置项添加到缓存中，包括时间戳
-	configMapCache[clusterName] = struct {
-		ConfigMap *corev1.ConfigMap
-		TimeStamp time.Time
-	}{ConfigMap: configMap, TimeStamp: time.Now()}
-
 	return configMap, nil
 }
 
@@ -254,7 +237,7 @@ func updateExternalPrometheusConfigMap(clusterName string) error {
 		configMap.Data = make(map[string]string)
 	}
 
-	dataName := fmt.Sprintf("external_%v", clusterName)
+	dataName := fmt.Sprintf("external.%v", clusterName)
 	dataFileName := fmt.Sprintf("%v.yaml", dataName)
 
 	if _, ok := configMap.Data[dataFileName]; !ok {
@@ -268,6 +251,11 @@ func updateExternalPrometheusConfigMap(clusterName string) error {
 			return errors.Wrap(err, fmt.Sprintf("update config map is failed: %v ", clusterName))
 		}
 	}
+	// 将获取的配置项添加到缓存中，包括时间戳
+	configMapCache[clusterName] = struct {
+		ConfigMap *corev1.ConfigMap
+		TimeStamp time.Time
+	}{ConfigMap: configMap, TimeStamp: time.Now()}
 	return nil
 }
 

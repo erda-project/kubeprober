@@ -18,48 +18,46 @@ import (
 )
 
 type ProbeMasterOptions struct {
-	MetricsAddr              string
-	PprofAddr                string
-	HealthProbeAddr          string
-	EnableLeaderElection     bool
-	EnablePprof              bool
-	LeaderElectionNamespace  string
-	Namespace                string
-	CreateDefaultPool        bool
-	Version                  bool
-	ProbeMasterListenAddr    string
-	ConfigFile               string
-	InfluxdbEnable           bool
-	InfluxdbHost             string
-	InfluxdbToken            string
-	InfluxdbOrg              string
-	InfluxdbBucket           string
-	AlertDataBucket          string
-	ErdaOpenapiURL           string
-	ErdaUsername             string
-	ErdaPassword             string
-	ErdaOrg                  string
-	ErdaProjectId            uint64
-	ErdaTicketEnable         bool
-	BypassPushMetricPassword string
+	MetricsAddr             string
+	PprofAddr               string
+	HealthProbeAddr         string
+	EnableLeaderElection    bool
+	EnablePprof             bool
+	LeaderElectionNamespace string
+	Namespace               string
+	CreateDefaultPool       bool
+	Version                 bool
+	ProbeMasterListenAddr   string
+	ConfigFile              string
+	InfluxdbEnable          bool
+	InfluxdbHost            string
+	InfluxdbToken           string
+	InfluxdbOrg             string
+	InfluxdbBucket          string
+	AlertDataBucket         string
+	ErdaOpenapiURL          string
+	ErdaUsername            string
+	ErdaPassword            string
+	ErdaOrg                 string
+	ErdaProjectId           uint64
+	ErdaTicketEnable        bool
 }
 
 // NewProbeMasterOptions creates a new NewProbeMasterOptions with a default config.
 func NewProbeMasterOptions() *ProbeMasterOptions {
 	o := &ProbeMasterOptions{
-		MetricsAddr:              ":8081",
-		PprofAddr:                ":8091",
-		HealthProbeAddr:          ":8001",
-		EnableLeaderElection:     false,
-		EnablePprof:              false,
-		LeaderElectionNamespace:  "kube-system",
-		Namespace:                "",
-		CreateDefaultPool:        false,
-		ProbeMasterListenAddr:    ":8088",
-		ConfigFile:               "",
-		InfluxdbEnable:           false,
-		ErdaTicketEnable:         false,
-		BypassPushMetricPassword: "BypassPushMetricPassword",
+		MetricsAddr:             ":8081",
+		PprofAddr:               ":8091",
+		HealthProbeAddr:         ":8001",
+		EnableLeaderElection:    false,
+		EnablePprof:             false,
+		LeaderElectionNamespace: "kube-system",
+		Namespace:               "",
+		CreateDefaultPool:       false,
+		ProbeMasterListenAddr:   ":8088",
+		ConfigFile:              "",
+		InfluxdbEnable:          false,
+		ErdaTicketEnable:        false,
 	}
 
 	return o
