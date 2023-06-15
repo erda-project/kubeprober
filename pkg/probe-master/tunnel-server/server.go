@@ -347,32 +347,43 @@ func Start(ctx context.Context, cfg *Config, influxdbConfig *apistructs.Influxdb
 		req *http.Request) {
 		json.NewEncoder(rw).Encode([]string{})
 	})
-	router.HandleFunc("/collect/bypass", func(rw http.ResponseWriter,
-		req *http.Request) {
-		targetURL := "http://prometheus.erda-monitoring:9090/api/v1/write"
+
+	router.HandleFunc("/tunnel/{cluster}/{path:.*}", handlePrometheusBypass(cfg, handler))
+
+	router.HandleFunc("/api/v1/bypass-collect", func(w http.ResponseWriter, r *http.Request) {
+		remote, err := url.Parse("http://prometheus-bypass.erda-monitoring:9090")
+		if err != nil {
+			logrus.Errorf(err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if r.Header.Get("debug") == "true" {
+			logrus.Infof("[debug] remoteaddr:%s request: method:%v,targetUrl:%v", r.RemoteAddr, r.Method, remote.RequestURI())
+		}
 
 		username := "probemaster"
 		password := cfg.BypassAuthPassword
 
-		// check basic auth
-		auth := req.Header.Get("Authorization")
+		// Check basic auth
+		auth := r.Header.Get("Authorization")
 		validAuth := "Basic " + base64.StdEncoding.EncodeToString([]byte(username+":"+password))
 		if auth != validAuth {
-			rw.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
-			http.Error(rw, "Unauthorized", http.StatusUnauthorized)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
+		r.Header.Del("Authorization")
 
-		target, err := url.Parse(targetURL)
-		if err != nil {
-			http.Error(rw, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		proxy := httputil.NewSingleHostReverseProxy(target)
-		req.Host = target.Host
-		proxy.ServeHTTP(rw, req)
+		r.Host = remote.Host
+		r.URL.Host = remote.Host
+		r.URL.Scheme = r.Method
+		r.URL.Path = "api/v1/write"
+		r.Header.Set("X-Forwarded-For", r.RemoteAddr)
+		r.Header.Set("X-Forwarded-Host", r.Host)
+
+		proxy := httputil.NewSingleHostReverseProxy(remote)
+		proxy.ServeHTTP(w, r)
 	})
-	router.HandleFunc("/tunnel/{cluster}/{path:.*}", handlePrometheusBypass(cfg, handler))
 
 	server := &http.Server{
 		BaseContext: func(net.Listener) context.Context {
