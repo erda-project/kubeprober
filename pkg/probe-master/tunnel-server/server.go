@@ -159,6 +159,17 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 }
 
 func newDatasource(clusterName string) (string, error) {
+	type JsonData struct {
+		HttpMethod                    string `yaml:"httpMethod"`
+		ManageAlerts                  bool   `yaml:"manageAlerts"`
+		PrometheusType                string `yaml:"prometheusType"`
+		PrometheusVersion             string `yaml:"prometheusVersion"`
+		IncrementalQuerying           bool   `yaml:"incrementalQuerying"`
+		IncrementalQueryOverlapWindow string `yaml:"incrementalQueryOverlapWindow"`
+		CacheLevel                    string `yaml:"cacheLevel"`
+		ExemplarTraceIdDestinations   string `yaml:"exemplarTraceIdDestinations"`
+	}
+
 	type Datasource struct {
 		Name       string `yaml:"name"`
 		Version    int    `yaml:"version"`
@@ -166,7 +177,10 @@ func newDatasource(clusterName string) (string, error) {
 		Url        string `yaml:"url"`
 		HttpMethod string `yaml:"httpMethod"`
 		Editable   bool   `yaml:"editable"`
+		Access     string `yaml:"access"`
+		JsonData   `yaml:"jsonData"`
 	}
+
 	type Config struct {
 		APIVersion  int          `yaml:"apiVersion"`
 		Datasources []Datasource `yaml:"datasources"`
@@ -183,6 +197,11 @@ func newDatasource(clusterName string) (string, error) {
 				Url:        fmt.Sprintf("http://probe-master.kubeprober.svc.cluster.local:8088/tunnel/%v/prometheus-bypass.erda-monitoring:9090", clusterName),
 				HttpMethod: "post",
 				Editable:   true,
+				JsonData: JsonData{
+					HttpMethod:     "POST",
+					ManageAlerts:   false,
+					PrometheusType: "Prometheus",
+				},
 			},
 		},
 	}
