@@ -59,3 +59,10 @@ rules:
     - "pods/exec"
   verbs:
     - "create"
+- apiGroups:
+    - "monitoring.coreos.com"
+  resources:
+    - servicemonitors
+    - podmonitors
+  verbs:
+    - "*"
