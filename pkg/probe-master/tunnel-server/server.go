@@ -160,25 +160,21 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 
 func newDatasource(clusterName string) (string, error) {
 	type JsonData struct {
-		HttpMethod                    string `yaml:"httpMethod"`
-		ManageAlerts                  bool   `yaml:"manageAlerts"`
-		PrometheusType                string `yaml:"prometheusType"`
-		PrometheusVersion             string `yaml:"prometheusVersion"`
-		IncrementalQuerying           bool   `yaml:"incrementalQuerying"`
-		IncrementalQueryOverlapWindow string `yaml:"incrementalQueryOverlapWindow"`
-		CacheLevel                    string `yaml:"cacheLevel"`
-		ExemplarTraceIdDestinations   string `yaml:"exemplarTraceIdDestinations"`
+		HttpMethod        string `yaml:"httpMethod"`
+		ManageAlerts      bool   `yaml:"manageAlerts"`
+		PrometheusType    string `yaml:"prometheusType"`
+		PrometheusVersion string `yaml:"prometheusVersion"`
 	}
 
 	type Datasource struct {
-		Name       string `yaml:"name"`
-		Version    int    `yaml:"version"`
-		Type       string `yaml:"type"`
-		Url        string `yaml:"url"`
-		HttpMethod string `yaml:"httpMethod"`
-		Editable   bool   `yaml:"editable"`
-		Access     string `yaml:"access"`
-		JsonData   `yaml:"jsonData"`
+		Name       string   `yaml:"name"`
+		Version    int      `yaml:"version"`
+		Type       string   `yaml:"type"`
+		Url        string   `yaml:"url"`
+		HttpMethod string   `yaml:"httpMethod"`
+		Editable   bool     `yaml:"editable"`
+		Access     string   `yaml:"access"`
+		JsonData   JsonData `yaml:"jsonData"`
 	}
 
 	type Config struct {
