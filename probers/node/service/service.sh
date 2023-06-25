@@ -154,14 +154,14 @@ function check_kubelet_eviction_soft_config() {
 }
 
 
-check_docker_status
+check_cri_status
 check_container_number
 check_image_number
-check_docker_dir
+check_data_dir
 check_kubelet_status
 check_firewall
 check_resolved
 check_chronyd
-check_docker_notify
+check_container_notify
 check_kubelet_eviction_config
 check_kubelet_eviction_soft_config
