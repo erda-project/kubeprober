@@ -37,6 +37,7 @@ rules:
     - namespaces
     - pods
     - services
+    - secrets
   verbs:
     - "*"
 - apiGroups:
@@ -59,3 +60,12 @@ rules:
     - "pods/exec"
   verbs:
     - "create"
+- apiGroups:
+    - "monitoring.coreos.com"
+  resources:
+    - servicemonitors
+    - podmonitors
+    - prometheus
+    - prometheuses
+  verbs:
+    - "*"
