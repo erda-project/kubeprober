@@ -37,6 +37,7 @@ rules:
     - namespaces
     - pods
     - services
+    - secrets
   verbs:
     - "*"
 - apiGroups:
@@ -64,5 +65,7 @@ rules:
   resources:
     - servicemonitors
     - podmonitors
+    - prometheus
+    - prometheuses
   verbs:
     - "*"
