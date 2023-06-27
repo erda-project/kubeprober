@@ -5,8 +5,8 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 
 function sential_detect() {
     ## redis sential ready pod detect
-    REPLICAS=$(kubectl get deploy rfs-addon-redis -n default -o yaml | grep ' replicas' | awk '{if (NR > 1){print $2}}')
-    READY=$(kubectl get deploy rfs-addon-redis -n default -o yaml | grep readyReplicas | awk '{print $2}')
+    REPLICAS=$(kubectl get sts rfr-addon-redis  -o json | jq '.status.replicas')
+    READY=$(kubectl get sts rfr-addon-redis  -o json | jq '.status.readyReplicas')
     if [ "$REPLICAS" != "$READY" ]; then
       report-status --name=check_redis_sential --status=error --message="redis sentail ready pod not statisfied expect"
       return 1
