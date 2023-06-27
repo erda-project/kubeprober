@@ -5,55 +5,49 @@ is_cs=false
 if [[ "$cluster_vendor" == cs || "$cluster_vendor" == cs_managed || "$cluster_vendor" == edas ]]; then
     is_cs=true
 fi
+if docker info  >/dev/null 2>&1; then
+    cri_name=docker
+else
+    cri_name=containerd
+fi
 
-## docker层面检查
-function check_docker_status() {
-    if systemctl is-active docker | grep '^active' > /dev/null 2>&1; then
-        echo host_dockerstatus ok
+function check_cri_status() {
+    if systemctl is-active $cri_name | grep '^active' > /dev/null 2>&1; then
+        echo "host_$cri_name status ok"
     else
-        echo host_dockerstatus error "docker not running"
+        echo "host_$cri_name status error $cri_name not running"
     fi
 }
 
-function check_container_number() {
-    num=$(docker info -f '{{.Containers}}')
-    if [[ $num -gt 200 ]]; then
-        echo host_container info "docker container(with exited) number should no more than 200"
-    else
-        echo host_container ok
-    fi
-}
-
-function check_image_number() {
-    num=$(docker info -f '{{.Images}}')
-    if [[ $num -gt 200 ]]; then
-        echo host_image warn "docker image number should no more than 200"
-    else
-        echo host_image ok
-    fi
-}
-
-
-function check_docker_dir() {
-    docker_data_dir=$(cat /netdata/dice-ops/dice-config/config.yaml  | grep data_root: | grep -v "#" | awk -F":" '{print $2}' | sed 's/^\s*\|\s*$//g')
-    if [[ "$is_cs" == true ]]; then
-      docker_data_dir=${docker_data_dir:="/var/lib/docker"}
-    else
-      docker_data_dir=${docker_data_dir:="/data/docker/data"}
-    fi
-
-    dataroot=$(docker info -f '{{.DockerRootDir}}')
-    if [[ $dataroot != $docker_data_dir ]]; then
-      if [[ "$cluster_vendor" == cs_managed && $dataroot == '/var/lib/docker' && $docker_data_dir == '/var/lib/container/docker' ]]; then
+function check_data_dir() {
+    if [[ "$cri_name" == "docker" ]]; then
+      if [[ "$is_cs" == true ]]; then
+        docker_data_dir="/var/lib/docker"
+      else
+        docker_data_dir="/data/docker/data"
+      fi
+      dataroot=$(docker info -f '{{.DockerRootDir}}')
+      if [[ $dataroot != $docker_data_dir ]]; then
+        if [[ "$cluster_vendor" == cs_managed && $dataroot == '/var/lib/docker' && $docker_data_dir == '/var/lib/container/docker' ]]; then
         # cs_managed ack bind /var/lib/container/docker /var/lib/docker in /etc/fstab
-        echo host_dockerdir ok
+           echo host_dockerdir ok
+           return
+        fi
+        echo host_dockerdir error "docker data-root should be '$docker_data_dir'"
         return
       fi
-
-      echo host_dockerdir error "docker data-root should be '$docker_data_dir'"
-      return
+      echo host_dockerdir ok
+      else
+        containerd_data_dir=$(cat /netdata/dice-ops/dice-config/config.yaml  | grep state_path:|awk -F":" '{print $2}' |sed 's/^\s*\|\s*$//g')
+        containerd_root=$(containerd config dump |tr -d ' '|grep state=|awk -F'"' '{print $2}')
+        if [[  "$containerd_data_dir" == "$containerd_root" ]];then
+          echo host_containerdir ok
+          return
+        else
+          echo host_containerdir error "container data-root should be '$containerd_data_dir'"
+          return
+        fi
     fi
-    echo host_dockerdir ok
 }
 
 function check_kubelet_status() {
@@ -91,17 +85,15 @@ function check_chronyd() {
     fi
 }
 
-function check_docker_notify() {
-    if cat /etc/systemd/system/docker.service |grep 'Type=notify' >/dev/null 2>&1; then
-        echo docker_service_notify ok
-    else
-        if cat /etc/systemd/system/multi-user.target.wants/docker.service |grep 'Type=notify' >/dev/null 2>&1; then
-          echo docker_service_notify ok
-        else
-        echo docker_service_notify error "docker service is not Type=notify"
-        fi
-    fi
+function check_cri_notify() {
+   if grep -q 'Type=notify' "/etc/systemd/system/$cri_name.service" 2>/dev/null ||
+   grep -q 'Type=notify' "/etc/systemd/system/multi-user.target.wants/$cri_name.service" 2>/dev/null; then
+      echo "$cri_name"_service_notify ok
+   else
+       echo "$cri_name"_service_notify error: "$cri_name service is not Type=notify"
+   fi
 }
+
 
 function check_kubelet_eviction_config() {
   value=$(ps aux | grep /usr/bin/kubelet | egrep -o  "eviction-hard=imagefs.available<([0-9]+)" | awk -F"<" '{print $2}')
@@ -138,14 +130,14 @@ function check_kubelet_eviction_soft_config() {
 }
 
 
-check_docker_status
+check_cri_status
 check_container_number
 check_image_number
-check_docker_dir
+check_data_dir
 check_kubelet_status
 check_firewall
 check_resolved
 check_chronyd
-check_docker_notify
+check_cri_notify
 check_kubelet_eviction_config
 check_kubelet_eviction_soft_config
