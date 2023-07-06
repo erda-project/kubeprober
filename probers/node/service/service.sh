@@ -3,10 +3,9 @@
 cluster_vendor=$(cat /netdata/dice-ops/dice-config/config.yaml | grep vendor | awk '{print $2}' 2>/dev/null)
 cri_name=$(cat /netdata/dice-ops/dice-config/config.yaml|sed 's/ //g'|grep -E "^docker|^containerd"|awk -F: '{print $1}')
 is_cs=false
-container_socket_path="/data/containerd/data/containerd.sock"
+container_socket_path=$(systemctl status containerd|grep containerd.sock|head -1|awk '{print $NF}')
 if [[ "$cluster_vendor" == cs || "$cluster_vendor" == cs_managed || "$cluster_vendor" == edas ]]; then
     is_cs=true
-    container_socket_path="/run/containerd/containerd.sock"
 fi
 
 
