@@ -38,7 +38,7 @@ KubeProber 是一个针对大规模 Kubernetes 集群设计的诊断工具，用
 运行在被纳管集群上的 operator，这个 operator 维护两个 CRD，一个是跟 probe-master 完全一致的 Probe，probe-agent 按照 probe 的定义去执行该集群的诊断项，另一个是 ProbeStatus，用于记录每个 Probe 的诊断结果，用户可以在被纳管的集群中通过kubectl get probestatus 来查看本集群的诊断结果。
 
 ## 开始使用
-[文档](https://docs.erda.cloud/1.2/manual/eco-tools/kubeprober/guides/install.html)
+[文档](https://docs.erda.cloud/2.2/manual/eco-tools/kubeprober/guides/install.html)
 ## 开发
 
 你可以在本地运行以及构建probe-master以及probe-agent，运行之前请确保本地存在~/.kube/config可以访问到kubernetes集群。
