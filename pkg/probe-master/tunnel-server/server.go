@@ -29,6 +29,7 @@ import (
 	"strings"
 	"time"
 
+	erda_api "github.com/erda-project/erda/apistructs"
 	"github.com/gorilla/mux"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	influxdb2api "github.com/influxdata/influxdb-client-go/v2/api"
@@ -43,7 +44,6 @@ import (
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	erda_api "github.com/erda-project/erda/apistructs"
 	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 	"github.com/erda-project/kubeprober/apistructs"
 	"github.com/erda-project/kubeprober/pkg/probe-master/alert/dingding"
@@ -598,7 +598,7 @@ func proxyDingdingAlert(rw http.ResponseWriter, req *http.Request, influxdb2api 
 			ticket.SendTicket(t)
 		}
 	}
-	klog.Errorf("alert start send to dingding\n")
+	klog.Info("alert start send to dingding")
 	dingding.ProxyAlert(rw, req)
 }
 
