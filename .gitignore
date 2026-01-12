@@ -37,6 +37,9 @@ go.sum
 /_bin
 /bin
 
+# kubectl probe plugins build binary
+dist/
+
 # for local debug
 /.env
 /.env.*
