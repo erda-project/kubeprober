@@ -1,7 +1,5 @@
-# syntax = docker/dockerfile:1.2
-
 # Build the manager binary
-FROM golang:1.16 as builder
+FROM m.daocloud.io/docker.io/golang:1.16 AS builder
 
 ARG APP
 WORKDIR /workspace
@@ -14,8 +12,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -mod readonly -a  -o ${APP} ./cmd/${APP}/${APP}.go
 
-#FROM centos:7
-FROM kubeprober/alpine:v3.9
+FROM registry.erda.cloud/retag/kubeprober/alpine:v3.9
 
 ARG ARCH=amd64
 ARG APP

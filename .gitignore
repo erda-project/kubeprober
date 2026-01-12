@@ -40,3 +40,7 @@ go.sum
 # for local debug
 /.env
 /.env.*
+
+# go cache
+.gocache/
+.gomodcache/

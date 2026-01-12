@@ -25,93 +25,115 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/erda-project/erda/apistructs"
 	"github.com/erda-project/kubeprober/pkg/probe-master/k8sclient"
 	dialclient "github.com/erda-project/kubeprober/pkg/probe-master/tunnel-client"
 )
 
+const (
+	probeAgentLabelKey   = "app"
+	probeAgentLabelValue = "probe-agent"
+	probeAgentContainer  = "probe-agent"
+	execCommandScript    = "kubectl-shell.sh"
+)
+
 func ClusterConsole(rw http.ResponseWriter, req *http.Request) {
-	// TODO make blow correct
-	vars := mux.Vars(req)
-	clusterName := vars["clusterName"]
+	clusterName := mux.Vars(req)["clusterName"]
+	if clusterName == "" {
+		http.Error(rw, "cluster name is required", http.StatusNotFound)
+		return
+	}
 
 	cluster, err := k8sclient.GetCluster(clusterName)
 	if err != nil {
-		errMsg := fmt.Sprintf("[cluster console] failed to list cluster with name: %s", clusterName)
-		logrus.Errorf(errMsg)
-		rw.Write([]byte(errMsg))
-		rw.WriteHeader(http.StatusInternalServerError)
+		logrus.Errorf("[cluster console] failed to get cluster %s: %v", clusterName, err)
+		http.Error(rw, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 	if cluster == nil {
-		errMsg := fmt.Sprintf("[cluster console] failed to find cluster with name: %s\n", clusterName)
-		rw.Write([]byte(errMsg))
-		rw.WriteHeader(http.StatusBadRequest)
+		http.Error(rw, fmt.Sprintf("cluster %s not found", clusterName), http.StatusBadRequest)
 		return
 	}
 
-	token := cluster.Spec.ClusterConfig.Token
-	if token == "" {
-		errMsg := fmt.Sprintf("[cluster console] invalid token for cluster with name: %s\n", clusterName)
-		rw.Write([]byte(errMsg))
-		rw.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	t, err := base64.StdEncoding.DecodeString(cluster.Spec.ClusterConfig.Token)
+	token, err := decodeClusterToken(clusterName, cluster.Spec.ClusterConfig.Token)
 	if err != nil {
-		errMsg := fmt.Sprintf("[cluster console] invalid token for cluster: %s\n", clusterName)
-		rw.Write([]byte(errMsg))
-		rw.WriteHeader(http.StatusInternalServerError)
+		logrus.Errorf("[cluster console] invalid token for cluster %s: %v", clusterName, err)
+		http.Error(rw, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	token = string(t)
 
 	clusterclient, err := dialclient.GenerateProbeClient(cluster)
 	if err != nil {
-		errMsg := fmt.Sprintf("[cluster console] invalid token for cluster with name: %s\n", clusterName)
-		rw.Write([]byte(errMsg))
-		rw.WriteHeader(http.StatusInternalServerError)
+		logrus.Errorf("[cluster console] failed to build k8s client for cluster %s: %v", clusterName, err)
+		http.Error(rw, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	podList := &v1.PodList{}
 
-	err = clusterclient.List(context.Background(), podList,
-		client.InNamespace(cluster.Spec.ClusterConfig.ProbeNamespaces),
-		client.MatchingLabels{"app": "probe-agent"})
+	pod, err := findRunningProbeAgent(req.Context(), clusterclient, cluster.Spec.ClusterConfig.ProbeNamespaces)
 	if err != nil {
-		errMsg := fmt.Sprintf("[cluster console] failed to find probe-agent pod for cluster with name: %s\n", clusterName)
-		rw.Write([]byte(errMsg))
-		rw.WriteHeader(http.StatusInternalServerError)
+		logrus.Errorf("[cluster console] failed to list probe-agent pods for cluster %s: %v", clusterName, err)
+		http.Error(rw, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	if pod == nil {
+		logrus.Errorf("failed to find a ready probe-agent pod for cluster %s", clusterName)
+		http.Error(rw, fmt.Sprintf("cluster %s does not have a ready probe-agent pod", clusterName), http.StatusInternalServerError)
 		return
 	}
 
-	for _, pod := range podList.Items {
-		if pod.Status.Phase != v1.PodRunning {
-			continue
+	req.URL.Path = execURLPath(clusterName, pod.Namespace, pod.Name)
+	req.URL.RawQuery = execQuery(token).Encode()
+
+	if proxyManager == nil {
+		logrus.Errorf("proxy manager not initialized for cluster %s", clusterName)
+		http.Error(rw, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	proxyManager.ProxyRequest(rw, req, clusterName)
+}
+
+func decodeClusterToken(clusterName, encoded string) (string, error) {
+	if encoded == "" {
+		return "", fmt.Errorf("empty token for cluster %s", clusterName)
+	}
+	decoded, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return "", err
+	}
+	return string(decoded), nil
+}
+
+func findRunningProbeAgent(ctx context.Context, c client.Client, namespace string) (*v1.Pod, error) {
+	podList := &v1.PodList{}
+	err := c.List(ctx, podList,
+		client.InNamespace(namespace),
+		client.MatchingLabels{probeAgentLabelKey: probeAgentLabelValue})
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range podList.Items {
+		pod := &podList.Items[i]
+		if pod.Status.Phase == v1.PodRunning {
+			return pod, nil
 		}
-
-		vars := url.Values{}
-		vars.Add("container", "probe-agent")
-		vars.Add("stdout", "1")
-		vars.Add("stdin", "1")
-		vars.Add("stderr", "1")
-		vars.Add("tty", "1")
-		vars.Add("command", "kubectl-shell.sh")
-		vars.Add("command", token)
-
-		path := fmt.Sprintf("/api/k8s/clusters/%s/api/v1/namespaces/%s/pods/%s/exec", clusterName, pod.Namespace, pod.Name)
-
-		req.URL.Path = path
-		req.URL.RawQuery = vars.Encode()
-
-		a.ServeHTTP(rw, req)
-		return
 	}
 
-	logrus.Errorf("failed to find a ready probe-agent pod for cluster %s", clusterName)
-	rw.WriteHeader(http.StatusInternalServerError)
-	rw.Write(apistructs.NewSteveError(apistructs.ServerError,
-		fmt.Sprintf("cluster %s does not have a ready probe-agent pod", clusterName)).JSON())
-	return
+	return nil, nil
+}
+
+func execQuery(token string) url.Values {
+	query := url.Values{}
+	query.Add("container", probeAgentContainer)
+	query.Add("stdout", "1")
+	query.Add("stdin", "1")
+	query.Add("stderr", "1")
+	query.Add("tty", "1")
+	query.Add("command", execCommandScript)
+	query.Add("command", token)
+	return query
+}
+
+func execURLPath(clusterName, namespace, podName string) string {
+	return fmt.Sprintf("/api/k8s/clusters/%s/api/v1/namespaces/%s/pods/%s/exec", clusterName, namespace, podName)
 }
