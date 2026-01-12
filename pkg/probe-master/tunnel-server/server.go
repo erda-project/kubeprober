@@ -29,7 +29,6 @@ import (
 	"strings"
 	"time"
 
-	erda_api "github.com/erda-project/erda/apistructs"
 	"github.com/gorilla/mux"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	influxdb2api "github.com/influxdata/influxdb-client-go/v2/api"
@@ -342,7 +341,7 @@ func Start(ctx context.Context, cfg *Config, influxdbConfig *apistructs.Influxdb
 		json.NewEncoder(rw).Encode([]string{"NODECOUNT"})
 	})
 
-	httphandler.NewAggregator(ctx)
+	httphandler.NewProxyManager(ctx)
 	router.HandleFunc("/api/k8s/clusters/{clusterName}", func(rw http.ResponseWriter,
 		req *http.Request) {
 		httphandler.ClusterConsole(rw, req)
@@ -586,13 +585,13 @@ func proxyDingdingAlert(rw http.ResponseWriter, req *http.Request, influxdb2api 
 			t.Title = fmt.Sprintf("(请勿改标题) 异常告警-[集群]: %s,[节点]: %s,[类别]: %s,[组件]: %s",
 				asItem.Cluster, asItem.Node, asItem.Type, asItem.Component)
 			t.Content = asItem.Msg
-			t.Type = erda_api.IssueTypeTicket
+			t.Type = ticket.IssueTypeTicket
 			if level == "fatal" {
-				t.Priority = erda_api.IssuePriorityUrgent
+				t.Priority = ticket.IssuePriorityUrgent
 			} else if level == "critical" {
-				t.Priority = erda_api.IssuePriorityHigh
+				t.Priority = ticket.IssuePriorityHigh
 			} else if level == "warning" {
-				t.Priority = erda_api.IssuePriorityNormal
+				t.Priority = ticket.IssuePriorityNormal
 			}
 
 			ticket.SendTicket(t)
@@ -634,8 +633,8 @@ func collectProbeStatus(rw http.ResponseWriter, req *http.Request, influxdb2api 
 			ps.ClusterName, ps.ProbeName, ps.CheckerName)
 		t.Content = fmt.Sprintf("[集群]: %s\n[类别]: %s\n[检查项]：%s\n[检查状态]：%s\n[错误信息]：\n%s",
 			ps.ClusterName, ps.ProbeName, ps.CheckerName, ps.Status, ps.Message)
-		t.Type = erda_api.IssueTypeTicket
-		t.Priority = erda_api.IssuePriorityHigh
+		t.Type = ticket.IssueTypeTicket
+		t.Priority = ticket.IssuePriorityHigh
 
 		//ticket.SendTicket(t)
 
@@ -649,8 +648,8 @@ func collectProbeStatus(rw http.ResponseWriter, req *http.Request, influxdb2api 
 			ps.ClusterName, ps.ProbeName, ps.CheckerName)
 		t.Content = fmt.Sprintf("[集群]: %s\n[类别]: %s\n[检查项]：%s\n[检查状态]: %s\n[错误信息]：\n%s",
 			ps.ClusterName, ps.ProbeName, ps.CheckerName, ps.Status, ps.Message)
-		t.Type = erda_api.IssueTypeTicket
-		t.Priority = erda_api.IssuePriorityLow
+		t.Type = ticket.IssueTypeTicket
+		t.Priority = ticket.IssuePriorityLow
 
 		//ticket.SendTicket(t)
 	}
