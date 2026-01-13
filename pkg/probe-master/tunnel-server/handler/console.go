@@ -25,15 +25,14 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 	"github.com/erda-project/kubeprober/pkg/probe-master/k8sclient"
 	dialclient "github.com/erda-project/kubeprober/pkg/probe-master/tunnel-client"
 )
 
 const (
-	probeAgentLabelKey   = "app"
-	probeAgentLabelValue = "probe-agent"
-	probeAgentContainer  = "probe-agent"
-	execCommandScript    = "kubectl-shell.sh"
+	probeAgentContainer = "probe-agent"
+	execCommandScript   = "kubectl-shell.sh"
 )
 
 func ClusterConsole(rw http.ResponseWriter, req *http.Request) {
@@ -107,7 +106,7 @@ func findRunningProbeAgent(ctx context.Context, c client.Client, namespace strin
 	podList := &v1.PodList{}
 	err := c.List(ctx, podList,
 		client.InNamespace(namespace),
-		client.MatchingLabels{probeAgentLabelKey: probeAgentLabelValue})
+		client.MatchingLabels{kubeproberv1.LabelKeyApp: kubeproberv1.LabelValueProbeAgent})
 	if err != nil {
 		return nil, err
 	}

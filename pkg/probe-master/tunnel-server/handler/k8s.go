@@ -21,11 +21,12 @@ import (
 	"sort"
 	"time"
 
-	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
-	"github.com/erda-project/kubeprober/pkg/probe-master/k8sclient"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
+	"github.com/erda-project/kubeprober/pkg/probe-master/k8sclient"
 )
 
 const DINGDING_ALERT_NAME = "dingding"
@@ -41,8 +42,8 @@ type TableResponse struct {
 	Type    string          `json:"type"`
 }
 
-type TimeSerieResponse struct {
-	Tatget     string    `json:"target"`
+type TimeSeriesResponse struct {
+	Target     string    `json:"target"`
 	Datapoints [][]int64 `json:"datapoints"`
 }
 
@@ -159,12 +160,12 @@ func GetAlertStatistic(rw http.ResponseWriter, req *http.Request) {
 	sort.Slice(listRow, func(i, j int) bool {
 		return listRow[i][1] < listRow[j][1]
 	})
-	resp := TimeSerieResponse{
-		Tatget:     "count",
+	resp := TimeSeriesResponse{
+		Target:     "count",
 		Datapoints: listRow,
 	}
 
-	if err := json.NewEncoder(rw).Encode([]TimeSerieResponse{resp}); err != nil {
+	if err := json.NewEncoder(rw).Encode([]TimeSeriesResponse{resp}); err != nil {
 		klog.Errorf("json encode for cluster list error: %+v\n", err)
 	}
 }

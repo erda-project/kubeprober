@@ -3,7 +3,7 @@ module github.com/erda-project/kubeprober
 go 1.16
 
 require (
-	github.com/aliyun/alibaba-cloud-sdk-go v1.61.1423 // indirect
+	github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/creack/pty v1.1.17 // indirect
 	github.com/erda-project/erda v1.5.0
@@ -27,6 +27,8 @@ require (
 	github.com/spf13/viper v1.8.1
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/zap v1.17.0
+	golang.org/x/net v0.0.0-20211029224645-99673261e6eb
+	gopkg.in/ini.v1 v1.66.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.21.2
