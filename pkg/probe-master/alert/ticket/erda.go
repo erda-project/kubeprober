@@ -8,6 +8,7 @@
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
@@ -27,7 +28,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"k8s.io/klog"
 
-	erda_api "github.com/erda-project/erda/apistructs"
 	"github.com/erda-project/kubeprober/apistructs"
 )
 
@@ -68,23 +68,23 @@ func Init(loginUser, loginPassword, openapiURL, orgName string, projectId uint64
 	err := erdaIdentity.GetUserOrgInfo()
 	if err != nil {
 		return err
-	} else {
-		sender = erdaIdentity
+	}
 
-		err = sender.GetTicketStates()
-		if err != nil {
-			klog.Errorf("failed to fetch states from erda: %+v\n", err)
-			return err
-		}
-		err = sender.GetAssignee()
-		if err != nil {
-			klog.Errorf("failed to fetch assignee for sre: %+v\n", err)
-		}
+	sender = erdaIdentity
 
-		err = sender.GetLabels()
-		if err != nil {
-			klog.Errorf("failed to fetch labels: %+v\n", err)
-		}
+	err = sender.GetTicketStates()
+	if err != nil {
+		klog.Errorf("failed to fetch states from erda: %+v\n", err)
+		return err
+	}
+	err = sender.GetAssignee()
+	if err != nil {
+		klog.Errorf("failed to fetch assignee for sre: %+v\n", err)
+	}
+
+	err = sender.GetLabels()
+	if err != nil {
+		klog.Errorf("failed to fetch labels: %+v\n", err)
 	}
 
 	return nil
@@ -153,7 +153,7 @@ func (u *ErdaIdentity) GetOrgID() error {
 		return err
 	}
 
-	r := erda_api.OrgFetchResponse{}
+	r := OrgFetchResponse{}
 	err = unmarshalResponse(resp, &r)
 	if err != nil {
 		logrus.Errorf("unmarshal response failed, error: %v", err)
@@ -178,8 +178,7 @@ func (u *ErdaIdentity) GetOrgID() error {
 
 func unmarshalResponse(r *resty.Response, o interface{}) error {
 	if r == nil {
-		err := fmt.Errorf("empty response")
-		return err
+		return fmt.Errorf("empty response")
 	}
 
 	if r.StatusCode() != 200 || r.Error() != nil {
@@ -196,9 +195,9 @@ func unmarshalResponse(r *resty.Response, o interface{}) error {
 }
 
 func (u *ErdaIdentity) GetTicketStates() error {
-	req := &erda_api.IssueStateRelationGetRequest{}
+	req := &IssueStateRelationGetRequest{}
 	req.ProjectID = u.ProjectId
-	req.IssueType = erda_api.IssueTypeTicket
+	req.IssueType = IssueTypeTicket
 	req.UserID = u.UserID
 	rs, err := u.GetStateRelations(req)
 	if err != nil {
@@ -257,7 +256,7 @@ func (u *ErdaIdentity) GetAssignee() error {
 	return nil
 }
 
-func (u *ErdaIdentity) SearchUser(username string) (*erda_api.UserInfo, error) {
+func (u *ErdaIdentity) SearchUser(username string) (*UserInfo, error) {
 	resp, err := u.client.R().
 		SetCookie(&http.Cookie{Name: "OPENAPISESSION", Value: u.SessionID}).
 		SetHeader("USER-ID", u.UserID).
@@ -268,7 +267,7 @@ func (u *ErdaIdentity) SearchUser(username string) (*erda_api.UserInfo, error) {
 		return nil, err
 	}
 
-	r := erda_api.UserListResponse{}
+	r := UserListResponse{}
 	err = unmarshalResponse(resp, &r)
 	if err != nil {
 		logrus.Errorf("unmarshal response failed, error: %v", err)
@@ -289,7 +288,7 @@ func (u *ErdaIdentity) SearchUser(username string) (*erda_api.UserInfo, error) {
 	return &r.Data.Users[0], nil
 }
 
-func (u *ErdaIdentity) CreateIssue(req *erda_api.IssueCreateRequest) error {
+func (u *ErdaIdentity) CreateIssue(req *IssueCreateRequest) error {
 	klog.Errorf("start send ticket to cloud address: %s\n", u.OpenapiUrl)
 	resp, err := u.client.R().SetBody(req).
 		SetCookie(&http.Cookie{Name: "OPENAPISESSION", Value: u.SessionID}).
@@ -300,7 +299,7 @@ func (u *ErdaIdentity) CreateIssue(req *erda_api.IssueCreateRequest) error {
 		return err
 	}
 
-	r := erda_api.IssueCreateResponse{}
+	r := IssueCreateResponse{}
 	err = unmarshalResponse(resp, &r)
 	if err != nil {
 		logrus.Errorf("unmarshal response failed, error: %v", err)
@@ -314,7 +313,7 @@ func (u *ErdaIdentity) CreateIssue(req *erda_api.IssueCreateRequest) error {
 	return nil
 }
 
-func (u *ErdaIdentity) UpdateIssue(req *erda_api.IssueUpdateRequest) error {
+func (u *ErdaIdentity) UpdateIssue(req *IssueUpdateRequest) error {
 	resp, err := u.client.R().SetBody(req).
 		SetCookie(&http.Cookie{Name: "OPENAPISESSION", Value: u.SessionID}).
 		SetHeader("USER-ID", u.UserID).
@@ -324,7 +323,7 @@ func (u *ErdaIdentity) UpdateIssue(req *erda_api.IssueUpdateRequest) error {
 		return err
 	}
 
-	r := erda_api.IssueUpdateResponse{}
+	r := IssueUpdateResponse{}
 	err = unmarshalResponse(resp, &r)
 	if err != nil {
 		logrus.Errorf("unmarshal response failed for issue %d, error: %v", req.ID, err)
@@ -338,7 +337,7 @@ func (u *ErdaIdentity) UpdateIssue(req *erda_api.IssueUpdateRequest) error {
 	return nil
 }
 
-func (u *ErdaIdentity) PagingIssue(req *erda_api.IssuePagingRequest) ([]erda_api.Issue, error) {
+func (u *ErdaIdentity) PagingIssue(req *IssuePagingRequest) ([]Issue, error) {
 	reqStates := url.Values{"state": []string{}}
 	for _, s := range req.State {
 		reqStates["state"] = append(reqStates["state"], strconv.FormatInt(s, 10))
@@ -360,7 +359,7 @@ func (u *ErdaIdentity) PagingIssue(req *erda_api.IssuePagingRequest) ([]erda_api
 		return nil, err
 	}
 
-	r := erda_api.IssuePagingResponse{}
+	r := IssuePagingResponse{}
 	err = unmarshalResponse(resp, &r)
 	if err != nil {
 		logrus.Errorf("unmarshal response failed, error: %v", err)
@@ -374,7 +373,7 @@ func (u *ErdaIdentity) PagingIssue(req *erda_api.IssuePagingRequest) ([]erda_api
 	return r.Data.List, nil
 }
 
-func (u *ErdaIdentity) GetStateRelations(req *erda_api.IssueStateRelationGetRequest) ([]erda_api.IssueStateRelation, error) {
+func (u *ErdaIdentity) GetStateRelations(req *IssueStateRelationGetRequest) ([]IssueStateRelation, error) {
 	resp, err := u.client.R().SetBody(req).
 		SetCookie(&http.Cookie{Name: "OPENAPISESSION", Value: u.SessionID}).
 		SetHeader("USER-ID", u.UserID).
@@ -385,7 +384,7 @@ func (u *ErdaIdentity) GetStateRelations(req *erda_api.IssueStateRelationGetRequ
 		return nil, err
 	}
 
-	r := &erda_api.IssueStateRelationGetResponse{}
+	r := &IssueStateRelationGetResponse{}
 	err = unmarshalResponse(resp, &r)
 	if err != nil {
 		logrus.Errorf("unmarshal response failed, error: %v", err)
@@ -411,7 +410,7 @@ func (u *ErdaIdentity) GetLabels() error {
 		return err
 	}
 
-	r := &erda_api.ProjectLabelListResponse{}
+	r := &ProjectLabelListResponse{}
 	err = unmarshalResponse(resp, &r)
 	if err != nil {
 		logrus.Errorf("unmarshal response failed, error: %v", err)
@@ -438,7 +437,7 @@ func (u *ErdaIdentity) CreateIssueComment(req *apistructs.CommentIssueStreamBatc
 		return err
 	}
 
-	r := erda_api.Header{}
+	r := Header{}
 	err = unmarshalResponse(resp, &r)
 	if err != nil {
 		logrus.Errorf("unmarshal response failed, error: %v", err)

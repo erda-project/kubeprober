@@ -8,6 +8,7 @@
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
@@ -20,7 +21,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"k8s.io/klog"
 
-	erda_api "github.com/erda-project/erda/apistructs"
 	"github.com/erda-project/kubeprober/apistructs"
 )
 
@@ -84,8 +84,8 @@ type Ticket struct {
 
 	Title    string
 	Content  string
-	Priority erda_api.IssuePriority
-	Type     erda_api.IssueType
+	Priority IssuePriority
+	Type     IssueType
 }
 
 func GetWeek() string {
@@ -107,8 +107,7 @@ func sendIssue(t *Ticket) error {
 	}
 
 	if issue != nil {
-
-		reqU := &erda_api.IssueUpdateRequest{}
+		reqU := &IssueUpdateRequest{}
 		reqU.ID = uint64(issue.ID)
 		reqU.Title = &issue.Title
 		reqU.Priority = &issue.Priority
@@ -162,7 +161,7 @@ func sendIssue(t *Ticket) error {
 func createIssueComment(issueID int64, content string) error {
 	comment := &apistructs.CommentIssueStreamCreateRequest{
 		IssueID: issueID,
-		Type:    string(erda_api.ISTComment),
+		Type:    string(ISTComment),
 		UserID:  sender.UserID,
 		Content: content,
 	}
@@ -189,14 +188,14 @@ func getLabels(oldL, newL []string) []string {
 	return newLabels
 }
 
-func updateIssue(req *erda_api.IssueUpdateRequest) error {
+func updateIssue(req *IssueUpdateRequest) error {
 	return sender.UpdateIssue(req)
 }
 
 func createIssue(t *Ticket) error {
 	now := time.Now()
 
-	req := &erda_api.IssueCreateRequest{}
+	req := &IssueCreateRequest{}
 	req.Title = t.Title
 	req.Content = t.Content
 	req.Priority = t.Priority
@@ -227,8 +226,8 @@ func (t *Ticket) newLabels() []string {
 	return labels
 }
 
-func existIssue(t *Ticket) (*erda_api.Issue, error) {
-	req := &erda_api.IssuePagingRequest{}
+func existIssue(t *Ticket) (*Issue, error) {
+	req := &IssuePagingRequest{}
 	req.ProjectID = sender.ProjectId
 	req.OrderBy = "plan_started_at"
 	req.Asc = false
@@ -241,7 +240,7 @@ func existIssue(t *Ticket) (*erda_api.Issue, error) {
 		return nil, err
 	}
 
-	var issue erda_api.Issue
+	var issue Issue
 	l := len(issues)
 	if l == 0 {
 		return nil, nil
