@@ -23,11 +23,6 @@ const (
 	ProbeName            = "KUBEPROBER_PROBE_NAME"
 	ProbeStatusReportUrl = "KUBEPROBER_STATUS_REPORT_URL"
 
-	LabelKeyApp            = "app"
-	LabelValueApp          = "kubeprober.erda.cloud"
-	LabelKeyProbeNameSpace = "kubeprober.erda.cloud/probe-namespace"
-	LabelKeyProbeName      = "kubeprober.erda.cloud/probe-name"
-
 	DefaultSourceKey   = "source"
 	DefaultSourceValue = "kubeprober"
 	OnceProbeDonePhase = "DONE"

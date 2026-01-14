@@ -342,6 +342,7 @@ func Start(ctx context.Context, cfg *Config, influxdbConfig *apistructs.Influxdb
 	})
 
 	httphandler.NewProxyManager(ctx)
+	httphandler.NewSocksManager(ctx, cfg.Listen)
 	router.HandleFunc("/api/k8s/clusters/{clusterName}", func(rw http.ResponseWriter,
 		req *http.Request) {
 		httphandler.ClusterConsole(rw, req)

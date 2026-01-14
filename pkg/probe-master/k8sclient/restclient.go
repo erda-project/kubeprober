@@ -33,6 +33,7 @@ import (
 
 var (
 	RestClient client.Client
+	RestConfig *rest.Config
 )
 
 func init() {
@@ -49,6 +50,7 @@ func init() {
 			return
 		}
 	}
+	RestConfig = config
 
 	scheme := runtime.NewScheme()
 	kubeproberv1.AddToScheme(scheme)

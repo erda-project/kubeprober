@@ -16,7 +16,7 @@ FROM registry.erda.cloud/retag/kubeprober/alpine:v3.9
 
 ARG ARCH=amd64
 ARG APP
-ENV KUBECTL_VERSION v1.19.7
+ENV KUBECTL_VERSION=v1.19.7
 ENV APP=${APP}
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64:/lib:/lib64
 
