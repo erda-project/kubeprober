@@ -6,7 +6,6 @@ require (
 	github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/creack/pty v1.1.17 // indirect
-	github.com/erda-project/erda v1.5.0
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-logr/logr v0.4.0
 	github.com/go-resty/resty/v2 v2.7.0
