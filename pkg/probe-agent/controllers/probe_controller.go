@@ -23,7 +23,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	batchv1 "k8s.io/api/batch/v1"
-	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -186,7 +185,7 @@ func (r *ProbeReconciler) ReconcileCronJob(ctx context.Context, probe *kubeprobe
 	r.log.V(0).Info("reconcile probe cron job", "cronjob", n)
 
 	// check whether probe been deleted
-	var cj batchv1beta1.CronJob
+	var cj batchv1.CronJob
 	err := r.Get(ctx, n, &cj)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -248,7 +247,7 @@ func (r *ProbeReconciler) createJob(ctx context.Context, probe *kubeproberv1.Pro
 	return nil
 }
 
-func (r *ProbeReconciler) genCronJob(probe *kubeproberv1.Probe) (cj batchv1beta1.CronJob, err error) {
+func (r *ProbeReconciler) genCronJob(probe *kubeproberv1.Probe) (cj batchv1.CronJob, err error) {
 	j, err := genJob(probe)
 	if err != nil {
 		return
@@ -258,7 +257,7 @@ func (r *ProbeReconciler) genCronJob(probe *kubeproberv1.Probe) (cj batchv1beta1
 
 	trueVar := true
 	schedule := fmt.Sprintf("*/%d * * * *", randomRunInterval)
-	cj = batchv1beta1.CronJob{
+	cj = batchv1.CronJob{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: probe.Namespace,
 			Name:      probe.Name,
@@ -277,19 +276,19 @@ func (r *ProbeReconciler) genCronJob(probe *kubeproberv1.Probe) (cj batchv1beta1
 				kubeproberv1.LabelKeyProbeName:      probe.Name,
 			},
 		},
-		Spec: batchv1beta1.CronJobSpec{
+		Spec: batchv1.CronJobSpec{
 			Schedule:                schedule,
 			StartingDeadlineSeconds: nil,
 			ConcurrencyPolicy:       "",
 			Suspend:                 nil,
-			JobTemplate: batchv1beta1.JobTemplateSpec{
+			JobTemplate: batchv1.JobTemplateSpec{
 				Spec: j.Spec,
 			},
 			// TODO: gc configuration
 			SuccessfulJobsHistoryLimit: nil,
 			FailedJobsHistoryLimit:     nil,
 		},
-		Status: batchv1beta1.CronJobStatus{},
+		Status: batchv1.CronJobStatus{},
 	}
 	return
 }
@@ -457,8 +456,8 @@ func (pcj *ProbeCronJobPredicates) Update(e event.UpdateEvent) bool {
 	ns := getNamespaceName(e.ObjectNew)
 	logger.Log.V(2).Info("cronjob update", "key", ns)
 
-	oldObject := e.ObjectOld.(*batchv1beta1.CronJob)
-	newObject := e.ObjectNew.(*batchv1beta1.CronJob)
+	oldObject := e.ObjectOld.(*batchv1.CronJob)
+	newObject := e.ObjectNew.(*batchv1.CronJob)
 	equal := cmp.Equal(oldObject.Spec, newObject.Spec)
 	if !equal {
 		return true
@@ -486,6 +485,6 @@ func (r *ProbeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&kubeproberv1.Probe{}, probePredicates).
-		Owns(&batchv1beta1.CronJob{}, probeCronJobPredicates).
+		Owns(&batchv1.CronJob{}, probeCronJobPredicates).
 		Complete(r)
 }

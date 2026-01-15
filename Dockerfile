@@ -1,10 +1,8 @@
-# Build the manager binary
-FROM m.daocloud.io/docker.io/golang:1.16 AS builder
+FROM registry.erda.cloud/erda-x/golang:1.24 AS builder
 
 ARG APP
 WORKDIR /workspace
 ENV APP=${APP}
-ENV GOPROXY=https://goproxy.cn,direct
 
 COPY . /workspace
 # Build

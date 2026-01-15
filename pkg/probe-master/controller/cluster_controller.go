@@ -28,7 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/json"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -270,7 +270,7 @@ func ListProbeOfCluster(cluster *kubeproberv1.Cluster, probes map[string]kubepro
 	return nil
 }
 
-//delete probe of cluster
+// delete probe of cluster
 func DeleteProbeOfCluster(cluster *kubeproberv1.Cluster, probeName string) error {
 	var err error
 	var c client.Client

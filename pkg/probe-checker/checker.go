@@ -80,11 +80,11 @@ func RunChecker(c Checker) error {
 	case <-time.After(c.GetTimeout()):
 		// The check has timed out after its specified timeout period
 		err := fmt.Errorf("checker: %s timeout: %v", c.GetName(), c.GetTimeout())
-		logrus.Errorf(err.Error())
+		logrus.Error(err)
 		return err
 	case err := <-doneChan:
 		if err != nil {
-			logrus.Errorf(err.Error())
+			logrus.Error(err)
 			return err
 		}
 		return nil

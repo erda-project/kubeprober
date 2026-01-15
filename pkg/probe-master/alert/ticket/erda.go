@@ -26,7 +26,7 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 
 	"github.com/erda-project/kubeprober/apistructs"
 )
@@ -132,7 +132,7 @@ func (u *ErdaIdentity) GetUserID() error {
 
 	if i.SessionID == "" {
 		err := fmt.Errorf("login failed, get empty sessionid")
-		logrus.Errorf(err.Error())
+		logrus.Error(err)
 		return err
 	}
 
@@ -183,7 +183,7 @@ func unmarshalResponse(r *resty.Response, o interface{}) error {
 
 	if r.StatusCode() != 200 || r.Error() != nil {
 		err := fmt.Errorf("status code: %v, body: %v error: %v", r.StatusCode(), string(r.Body()), r.Error())
-		logrus.Errorf(err.Error())
+		logrus.Error(err)
 		return err
 	}
 

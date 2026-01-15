@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 	"github.com/go-logr/logr"
@@ -339,7 +338,7 @@ func (r *ProbeStatusReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		//watch pod, get failed probe pod and update related probe status
 		For(&corev1.Pod{}, podPredicates).
 		// watch probe status but do nothing, only cache & sync probe status
-		Watches(&source.Kind{Type: &kubeproberv1.ProbeStatus{}}, &handler.EnqueueRequestForObject{}).
+		Watches(&kubeproberv1.ProbeStatus{}, &handler.EnqueueRequestForObject{}).
 		Complete(r)
 }
 
