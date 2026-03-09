@@ -47,6 +47,7 @@ import (
 	"github.com/erda-project/kubeprober/apistructs"
 	"github.com/erda-project/kubeprober/pkg/probe-master/alert/dingding"
 	"github.com/erda-project/kubeprober/pkg/probe-master/alert/ticket"
+	controllerpkg "github.com/erda-project/kubeprober/pkg/probe-master/controller"
 	"github.com/erda-project/kubeprober/pkg/probe-master/k8sclient"
 	_ "github.com/erda-project/kubeprober/pkg/probe-master/k8sclient"
 	httphandler "github.com/erda-project/kubeprober/pkg/probe-master/tunnel-server/handler"
@@ -58,8 +59,31 @@ func init() {
 		TimeStamp time.Time
 	})
 }
+
+var defaultEnqueueClusterReconcile = func(clusterName string) {
+	controllerpkg.GetClusterEventSource().Enqueue(clusterName)
+}
+
+var enqueueClusterReconcile = defaultEnqueueClusterReconcile
+
 func clusterRegister(server *remotedialer.Server, rw http.ResponseWriter, req *http.Request) {
 	server.ServeHTTP(rw, req)
+}
+
+func notifyClusterReady(clusterName string) {
+	clusterName = strings.TrimSpace(clusterName)
+	if clusterName == "" {
+		return
+	}
+	enqueueClusterReconcile(clusterName)
+}
+
+func notifyClusterConnect(req *http.Request) {
+	clusterName, authed, err := Authorizer(req)
+	if err != nil || !authed || clusterName == "" || clusterName == "proxy" {
+		return
+	}
+	notifyClusterReady(clusterName)
 }
 
 func heartbeat(rw http.ResponseWriter, req *http.Request) {
@@ -158,6 +182,7 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	notifyClusterReady(hbData.Name)
 	rw.WriteHeader(http.StatusOK)
 	return
 }
@@ -318,6 +343,7 @@ func Start(ctx context.Context, cfg *Config, influxdbConfig *apistructs.Influxdb
 	router.Path("/heartbeat").Methods(http.MethodPost).HandlerFunc(heartbeat)
 	router.HandleFunc("/clusteragent/connect", func(rw http.ResponseWriter,
 		req *http.Request) {
+		notifyClusterConnect(req)
 		clusterRegister(handler, rw, req)
 	})
 
