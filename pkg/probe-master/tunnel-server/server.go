@@ -71,17 +71,15 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 		rw.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	clusterSpec := kubeproberv1.Cluster{
-		Spec: kubeproberv1.ClusterSpec{
-			K8sVersion: hbData.Version,
-			ClusterConfig: kubeproberv1.ClusterConfig{
-				Address:         hbData.Address,
-				Token:           hbData.Token,
-				CACert:          hbData.CaData,
-				CertData:        hbData.CertData,
-				KeyData:         hbData.KeyData,
-				ProbeNamespaces: hbData.ProbeNamespace,
-			},
+	clusterSpec := kubeproberv1.ClusterSpec{
+		K8sVersion: hbData.Version,
+		ClusterConfig: kubeproberv1.ClusterConfig{
+			Address:         hbData.Address,
+			Token:           hbData.Token,
+			CACert:          hbData.CaData,
+			CertData:        hbData.CertData,
+			KeyData:         hbData.KeyData,
+			ProbeNamespaces: hbData.ProbeNamespace,
 		},
 	}
 	err = k8sclient.RestClient.Get(context.Background(), client.ObjectKey{
@@ -89,11 +87,14 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 		Name:      hbData.Name,
 	}, cluster)
 	if apierrors.IsNotFound(err) {
-		clusterSpec.ObjectMeta = metav1.ObjectMeta{
-			Name:      hbData.Name,
-			Namespace: metav1.NamespaceDefault,
+		cluster := kubeproberv1.Cluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      hbData.Name,
+				Namespace: metav1.NamespaceDefault,
+			},
+			Spec: clusterSpec,
 		}
-		if err = k8sclient.RestClient.Create(context.Background(), &clusterSpec); err != nil {
+		if err = k8sclient.RestClient.Create(context.Background(), &cluster); err != nil {
 			errMsg := fmt.Sprintf("[heartbeat] failed to create cluster [%s]: %+v\n", hbData.Name, err)
 			rw.Write([]byte(errMsg))
 			rw.WriteHeader(http.StatusInternalServerError)
@@ -105,7 +106,11 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	} else {
-		patch, _ := json.Marshal(clusterSpec)
+		// Keep heartbeat spec updates scoped to "spec" only, so metadata (including annotations)
+		// is never touched by periodic heartbeats.
+		patch, _ := json.Marshal(map[string]interface{}{
+			"spec": clusterSpec,
+		})
 		err = k8sclient.RestClient.Patch(context.Background(), &kubeproberv1.Cluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      hbData.Name,
@@ -121,15 +126,15 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 		}
 	}
 	loc, _ := time.LoadLocation("Asia/Shanghai")
-	statusPatchBody := kubeproberv1.Cluster{
-		Status: kubeproberv1.ClusterStatus{
-			HeartBeatTimeStamp: time.Now().In(loc).Format("2006-01-02 15:04:05"),
-			NodeCount:          hbData.NodeCount,
-			Checkers:           hbData.Checkers,
-			ExtraStatus:        hbData.ExtraStatus,
-		},
+	statusPatchBody := kubeproberv1.ClusterStatus{
+		HeartBeatTimeStamp: time.Now().In(loc).Format("2006-01-02 15:04:05"),
+		NodeCount:          hbData.NodeCount,
+		Checkers:           hbData.Checkers,
+		ExtraStatus:        hbData.ExtraStatus,
 	}
-	statusPatch, _ := json.Marshal(statusPatchBody)
+	statusPatch, _ := json.Marshal(map[string]interface{}{
+		"status": statusPatchBody,
+	})
 	err = k8sclient.RestClient.Status().Patch(context.Background(), &kubeproberv1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      hbData.Name,

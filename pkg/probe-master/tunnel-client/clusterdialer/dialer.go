@@ -16,16 +16,21 @@ package clusterdialer
 import (
 	"context"
 	"net"
+	"sync"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
 var session TunnelSession
+var startOnce sync.Once
 
-func init() {
-	clusterDialerEndpoint := "ws://127.0.0.1:8088/clusterdialer"
-	go session.initialize(clusterDialerEndpoint)
+const clusterDialerEndpoint = "ws://127.0.0.1:8088/clusterdialer"
+
+func ensureSessionStarted() {
+	startOnce.Do(func() {
+		go session.initialize(clusterDialerEndpoint)
+	})
 }
 
 type DialContextFunc func(ctx context.Context, network, address string) (net.Conn, error)
@@ -33,6 +38,7 @@ type DialContextProtoFunc func(ctx context.Context, address string) (net.Conn, e
 
 func DialContext(clusterKey string) DialContextFunc {
 	return func(ctx context.Context, network, addr string) (net.Conn, error) {
+		ensureSessionStarted()
 		logrus.Debugf("use cluster dialer, key:%s", clusterKey)
 		f := session.getClusterDialer(ctx, clusterKey)
 		if f == nil {
@@ -44,6 +50,7 @@ func DialContext(clusterKey string) DialContextFunc {
 
 func DialContextProto(clusterKey, proto string) DialContextProtoFunc {
 	return func(ctx context.Context, addr string) (net.Conn, error) {
+		ensureSessionStarted()
 		logrus.Debugf("use cluster dialer, key:%s", clusterKey)
 		f := session.getClusterDialer(ctx, clusterKey)
 		if f == nil {

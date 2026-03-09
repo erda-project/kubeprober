@@ -28,6 +28,8 @@ var clusterlog = logf.Log.WithName("cluster-resource")
 func (c *Cluster) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(c).
+		WithDefaulter(c).
+		WithValidator(c).
 		Complete()
 }
 

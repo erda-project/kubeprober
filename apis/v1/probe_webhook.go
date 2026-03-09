@@ -65,6 +65,8 @@ func init() {
 func (p *Probe) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(p).
+		WithDefaulter(p).
+		WithValidator(p).
 		Complete()
 }
 
