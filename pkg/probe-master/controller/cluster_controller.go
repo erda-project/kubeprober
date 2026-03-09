@@ -18,6 +18,7 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -32,7 +33,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
 	dialclient "github.com/erda-project/kubeprober/pkg/probe-master/tunnel-client"
@@ -44,6 +47,11 @@ type ClusterReconciler struct {
 	Scheme *runtime.Scheme
 	Log    logr.Logger
 }
+
+const (
+	clusterAccessRetryDelay  = 5 * time.Second
+	clusterFallbackSyncDelay = 10 * time.Minute
+)
 
 //+kubebuilder:rbac:groups=kubeprober.erda.cloud,resources=clusters,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=kubeprober.erda.cloud,resources=clusters/status,verbs=get;update;patch
@@ -68,6 +76,9 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	cluster := &kubeproberv1.Cluster{}
 	if err = r.Get(ctx, req.NamespacedName, cluster); err != nil {
+		if apierrors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
 		klog.Errorf("get cluster spec [%s] error:  %+v\n", req.Name, err)
 		return ctrl.Result{}, err
 	}
@@ -79,12 +90,15 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			labelKeys = append(labelKeys, strings.Split(k, "/")[1])
 		}
 	}
-	klog.Infof("labels of cluster [%s] is: %+v\n", req.Name, labelKeys)
+	klog.V(1).Infof("labels of cluster [%s] is: %+v\n", req.Name, labelKeys)
 
 	// fetch probe from cluster
 	existProbes := make(map[string]kubeproberv1.Probe)
 	err = ListProbeOfCluster(cluster, existProbes)
 	if err != nil {
+		if result, handled := requeueIfClusterAccessPending(cluster.Name, err); handled {
+			return result, nil
+		}
 		return ctrl.Result{}, err
 	}
 
@@ -101,6 +115,9 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			}
 			klog.Errorf("create probe [%s] for cluster [%s]\n", probe.Name, cluster.Name)
 			if err = AddProbeToCluster(cluster, probe); err != nil {
+				if result, handled := requeueIfClusterAccessPending(cluster.Name, err); handled {
+					return result, nil
+				}
 				klog.Errorf("create probe [%s] for cluster [%s] err: %+v\n", probe.Name, cluster.Name, err)
 				return ctrl.Result{}, err
 			}
@@ -110,8 +127,11 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	//delete probe
 	for name := range existProbes {
 		if !IsContain(labelKeys, name) {
-			klog.Infof("delete probe [%s] for cluster [%s]\n", name, cluster.Name)
+			klog.V(1).Infof("delete probe [%s] for cluster [%s]\n", name, cluster.Name)
 			if err = DeleteProbeOfCluster(cluster, name); err != nil {
+				if result, handled := requeueIfClusterAccessPending(cluster.Name, err); handled {
+					return result, nil
+				}
 				klog.Errorf("delete probe [%s] for cluster [%s] err: %+v\n", name, cluster.Name, err)
 				return ctrl.Result{}, err
 			}
@@ -119,8 +139,11 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	//handle ExtraInfo for remote cluster
-	klog.Infof("handle extrainfo for remote cluster [%s]\n", cluster.Name)
+	klog.V(1).Infof("handle extrainfo for remote cluster [%s]\n", cluster.Name)
 	if err = updateCmForCluster(cluster); err != nil {
+		if result, handled := requeueIfClusterAccessPending(cluster.Name, err); handled {
+			return result, nil
+		}
 		klog.Errorf("update extravar for cluster [%s] err: %+v\n", cluster.Name, err)
 		return ctrl.Result{}, err
 	}
@@ -140,7 +163,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	if patch, err = json.Marshal(statusPatch); err != nil {
 		return ctrl.Result{}, err
 	}
-	klog.Infof("patch cluster status for remote cluster [%s]\n", cluster.Name)
+	klog.V(1).Infof("patch cluster status for remote cluster [%s]\n", cluster.Name)
 
 	if err = r.Status().Patch(ctx, &kubeproberv1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
@@ -151,13 +174,17 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		klog.Errorf("update cluster [%s] status error: %+v\n", req.Name, err)
 		return ctrl.Result{}, err
 	}
-	return ctrl.Result{}, nil
+	return ctrl.Result{RequeueAfter: clusterFallbackSyncDelay}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&kubeproberv1.Cluster{}).WithEventFilter(&ClusterPredicate{}).
+		WatchesRawSource(source.Channel(
+			GetClusterEventSource().Events(),
+			&handler.EnqueueRequestForObject{},
+		)).
 		Complete(r)
 }
 
@@ -167,6 +194,38 @@ func IsContain(items []string, item string) bool {
 			return true
 		}
 	}
+	return false
+}
+
+func requeueIfClusterAccessPending(clusterName string, err error) (ctrl.Result, bool) {
+	if !isTransientClusterAccessError(err) {
+		return ctrl.Result{}, false
+	}
+
+	klog.V(1).Infof("remote cluster [%s] is not ready yet, requeue after %s: %+v\n", clusterName, clusterAccessRetryDelay, err)
+	return ctrl.Result{RequeueAfter: clusterAccessRetryDelay}, true
+}
+
+func isTransientClusterAccessError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	msg := err.Error()
+	for _, marker := range []string{
+		"failed to find Session for client",
+		"io: read/write on closed pipe",
+		"the server has asked for the client to provide credentials",
+		"websocket: close 1006",
+		"unexpected EOF",
+		"connection refused",
+		"waiting fo clusterdial session ready",
+	} {
+		if strings.Contains(msg, marker) {
+			return true
+		}
+	}
+
 	return false
 }
 
@@ -384,7 +443,7 @@ func (rl *ClusterPredicate) Create(e event.CreateEvent) bool {
 	if ns != metav1.NamespaceDefault {
 		return false
 	}
-	return true
+	return false
 }
 
 func (rl *ClusterPredicate) Delete(e event.DeleteEvent) bool {

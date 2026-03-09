@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -178,7 +177,6 @@ func Run(opts *options.ProbeMasterOptions) {
 	}, influxdbConfig, erdaConfig)
 
 	setupLog.Info("starting manager")
-	time.Sleep(10 * time.Second)
 	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)

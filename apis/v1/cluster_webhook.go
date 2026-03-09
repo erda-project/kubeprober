@@ -15,19 +15,19 @@ package v1
 
 import (
 	"context"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-var clusterlog = logf.Log.WithName("cluster-resource")
-
 func (c *Cluster) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(c).
+		WithDefaulter(c).
+		WithValidator(c).
 		Complete()
 }
 
@@ -37,13 +37,9 @@ var _ webhook.CustomDefaulter = &Cluster{}
 
 // Default implements webhook.CustomDefaulter so a webhook will be registered for the type
 func (c *Cluster) Default(_ context.Context, obj runtime.Object) error {
-	cluster, ok := obj.(*Cluster)
-	if ok {
-		clusterlog.Info("default", "name", cluster.Name)
-	} else {
-		clusterlog.Info("default", "unexpectedObject", obj)
+	if _, ok := obj.(*Cluster); !ok {
+		return fmt.Errorf("expected *Cluster, got %T", obj)
 	}
-	// TODO(user): fill in your defaulting logic.
 	return nil
 }
 
@@ -53,36 +49,24 @@ var _ webhook.CustomValidator = &Cluster{}
 
 // ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type
 func (c *Cluster) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
-	cluster, ok := obj.(*Cluster)
-	if ok {
-		clusterlog.Info("validate create", "name", cluster.Name)
-	} else {
-		clusterlog.Info("validate create", "unexpectedObject", obj)
+	if _, ok := obj.(*Cluster); !ok {
+		return nil, fmt.Errorf("expected *Cluster, got %T", obj)
 	}
-	// TODO(user): fill in your validation logic upon object creation.
 	return nil, nil
 }
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type
 func (c *Cluster) ValidateUpdate(_ context.Context, _ runtime.Object, newObj runtime.Object) (admission.Warnings, error) {
-	cluster, ok := newObj.(*Cluster)
-	if ok {
-		clusterlog.Info("validate update", "name", cluster.Name)
-	} else {
-		clusterlog.Info("validate update", "unexpectedObject", newObj)
+	if _, ok := newObj.(*Cluster); !ok {
+		return nil, fmt.Errorf("expected *Cluster, got %T", newObj)
 	}
-	// TODO(user): fill in your validation logic upon object update.
 	return nil, nil
 }
 
 // ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type
 func (c *Cluster) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
-	cluster, ok := obj.(*Cluster)
-	if ok {
-		clusterlog.Info("validate delete", "name", cluster.Name)
-	} else {
-		clusterlog.Info("validate delete", "unexpectedObject", obj)
+	if _, ok := obj.(*Cluster); !ok {
+		return nil, fmt.Errorf("expected *Cluster, got %T", obj)
 	}
-	// TODO(user): fill in your validation logic upon object deletion.
 	return nil, nil
 }

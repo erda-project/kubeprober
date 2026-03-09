@@ -24,7 +24,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -36,7 +35,6 @@ import (
 
 var (
 	clusterRestClient client.Client
-	probelog          = logf.Log.WithName("probe-resource")
 )
 
 func init() {
@@ -65,6 +63,8 @@ func init() {
 func (p *Probe) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(p).
+		WithDefaulter(p).
+		WithValidator(p).
 		Complete()
 }
 
@@ -74,14 +74,9 @@ var _ webhook.CustomDefaulter = &Probe{}
 
 // Default implements webhook.CustomDefaulter so a webhook will be registered for the type
 func (p *Probe) Default(_ context.Context, obj runtime.Object) error {
-	probe, ok := obj.(*Probe)
-	if ok {
-		probelog.Info("default", "name", probe.Name)
-	} else {
-		probelog.Info("default", "unexpectedObject", obj)
+	if _, ok := obj.(*Probe); !ok {
+		return fmt.Errorf("expected *Probe, got %T", obj)
 	}
-
-	// TODO(user): fill in your defaulting logic.
 	return nil
 }
 
@@ -91,25 +86,17 @@ var _ webhook.CustomValidator = &Probe{}
 
 // ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type
 func (p *Probe) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
-	probe, ok := obj.(*Probe)
-	if ok {
-		probelog.Info("validate create", "name", probe.Name)
-	} else {
-		probelog.Info("validate create", "unexpectedObject", obj)
+	if _, ok := obj.(*Probe); !ok {
+		return nil, fmt.Errorf("expected *Probe, got %T", obj)
 	}
-	// TODO(user): fill in your validation logic upon object creation.
 	return nil, nil
 }
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type
 func (p *Probe) ValidateUpdate(_ context.Context, _ runtime.Object, newObj runtime.Object) (admission.Warnings, error) {
-	probe, ok := newObj.(*Probe)
-	if ok {
-		probelog.Info("validate update", "name", probe.Name)
-	} else {
-		probelog.Info("validate update", "unexpectedObject", newObj)
+	if _, ok := newObj.(*Probe); !ok {
+		return nil, fmt.Errorf("expected *Probe, got %T", newObj)
 	}
-	// TODO(user): fill in your validation logic upon object update.
 	return nil, nil
 }
 
@@ -118,10 +105,8 @@ func (p *Probe) ValidateDelete(ctx context.Context, obj runtime.Object) (admissi
 	var err error
 	var attachedCluster []string
 	probe, ok := obj.(*Probe)
-	if ok {
-		probelog.Info("validate delete", "name", probe.Name)
-	} else {
-		probelog.Info("validate delete", "unexpectedObject", obj)
+	if !ok {
+		return nil, fmt.Errorf("expected *Probe, got %T", obj)
 	}
 	clusters := &ClusterList{}
 	if err = clusterRestClient.List(ctx, clusters); err != nil {
