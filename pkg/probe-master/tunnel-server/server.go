@@ -40,7 +40,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kubeproberv1 "github.com/erda-project/kubeprober/apis/v1"
@@ -114,7 +114,7 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 		}, client.RawPatch(types.MergePatchType, patch))
 		if err != nil {
 			errMsg := fmt.Sprintf("[heartbeat] patch cluster[%s] spec error: %+v\n", hbData.Name, err)
-			klog.Errorf(errMsg)
+			klog.Error(errMsg)
 			rw.Write([]byte(errMsg))
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
@@ -138,7 +138,7 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 	}, client.RawPatch(types.MergePatchType, statusPatch))
 	if err != nil {
 		errMsg := fmt.Sprintf("[heartbeat] patch cluster[%s] status error: %+v\n", hbData.Name, err)
-		klog.Errorf(errMsg)
+		klog.Error(errMsg)
 		rw.Write([]byte(errMsg))
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
@@ -147,7 +147,7 @@ func heartbeat(rw http.ResponseWriter, req *http.Request) {
 	err = updateExternalPrometheusConfigMap(hbData.Name)
 	if err != nil {
 		errMsg := fmt.Sprintf("[heartbeat] update configmap error for cluster[%s]: %+v\n", hbData.Name, err)
-		klog.Errorf(errMsg)
+		klog.Error(errMsg)
 		rw.Write([]byte(errMsg))
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
@@ -368,7 +368,7 @@ func Start(ctx context.Context, cfg *Config, influxdbConfig *apistructs.Influxdb
 	router.HandleFunc("/api/v1/bypass-collect", func(w http.ResponseWriter, r *http.Request) {
 		remote, err := url.Parse("http://prometheus-bypass.erda-monitoring:9090")
 		if err != nil {
-			logrus.Errorf(err.Error())
+			logrus.Error(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -428,7 +428,7 @@ func handlePrometheusBypass(cfg *Config, remoteServer *remotedialer.Server) func
 			Name:      clusterName,
 		}, cluster); err != nil {
 			err = errors.Wrap(err, fmt.Sprintf("get cluster %v info", cluster))
-			logrus.Errorf(err.Error())
+			logrus.Error(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -436,7 +436,7 @@ func handlePrometheusBypass(cfg *Config, remoteServer *remotedialer.Server) func
 		client := getClient(remoteServer, clusterName, timeout)
 		if client == nil {
 			err := errors.New(fmt.Sprintf("Get client for cluster %v failed", clusterName))
-			logrus.Errorf(err.Error())
+			logrus.Error(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -446,7 +446,7 @@ func handlePrometheusBypass(cfg *Config, remoteServer *remotedialer.Server) func
 		req, err := http.NewRequest(r.Method, targetURL, r.Body)
 		if err != nil {
 			err = errors.Wrap(err, fmt.Sprintf("create request for %v", targetURL))
-			logrus.Errorf(err.Error())
+			logrus.Error(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -470,7 +470,7 @@ func handlePrometheusBypass(cfg *Config, remoteServer *remotedialer.Server) func
 		resp, err := client.Do(req)
 		if err != nil {
 			err = errors.Wrap(err, fmt.Sprintf("[%v]do request is failed %v", clusterName, err))
-			logrus.Errorf(err.Error())
+			logrus.Error(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -478,7 +478,7 @@ func handlePrometheusBypass(cfg *Config, remoteServer *remotedialer.Server) func
 
 		if err != nil {
 			err = errors.Wrap(err, fmt.Sprintf("perform request for %v", targetURL))
-			logrus.Errorf(err.Error())
+			logrus.Error(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -501,7 +501,7 @@ func handlePrometheusBypass(cfg *Config, remoteServer *remotedialer.Server) func
 		// Copy the response body to the client
 		if _, err := io.Copy(w, resp.Body); err != nil {
 			err = errors.Wrap(err, fmt.Sprintf("copy response body for %v", targetURL))
-			logrus.Errorf(err.Error())
+			logrus.Error(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -607,7 +607,7 @@ func collectProbeStatus(rw http.ResponseWriter, req *http.Request, influxdb2api 
 	var err error
 	if err = json.NewDecoder(req.Body).Decode(&ps); err != nil {
 		errMsg := fmt.Sprintf("receive probe status err: %+v\n", err)
-		klog.Errorf(errMsg)
+		klog.Error(errMsg)
 		rw.WriteHeader(http.StatusBadRequest)
 		rw.Write([]byte(errMsg))
 		return
@@ -641,7 +641,7 @@ func collectProbeStatus(rw http.ResponseWriter, req *http.Request, influxdb2api 
 
 		if err = dingding.SendAlert(&ps); err != nil {
 			errMsg := fmt.Sprintf("send dingding alert err: %+v\n", err)
-			klog.Errorf(errMsg)
+			klog.Error(errMsg)
 		}
 	} else if ps.Status == kubeproberv1.CheckerStatusPass {
 		t := &ticket.Ticket{Kind: ticket.PassTicket}

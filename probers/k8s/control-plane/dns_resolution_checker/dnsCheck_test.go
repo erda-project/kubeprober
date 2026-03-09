@@ -72,7 +72,7 @@ func TestGetIpsFromEndpoint(t *testing.T) {
 
 	ips, err := getIpsFromEndpoint(endpoints)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err)
 	}
 	if len(ips) < 1 {
 		t.Fatalf("No ips found from endpoint list")

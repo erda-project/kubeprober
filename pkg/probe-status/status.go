@@ -107,7 +107,7 @@ func sendProbeStatus(ps kubeproberv1.ReportProbeStatusSpec, info ProbeStatusRepo
 		// retry on status codes that do not return a 200 or 400
 		if !(resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusBadRequest) {
 			err := fmt.Errorf("bad response status code from report url, status:%v, report url:%s", resp.StatusCode, info.ProbeStatusReportUrl)
-			logrus.Errorf(err.Error())
+			logrus.Error(err)
 			return err
 		}
 		return nil
@@ -123,7 +123,7 @@ func sendProbeStatus(ps kubeproberv1.ReportProbeStatusSpec, info ProbeStatusRepo
 func renderProbeStatus(status []kubeproberv1.ProbeCheckerStatus, info ProbeStatusReportInfo) (*kubeproberv1.ReportProbeStatusSpec, error) {
 	if len(status) == 0 {
 		err := fmt.Errorf("empty report status")
-		logrus.Errorf(err.Error())
+		logrus.Error(err)
 		return nil, err
 	}
 
@@ -188,7 +188,7 @@ func (p *ProbeStatusReportInfo) InitProbeNamespace() error {
 
 	if namespace == "" {
 		err := fmt.Errorf("cannot get probe namespace from secret file or environment")
-		logrus.Errorf(err.Error())
+		logrus.Error(err)
 		return err
 
 	}
@@ -209,7 +209,7 @@ func (p *ProbeStatusReportInfo) InitProbeName() error {
 	name := os.Getenv(kubeproberv1.ProbeName)
 	if name == "" {
 		err := fmt.Errorf("cannot get probe name from environment")
-		logrus.Errorf(err.Error())
+		logrus.Error(err)
 		return err
 	}
 	p.ProbeName = name
@@ -227,7 +227,7 @@ func (p *ProbeStatusReportInfo) InitProbeStatusReportUrl() error {
 	u := os.Getenv(kubeproberv1.ProbeStatusReportUrl)
 	if u == "" {
 		err := fmt.Errorf("cannot get probe status report url from environment")
-		logrus.Errorf(err.Error())
+		logrus.Error(err)
 		return err
 	}
 	_, err := url.ParseRequestURI(u)

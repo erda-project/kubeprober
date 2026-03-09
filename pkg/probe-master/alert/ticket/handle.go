@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 
 	"github.com/erda-project/kubeprober/apistructs"
 )

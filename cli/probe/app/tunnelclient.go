@@ -22,12 +22,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-//Generate k8sclient of cluster
+// Generate k8sclient of cluster
 func GenerateProbeClient(cluster *kubeproberv1.Cluster) (client.Client, error) {
 	var clusterToken []byte
 	var err error

@@ -20,7 +20,7 @@ import (
 
 	"github.com/erda-project/kubeprober/cmd/probe-master/app"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 func main() {

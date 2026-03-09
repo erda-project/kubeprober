@@ -108,7 +108,7 @@ func createDeploymentConfig() (*v1.Deployment, error) {
 
 	if len(checkImage) == 0 {
 		err := errors.New("check image url for container is empty: " + checkImage)
-		log.Errorf(err.Error())
+		log.Error(err)
 		return nil, err
 	}
 
@@ -236,14 +236,14 @@ func createContainerConfig() corev1.Container {
 	}
 
 	// Make a handler for the probes.
-	handler := corev1.Handler{
+	handler := corev1.ProbeHandler{
 		TCPSocket: &tcpSocket,
 	}
 
 	// Make liveness and readiness probes.
 	// Make the liveness probe here.
 	liveProbe := corev1.Probe{
-		Handler:             handler,
+		ProbeHandler:        handler,
 		InitialDelaySeconds: defaultProbeInitialDelaySeconds,
 		TimeoutSeconds:      defaultProbeTimeoutSeconds,
 		PeriodSeconds:       defaultProbePeriodSeconds,
@@ -253,7 +253,7 @@ func createContainerConfig() corev1.Container {
 
 	// Make the readiness probe here.
 	readyProbe := corev1.Probe{
-		Handler:             handler,
+		ProbeHandler:        handler,
 		InitialDelaySeconds: defaultProbeInitialDelaySeconds,
 		TimeoutSeconds:      defaultProbeTimeoutSeconds,
 		PeriodSeconds:       defaultProbePeriodSeconds,
