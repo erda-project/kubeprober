@@ -2,6 +2,8 @@ module github.com/erda-project/kubeprober
 
 go 1.24.0
 
+godebug x509negativeserial=1
+
 require (
 	github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5
 	github.com/cenkalti/backoff v2.2.1+incompatible
